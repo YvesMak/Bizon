@@ -220,9 +220,12 @@ function formatAmount(amount) {
  */
 function getStatusBadge(status) {
     const statusLabels = {
+        draft: 'Brouillon',
         confirmed: 'Confirmée',
         preparing: 'En préparation',
-        ready: 'Prête'
+        ready: 'Prête',
+        paid: 'Payée',
+        cancelled: 'Annulée'
     };
     return `<span class="status-badge ${status}">${statusLabels[status] || status}</span>`;
 }
@@ -523,15 +526,30 @@ function updateItemQuantity(index, delta) {
 }
 
 /**
+ * =================================================================
+ * RÈGLE MÉTIER CRITIQUE : FLUX SERVEUR SIMPLIFIÉ
+ * =================================================================
+ * Le serveur ne gère QUE le cycle: création → confirmation → suivi
+ * 
+ * 1. Création: draft (backend)
+ * 2. Envoi cuisine: confirmed (déclenche décrémentation stock)
+ * 3. Suivi: preparing/ready (lecture seule)
+ * 
+ * Le serveur NE VOIT JAMAIS les commandes paid ou cancelled dans sa liste
+ */
+
+/**
  * Envoie la commande en cuisine
+ * RÈGLE: Crée en draft puis confirme immédiatement
  */
 async function sendToKitchen() {
     // Validation
     const tableNumber = document.getElementById('table-number').value;
     const customerName = document.getElementById('customer-name').value;
 
-    if (!tableNumber) {
-        showToast('Le numéro de table est obligatoire', 'error');
+    // 🔒 RÈGLE MÉTIER: Table OU nom client obligatoire
+    if (!tableNumber && !customerName) {
+        showToast('Le numéro de table ou le nom du client est obligatoire', 'error');
         document.getElementById('table-number').focus();
         return;
     }
@@ -544,14 +562,14 @@ async function sendToKitchen() {
     // Préparer les données
     const orderData = {
         type: 'dine_in',
-        table_number: parseInt(tableNumber),
+        table_number: tableNumber || null,
         customer_name: customerName || null,
         items: waiterState.currentOrder.items.map(item => ({
             product_id: item.product_id,
             quantity: item.quantity,
             unit_price: item.unit_price
         })),
-        notes: `Commande serveur - ${waiterState.user.firstName || ''} ${waiterState.user.lastName || ''}`
+        notes: `Serveur: ${waiterState.user.firstName || ''} ${waiterState.user.lastName || ''}`
     };
 
     try {
@@ -559,17 +577,30 @@ async function sendToKitchen() {
         submitBtn.disabled = true;
         submitBtn.textContent = '⏳ Envoi en cours...';
 
-        const result = await createOrder(orderData);
+        // 1. Créer commande (status = draft)
+        const createResult = await createOrder(orderData);
 
-        if (result && result.order) {
-            showToast('Commande envoyée en cuisine avec succès', 'success');
-            
-            // Retour à la liste après 1.5s
-            setTimeout(() => {
-                showPage('orders');
-                loadOrders();
-            }, 1500);
+        if (!createResult || !createResult.order) {
+            throw new Error('Erreur lors de la création de la commande');
         }
+
+        const orderId = createResult.order.id;
+
+        // 2. Confirmer immédiatement (déclenche décrémentation stock)
+        await updateOrderStatus(orderId, 'confirmed');
+
+        showToast('Commande envoyée en cuisine avec succès', 'success');
+        
+        // Reset formulaire
+        waiterState.currentOrder = { tableNumber: null, customerName: '', items: [] };
+        document.getElementById('table-number').value = '';
+        document.getElementById('customer-name').value = '';
+        
+        // Retour à la liste après 1.5s
+        setTimeout(() => {
+            showPage('orders');
+            loadOrders();
+        }, 1500);
 
     } catch (error) {
         showToast(error.message, 'error');
@@ -577,6 +608,16 @@ async function sendToKitchen() {
         submitBtn.disabled = false;
         submitBtn.textContent = '🍳 Envoyer en cuisine';
     }
+}
+
+/**
+ * Met à jour le statut d'une commande
+ */
+async function updateOrderStatus(orderId, newStatus) {
+    return await apiCall(`/orders/${orderId}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: newStatus })
+    });
 }
 
 // ============================================

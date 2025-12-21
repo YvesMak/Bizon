@@ -7,13 +7,13 @@
 **Option A: Via psql (recommandé)**
 
 ```bash
-psql -U postgres -d bizon_db
+psql -U yves -d bizon_db
 ```
 
 Puis copier-coller:
 
 ```sql
-INSERT INTO users (restaurant_id, email, password_hash, first_name, last_name, role)
+INSERT INTO users (restaurant_id, email, password, first_name, last_name, role)
 VALUES (
     1,
     'serveur@test.com',
@@ -27,7 +27,7 @@ VALUES (
 **Option B: Copier le fichier SQL**
 
 ```bash
-psql -U postgres -d bizon_db -f test-waiter-create-user.sql
+psql -U yves -d bizon_db -f test-waiter-create-user.sql
 ```
 
 ### 2. Démarrer les serveurs (si pas déjà fait)

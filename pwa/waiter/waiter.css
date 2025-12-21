@@ -138,6 +138,11 @@
     text-transform: uppercase;
 }
 
+.status-badge.draft {
+    background: #e2e3e5;
+    color: #41464b;
+}
+
 .status-badge.confirmed {
     background: #cfe2ff;
     color: #084298;
@@ -151,6 +156,16 @@
 .status-badge.ready {
     background: #d1e7dd;
     color: #0f5132;
+}
+
+.status-badge.paid {
+    background: #a3cfbb;
+    color: #0a3622;
+}
+
+.status-badge.cancelled {
+    background: #f8d7da;
+    color: #842029;
 }
 
 .order-card-info {

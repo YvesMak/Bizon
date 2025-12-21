@@ -6,9 +6,9 @@ class AuthService {
   /**
    * Génère un token JWT
    */
-  generateToken(userId) {
+  generateToken(userId, restaurantId, role) {
     return jwt.sign(
-      { userId },
+      { userId, restaurantId, role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
@@ -77,7 +77,7 @@ class AuthService {
       await transaction.commit();
 
       // Générer le token
-      const token = this.generateToken(user.id);
+      const token = this.generateToken(user.id, restaurant.id, 'owner');
 
       // Retourner sans le mot de passe
       const userResponse = user.toJSON();
@@ -124,7 +124,7 @@ class AuthService {
       throw new Error('Le restaurant est suspendu');
     }
 
-    const token = this.generateToken(user.id);
+    const token = this.generateToken(user.id, user.restaurant_id, user.role);
 
     const userResponse = user.toJSON();
     delete userResponse.password;

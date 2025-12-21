@@ -41,12 +41,17 @@ const Order = sequelize.define('Order', {
     defaultValue: 'dine_in'
   },
   status: {
-    type: DataTypes.ENUM('pending', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled'),
-    defaultValue: 'pending'
+    type: DataTypes.ENUM('draft', 'confirmed', 'preparing', 'ready', 'paid', 'cancelled'),
+    defaultValue: 'draft'
   },
   table_number: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+  customer_name: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'Nom du client si pas dans base customers'
   },
   subtotal: {
     type: DataTypes.DECIMAL(10, 2),

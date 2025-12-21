@@ -2,13 +2,16 @@
 -- SQL: Création d'un utilisateur SERVEUR
 -- ============================================
 
+-- Note: Sur macOS, l'utilisateur PostgreSQL est votre nom système (pas "postgres")
+-- Utilisez: psql -U yves -d bizon_db -f test-waiter-create-user.sql
+
 -- 1. Créer l'utilisateur serveur (associé au restaurant ID 1)
 -- Password: "serveur123" (hash bcrypt)
 
 INSERT INTO users (
     restaurant_id, 
     email, 
-    password_hash, 
+    password, 
     first_name, 
     last_name, 
     role,
@@ -42,10 +45,10 @@ WHERE email = 'serveur@test.com';
 -- ============================================
 
 -- Exécuter dans le terminal:
--- psql -U postgres -d bizon_db -f test-waiter-create-user.sql
+-- psql -U yves -d bizon_db -f test-waiter-create-user.sql
 
 -- Ou directement dans psql:
--- psql -U postgres -d bizon_db
+-- psql -U yves -d bizon_db
 -- Puis copier-coller les commandes INSERT et SELECT ci-dessus
 
 -- ============================================
@@ -78,7 +81,7 @@ WHERE email = 'serveur@test.com';
 INSERT INTO users (
     restaurant_id, 
     email, 
-    password_hash, 
+    password, 
     first_name, 
     last_name, 
     role,
