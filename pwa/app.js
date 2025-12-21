@@ -287,6 +287,17 @@ document.getElementById('form-login').addEventListener('submit', async (e) => {
         localStorage.setItem('bizon_restaurant_id', data.user.restaurant_id);
         
         showToast('Connexion réussie !', 'success');
+        
+        // Redirection selon le rôle
+        if (data.user.role === 'waiter') {
+            // Redirection vers l'espace serveur
+            setTimeout(() => {
+                window.location.href = 'waiter/waiter.html';
+            }, 1000);
+            return;
+        }
+        
+        // Comportement normal pour client/owner/manager/cashier
         showPage('menu');
         await loadProducts();
     } catch (error) {

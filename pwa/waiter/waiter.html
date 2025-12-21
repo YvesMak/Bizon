@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bizon - Espace Serveur</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="waiter.css">
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#e63946">
+</head>
+<body>
+    <!-- Header Simplifié Serveur -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-circle">B</div>
+                <span class="role-badge">SERVEUR</span>
+            </div>
+            <nav class="main-nav">
+                <a href="#orders" class="nav-link active" data-page="orders">MES COMMANDES</a>
+            </nav>
+            <div class="header-actions">
+                <span class="user-name" id="user-name"></span>
+                <button class="btn-secondary" id="btn-logout">Déconnexion</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container waiter-container">
+        <!-- Page: Liste des commandes -->
+        <div id="page-orders" class="page active">
+            <div class="page-header">
+                <h1>Mes Commandes</h1>
+                <button class="btn-primary btn-large" id="btn-new-order">
+                    ➕ Nouvelle Commande
+                </button>
+            </div>
+
+            <!-- Filtres -->
+            <div class="filters">
+                <button class="filter-btn active" data-status="all">Toutes</button>
+                <button class="filter-btn" data-status="confirmed">Confirmées</button>
+                <button class="filter-btn" data-status="preparing">En préparation</button>
+                <button class="filter-btn" data-status="ready">Prêtes</button>
+            </div>
+
+            <!-- Liste des commandes -->
+            <div class="orders-list" id="orders-list">
+                <div class="loading">Chargement des commandes...</div>
+            </div>
+        </div>
+
+        <!-- Page: Nouvelle commande -->
+        <div id="page-new-order" class="page">
+            <div class="page-header">
+                <button class="btn-back" id="btn-back-from-new">← Retour</button>
+                <h1>Nouvelle Commande</h1>
+            </div>
+
+            <!-- Informations commande -->
+            <div class="order-info-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Numéro de table *</label>
+                        <input type="number" id="table-number" min="1" placeholder="Ex: 12" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nom client (optionnel)</label>
+                        <input type="text" id="customer-name" placeholder="Ex: Dupont">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sélection produits (réutilise UI client) -->
+            <div class="products-section">
+                <h2>Sélection des produits</h2>
+                
+                <!-- Catégories -->
+                <div class="categories-tabs" id="categories-tabs">
+                    <button class="category-tab active" data-category="all">Tous</button>
+                </div>
+
+                <!-- Grille produits -->
+                <div class="products-grid" id="new-order-products">
+                    <div class="loading">Chargement des produits...</div>
+                </div>
+            </div>
+
+            <!-- Récapitulatif panier -->
+            <div class="order-summary" id="order-summary">
+                <h3>Récapitulatif</h3>
+                <div class="summary-items" id="summary-items">
+                    <p class="empty-cart">Aucun produit sélectionné</p>
+                </div>
+                <div class="summary-total">
+                    <span>Total</span>
+                    <span class="total-amount" id="total-amount">0 FCFA</span>
+                </div>
+                <button class="btn-primary btn-block" id="btn-send-to-kitchen" disabled>
+                    🍳 Envoyer en cuisine
+                </button>
+            </div>
+        </div>
+
+        <!-- Page: Détail commande -->
+        <div id="page-order-detail" class="page">
+            <div class="page-header">
+                <button class="btn-back" id="btn-back-from-detail">← Retour</button>
+                <h1>Commande <span id="order-number"></span></h1>
+            </div>
+
+            <div class="order-detail-container">
+                <!-- Informations -->
+                <div class="detail-section">
+                    <div class="detail-info">
+                        <div class="info-row">
+                            <span class="label">Table:</span>
+                            <span class="value" id="detail-table"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Client:</span>
+                            <span class="value" id="detail-customer"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Statut:</span>
+                            <span class="status-badge" id="detail-status"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Montant:</span>
+                            <span class="value" id="detail-amount"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Créée le:</span>
+                            <span class="value" id="detail-date"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Produits -->
+                <div class="detail-section">
+                    <h3>Produits commandés</h3>
+                    <div class="order-items" id="detail-items"></div>
+                </div>
+
+                <!-- Actions -->
+                <div class="detail-actions" id="detail-actions">
+                    <!-- Actions dynamiques selon statut -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container"></div>
+
+    <!-- Modal Confirmation -->
+    <div class="modal" id="modal-confirm">
+        <div class="modal-content">
+            <h3 id="modal-title">Confirmer l'action</h3>
+            <p id="modal-message"></p>
+            <div class="modal-actions">
+                <button class="btn-secondary" id="modal-cancel">Annuler</button>
+                <button class="btn-primary" id="modal-confirm-btn">Confirmer</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="waiter.js"></script>
+</body>
+</html>
