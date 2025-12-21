@@ -1,0 +1,19 @@
+const express = require('express');
+const router = express.Router();
+const OrderController = require('./controller');
+const auth = require('../../middlewares/auth');
+const roleCheck = require('../../middlewares/roleCheck');
+const tenantIsolation = require('../../middlewares/tenantIsolation');
+
+router.use(auth, tenantIsolation);
+
+// CRUD commandes
+router.get('/', OrderController.getAll);
+router.get('/:id', OrderController.getById);
+router.post('/', OrderController.create);
+
+// Gestion du statut
+router.patch('/:id/status', OrderController.updateStatus);
+router.post('/:id/cancel', OrderController.cancel);
+
+module.exports = router;
