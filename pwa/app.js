@@ -2,7 +2,7 @@
 // BIZON PWA - Frontend Application
 // ============================================
 
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = '/api';
 
 // State Management
 const state = {
@@ -290,14 +290,19 @@ document.getElementById('form-login').addEventListener('submit', async (e) => {
         
         // Redirection selon le rôle
         if (data.user.role === 'waiter') {
-            // Redirection vers l'espace serveur
-            setTimeout(() => {
-                window.location.href = 'waiter/waiter.html';
-            }, 1000);
+            setTimeout(() => { window.location.href = 'waiter/waiter.html'; }, 1000);
             return;
         }
-        
-        // Comportement normal pour client/owner/manager/cashier
+        if (data.user.role === 'cashier') {
+            setTimeout(() => { window.location.href = 'cashier/cashier.html'; }, 1000);
+            return;
+        }
+        if (data.user.role === 'manager' || data.user.role === 'owner') {
+            setTimeout(() => { window.location.href = 'manager/manager.html'; }, 1000);
+            return;
+        }
+
+        // Comportement par défaut (client)
         showPage('menu');
         await loadProducts();
     } catch (error) {

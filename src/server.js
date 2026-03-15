@@ -18,14 +18,21 @@ const invoiceRoutes = require('./modules/invoices/routes');
 const subscriptionRoutes = require('./modules/subscriptions/routes');
 const onboardingRoutes = require('./modules/onboarding/routes');
 
+const path = require('path');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middlewares globaux
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false
+}));
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Servir les fichiers statiques PWA
+app.use(express.static(path.join(__dirname, '..', 'pwa')));
 
 // Rate limiting
 const limiter = rateLimit({

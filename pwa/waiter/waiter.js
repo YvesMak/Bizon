@@ -3,7 +3,7 @@
 // Espace serveur pour gestion des commandes
 // ============================================
 
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = '/api';
 
 // ============================================
 // STATE MANAGEMENT
@@ -243,12 +243,12 @@ async function loadOrders() {
 
     try {
         const response = await getOrders(waiterState.filters.status);
-        
-        if (!response || !response.orders) {
+
+        if (!response) {
             throw new Error('Erreur lors du chargement des commandes');
         }
 
-        waiterState.orders = response.orders;
+        waiterState.orders = response.orders || (Array.isArray(response) ? response : []);
 
         if (waiterState.orders.length === 0) {
             container.innerHTML = `
@@ -261,9 +261,9 @@ async function loadOrders() {
         }
 
         container.innerHTML = waiterState.orders.map(order => `
-            <div class="order-card" onclick="viewOrderDetail(${order.id})">
+            <div class="order-card" onclick="viewOrderDetail('${order.id}')">
                 <div class="order-card-header">
-                    <span class="order-number">#${order.id}</span>
+                    <span class="order-number">${order.order_number || '#' + order.id}</span>
                     ${getStatusBadge(order.status)}
                 </div>
                 <div class="order-card-info">
@@ -276,13 +276,13 @@ async function loadOrders() {
                         </div>
                     ` : ''}
                     <div class="info-item">
-                        <strong>Créée:</strong> ${formatDate(order.created_at)}
+                        <strong>Créée:</strong> ${formatDate(order.createdAt)}
                     </div>
                 </div>
                 <div class="order-card-footer">
                     <span class="order-amount">${formatAmount(order.total_amount)}</span>
                     ${order.status === 'confirmed' ? `
-                        <button class="btn-secondary btn-small" onclick="event.stopPropagation(); confirmCancelOrder(${order.id})">
+                        <button class="btn-secondary btn-small" onclick="event.stopPropagation(); confirmCancelOrder('${order.id}')">
                             Annuler
                         </button>
                     ` : ''}
@@ -636,12 +636,13 @@ async function viewOrderDetail(orderId) {
     try {
         const response = await getOrderDetail(orderId);
         
-        if (!response || !response.order) {
+        if (!response) {
             throw new Error('Commande introuvable');
         }
 
-        waiterState.currentOrderDetail = response.order;
-        renderOrderDetail(response.order);
+        const order = response.order || response;
+        waiterState.currentOrderDetail = order;
+        renderOrderDetail(order);
 
     } catch (error) {
         showToast(error.message, 'error');
@@ -658,7 +659,7 @@ function renderOrderDetail(order) {
     document.getElementById('detail-customer').textContent = order.customer_name || 'Client anonyme';
     document.getElementById('detail-status').innerHTML = getStatusBadge(order.status);
     document.getElementById('detail-amount').textContent = formatAmount(order.total_amount);
-    document.getElementById('detail-date').textContent = formatDate(order.created_at);
+    document.getElementById('detail-date').textContent = formatDate(order.createdAt);
 
     // Items
     const itemsContainer = document.getElementById('detail-items');
@@ -679,7 +680,7 @@ function renderOrderDetail(order) {
     
     if (order.status === 'confirmed') {
         actionsContainer.innerHTML = `
-            <button class="btn-secondary" onclick="confirmCancelOrder(${order.id})">
+            <button class="btn-secondary" onclick="confirmCancelOrder('${order.id}')">
                 ❌ Annuler la commande
             </button>
         `;
@@ -712,7 +713,7 @@ async function executeCancelOrder(orderId) {
     try {
         const result = await cancelOrder(orderId);
 
-        if (result && result.order) {
+        if (result) {
             showToast('Commande annulée avec succès', 'success');
             
             // Retour à la liste
