@@ -1,4 +1,5 @@
 const OrderService = require('./service');
+const sse = require('../../sse');
 
 class OrderController {
   async getAll(req, res) {
@@ -36,11 +37,21 @@ class OrderController {
   async updateStatus(req, res) {
     try {
       const order = await OrderService.updateStatus(
-        req.restaurantId, 
-        req.params.id, 
+        req.restaurantId,
+        req.params.id,
         req.body.status,
         req.user?.id
       );
+
+      // Émettre l'événement SSE aux clients connectés du restaurant
+      sse.emit(req.restaurantId, 'order_status_changed', {
+        orderId: order.id,
+        orderNumber: order.order_number,
+        status: order.status,
+        tableNumber: order.table_number,
+        customerName: order.customer_name
+      });
+
       res.json({
         message: 'Statut mis à jour',
         order
@@ -50,9 +61,47 @@ class OrderController {
     }
   }
 
+  stream(req, res) {
+    // Headers SSE
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // désactive le buffering nginx
+    res.flushHeaders();
+
+    const restaurantId = req.restaurantId;
+
+    // Enregistrer le client
+    sse.addClient(restaurantId, res);
+
+    // Ping toutes les 25s pour garder la connexion active
+    const keepAlive = setInterval(() => {
+      try {
+        res.write(': ping\n\n');
+      } catch {
+        clearInterval(keepAlive);
+      }
+    }, 25000);
+
+    // Nettoyage à la déconnexion
+    req.on('close', () => {
+      clearInterval(keepAlive);
+      sse.removeClient(restaurantId, res);
+    });
+  }
+
   async cancel(req, res) {
     try {
       const order = await OrderService.cancel(req.restaurantId, req.params.id, req.user?.id);
+
+      sse.emit(req.restaurantId, 'order_status_changed', {
+        orderId: order.id,
+        orderNumber: order.order_number,
+        status: order.status,
+        tableNumber: order.table_number,
+        customerName: order.customer_name
+      });
+
       res.json({
         message: 'Commande annulée',
         order

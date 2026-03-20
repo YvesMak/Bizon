@@ -7,6 +7,9 @@ const tenantIsolation = require('../../middlewares/tenantIsolation');
 
 router.use(auth, tenantIsolation);
 
+// SSE — flux temps réel des changements de statut
+router.get('/stream', OrderController.stream);
+
 // CRUD commandes
 router.get('/', OrderController.getAll);
 router.get('/:id', OrderController.getById);

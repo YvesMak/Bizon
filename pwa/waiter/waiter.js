@@ -174,14 +174,14 @@ async function getCategories() {
 /**
  * Affiche un toast de notification
  */
-function showToast(message, type = 'info') {
+function showToast(message, type = 'info', duration = 3000) {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
     container.appendChild(toast);
 
-    setTimeout(() => toast.remove(), 3000);
+    setTimeout(() => toast.remove(), duration);
 }
 
 /**
@@ -807,11 +807,62 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('modal-cancel').addEventListener('click', closeModal);
     document.getElementById('modal-confirm-btn').addEventListener('click', confirmModal);
 
-    // Auto-refresh toutes les 30s
-    setInterval(() => {
+    // Connexion SSE pour les notifications temps réel
+    initSSE();
+});
+
+// ============================================
+// SSE — TEMPS RÉEL
+// ============================================
+
+let sseSource = null;
+
+function initSSE() {
+    if (!waiterState.token) return;
+
+    // Le token est passé en query param car EventSource ne supporte pas les headers custom
+    const url = `${API_BASE_URL}/orders/stream?token=${encodeURIComponent(waiterState.token)}`;
+    sseSource = new EventSource(url);
+
+    sseSource.addEventListener('order_status_changed', (e) => {
+        const data = JSON.parse(e.data);
+        handleOrderStatusChange(data);
+    });
+
+    sseSource.onerror = () => {
+        // Reconnexion automatique gérée par le browser
+        // Fallback polling si SSE échoue après plusieurs tentatives
+        if (sseSource.readyState === EventSource.CLOSED) {
+            startFallbackPolling();
+        }
+    };
+}
+
+function handleOrderStatusChange(data) {
+    const { orderId, orderNumber, status, tableNumber } = data;
+
+    // Notification pour les commandes "ready" (prêtes à servir)
+    if (status === 'ready') {
+        showToast(`🍽️ Commande ${orderNumber} — Table ${tableNumber} est prête !`, 'success', 6000);
+    } else if (status === 'preparing') {
+        showToast(`👨‍🍳 Commande ${orderNumber} — Table ${tableNumber} en préparation`, 'info', 4000);
+    }
+
+    // Rafraîchir la liste si on est sur la page commandes
+    const activePage = document.querySelector('.page.active');
+    if (activePage && activePage.id === 'page-orders') {
+        loadOrders();
+    }
+}
+
+let fallbackInterval = null;
+
+function startFallbackPolling() {
+    if (fallbackInterval) return; // déjà actif
+    fallbackInterval = setInterval(() => {
         const activePage = document.querySelector('.page.active');
         if (activePage && activePage.id === 'page-orders') {
             loadOrders();
         }
     }, 30000);
-});
+}
