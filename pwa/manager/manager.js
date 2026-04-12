@@ -30,7 +30,7 @@ const mgrState = {
 
 function checkManagerAuth() {
     if (!mgrState.token) {
-        window.location.href = '../index.html';
+        window.location.href = '../staff/login.html';
         return false;
     }
 
@@ -40,7 +40,7 @@ function checkManagerAuth() {
 
         if (payload.role !== 'manager' && payload.role !== 'owner') {
             showToast('Accès refusé : rôle manager ou propriétaire requis', 'error');
-            setTimeout(() => window.location.href = '../index.html', 2000);
+            setTimeout(() => window.location.href = '../staff/login.html', 2000);
             return false;
         }
 
@@ -63,7 +63,7 @@ function checkManagerAuth() {
     } catch (error) {
         console.error('Token invalide:', error);
         localStorage.removeItem('bizon_token');
-        window.location.href = '../index.html';
+        window.location.href = '../staff/login.html';
         return false;
     }
 }
@@ -91,7 +91,7 @@ async function apiCall(endpoint, options = {}) {
                 showToast('Session expirée', 'error');
                 setTimeout(() => {
                     localStorage.removeItem('bizon_token');
-                    window.location.href = '../index.html';
+                    window.location.href = '../staff/login.html';
                 }, 1500);
                 return null;
             }
@@ -943,7 +943,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-logout').addEventListener('click', () => {
         localStorage.removeItem('bizon_token');
         localStorage.removeItem('bizon_restaurant_id');
-        window.location.href = '../index.html';
+        window.location.href = '../staff/login.html';
     });
 
     // Order filters

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bizon — Espace Personnel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+  <meta name="theme-color" content="#C62828">
+  <style>
+    body {
+      background: var(--bg-dark, #1C1917);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      font-family: var(--font);
+    }
+    .staff-login-wrap {
+      width: 100%;
+      max-width: 400px;
+      padding: 2rem;
+    }
+    .staff-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 2.5rem;
+      justify-content: center;
+    }
+    .staff-logo-box {
+      width: 48px;
+      height: 48px;
+      background: var(--primary, #C62828);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .staff-logo-name {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+    .staff-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 2rem;
+    }
+    .staff-title {
+      color: #fff;
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0 0 0.25rem;
+    }
+    .staff-subtitle {
+      color: rgba(255,255,255,0.5);
+      font-size: 0.875rem;
+      margin: 0 0 1.75rem;
+    }
+    .staff-field label {
+      display: block;
+      color: rgba(255,255,255,0.7);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+    .staff-field input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 1rem;
+      font-family: var(--font);
+      outline: none;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+    .staff-field input:focus {
+      border-color: var(--primary, #C62828);
+    }
+    .staff-field input::placeholder { color: rgba(255,255,255,0.25); }
+    .staff-field { margin-bottom: 1rem; }
+    .btn-staff-login {
+      width: 100%;
+      padding: 0.875rem;
+      background: var(--primary, #C62828);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: var(--font);
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: opacity 0.2s;
+    }
+    .btn-staff-login:hover { opacity: 0.9; }
+    .btn-staff-login:disabled { opacity: 0.5; cursor: not-allowed; }
+    .staff-footer {
+      text-align: center;
+      margin-top: 1.5rem;
+      color: rgba(255,255,255,0.4);
+      font-size: 0.8125rem;
+    }
+    .staff-footer a {
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+    }
+    .staff-footer a:hover { color: #fff; }
+    .staff-error {
+      background: rgba(198,40,40,0.15);
+      border: 1px solid rgba(198,40,40,0.4);
+      color: #ef9a9a;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    .staff-error.visible { display: block; }
+    #toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .toast {
+      padding: 0.75rem 1.25rem;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #fff;
+      background: #1C1917;
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    .toast.success { background: #2e7d32; }
+    .toast.error { background: #c62828; }
+  </style>
+</head>
+<body>
+  <div class="staff-login-wrap">
+    <div class="staff-logo">
+      <div class="staff-logo-box">B</div>
+      <span class="staff-logo-name">Bizon</span>
+    </div>
+    <div class="staff-card">
+      <h1 class="staff-title">Espace Personnel</h1>
+      <p class="staff-subtitle">Connectez-vous avec vos identifiants</p>
+      <div class="staff-error" id="staff-error"></div>
+      <form id="form-staff-login">
+        <div class="staff-field">
+          <label>Email</label>
+          <input type="email" id="staff-email" placeholder="votre@email.com" required autocomplete="email">
+        </div>
+        <div class="staff-field">
+          <label>Mot de passe</label>
+          <input type="password" id="staff-password" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn-staff-login" id="btn-staff-login">Se connecter</button>
+      </form>
+    </div>
+    <div class="staff-footer">
+      <a href="../index.html">← Retour au menu client</a>
+    </div>
+  </div>
+  <div id="toast-container"></div>
+  <script>
+    const API = '/api';
+
+    function showError(msg) {
+      const el = document.getElementById('staff-error');
+      el.textContent = msg;
+      el.classList.add('visible');
+    }
+
+    function hideError() {
+      document.getElementById('staff-error').classList.remove('visible');
+    }
+
+    function showToast(msg, type = 'info') {
+      const c = document.getElementById('toast-container');
+      const t = document.createElement('div');
+      t.className = `toast ${type}`;
+      t.textContent = msg;
+      c.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    }
+
+    // Si déjà connecté comme staff, rediriger
+    (function() {
+      const token = localStorage.getItem('bizon_token');
+      if (!token) return;
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const now = Date.now() / 1000;
+        if (payload.exp > now) {
+          if (payload.role === 'waiter') window.location.href = '../waiter/waiter.html';
+          else if (payload.role === 'cashier') window.location.href = '../cashier/cashier.html';
+          else if (payload.role === 'manager' || payload.role === 'owner') window.location.href = '../manager/manager.html';
+        }
+      } catch {}
+    })();
+
+    document.getElementById('form-staff-login').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError();
+      const btn = document.getElementById('btn-staff-login');
+      btn.disabled = true;
+      btn.textContent = 'Connexion...';
+
+      const email = document.getElementById('staff-email').value;
+      const password = document.getElementById('staff-password').value;
+
+      try {
+        const res = await fetch(`${API}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Identifiants incorrects');
+
+        localStorage.setItem('bizon_token', data.token);
+        localStorage.setItem('bizon_restaurant_id', data.user?.restaurant_id || '');
+        showToast('Connexion réussie !', 'success');
+
+        setTimeout(() => {
+          const role = data.user?.role;
+          if (role === 'waiter') window.location.href = '../waiter/waiter.html';
+          else if (role === 'cashier') window.location.href = '../cashier/cashier.html';
+          else window.location.href = '../manager/manager.html';
+        }, 800);
+      } catch (err) {
+        showError(err.message);
+        btn.disabled = false;
+        btn.textContent = 'Se connecter';
+      }
+    });
+  </script>
+</body>
+</html>

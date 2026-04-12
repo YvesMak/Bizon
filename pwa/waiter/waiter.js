@@ -36,7 +36,7 @@ const waiterState = {
  */
 function checkWaiterAuth() {
     if (!waiterState.token) {
-        window.location.href = '../index.html';
+        window.location.href = '../staff/login.html';
         return false;
     }
 
@@ -47,7 +47,7 @@ function checkWaiterAuth() {
 
         if (payload.role !== 'waiter') {
             showToast('Accès refusé : rôle serveur requis', 'error');
-            setTimeout(() => window.location.href = '../index.html', 2000);
+            setTimeout(() => window.location.href = '../staff/login.html', 2000);
             return false;
         }
 
@@ -59,7 +59,7 @@ function checkWaiterAuth() {
     } catch (error) {
         console.error('Token invalide:', error);
         localStorage.removeItem('bizon_token');
-        window.location.href = '../index.html';
+        window.location.href = '../staff/login.html';
         return false;
     }
 }
@@ -91,7 +91,7 @@ async function apiCall(endpoint, options = {}) {
                 showToast('Session expirée', 'error');
                 setTimeout(() => {
                     localStorage.removeItem('bizon_token');
-                    window.location.href = '../index.html';
+                    window.location.href = '../staff/login.html';
                 }, 1500);
                 return null;
             }
@@ -248,7 +248,8 @@ async function loadOrders() {
             throw new Error('Erreur lors du chargement des commandes');
         }
 
-        waiterState.orders = response.orders || (Array.isArray(response) ? response : []);
+        // L'API peut retourner un tableau direct ou un objet { orders: [] }
+        waiterState.orders = Array.isArray(response) ? response : (response.orders || []);
 
         if (waiterState.orders.length === 0) {
             container.innerHTML = `
@@ -261,9 +262,9 @@ async function loadOrders() {
         }
 
         container.innerHTML = waiterState.orders.map(order => `
-            <div class="order-card" onclick="viewOrderDetail('${order.id}')">
+            <div class="order-card" onclick="viewOrderDetail(${order.id})">
                 <div class="order-card-header">
-                    <span class="order-number">${order.order_number || '#' + order.id}</span>
+                    <span class="order-number">#${order.id}</span>
                     ${getStatusBadge(order.status)}
                 </div>
                 <div class="order-card-info">
@@ -276,13 +277,13 @@ async function loadOrders() {
                         </div>
                     ` : ''}
                     <div class="info-item">
-                        <strong>Créée:</strong> ${formatDate(order.createdAt)}
+                        <strong>Créée:</strong> ${formatDate(order.created_at)}
                     </div>
                 </div>
                 <div class="order-card-footer">
                     <span class="order-amount">${formatAmount(order.total_amount)}</span>
                     ${order.status === 'confirmed' ? `
-                        <button class="btn-secondary btn-small" onclick="event.stopPropagation(); confirmCancelOrder('${order.id}')">
+                        <button class="btn-secondary btn-small" onclick="event.stopPropagation(); confirmCancelOrder(${order.id})">
                             Annuler
                         </button>
                     ` : ''}
@@ -635,7 +636,7 @@ async function viewOrderDetail(orderId) {
 
     try {
         const response = await getOrderDetail(orderId);
-        
+
         if (!response) {
             throw new Error('Commande introuvable');
         }
@@ -659,7 +660,7 @@ function renderOrderDetail(order) {
     document.getElementById('detail-customer').textContent = order.customer_name || 'Client anonyme';
     document.getElementById('detail-status').innerHTML = getStatusBadge(order.status);
     document.getElementById('detail-amount').textContent = formatAmount(order.total_amount);
-    document.getElementById('detail-date').textContent = formatDate(order.createdAt);
+    document.getElementById('detail-date').textContent = formatDate(order.created_at);
 
     // Items
     const itemsContainer = document.getElementById('detail-items');
@@ -680,7 +681,7 @@ function renderOrderDetail(order) {
     
     if (order.status === 'confirmed') {
         actionsContainer.innerHTML = `
-            <button class="btn-secondary" onclick="confirmCancelOrder('${order.id}')">
+            <button class="btn-secondary" onclick="confirmCancelOrder(${order.id})">
                 ❌ Annuler la commande
             </button>
         `;
@@ -713,7 +714,7 @@ async function executeCancelOrder(orderId) {
     try {
         const result = await cancelOrder(orderId);
 
-        if (result) {
+        if (result && result.order) {
             showToast('Commande annulée avec succès', 'success');
             
             // Retour à la liste
@@ -779,7 +780,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-logout').addEventListener('click', () => {
         localStorage.removeItem('bizon_token');
         localStorage.removeItem('bizon_restaurant_id');
-        window.location.href = '../index.html';
+        window.location.href = '../staff/login.html';
     });
 
     // Navigation
@@ -820,7 +821,6 @@ let sseSource = null;
 function initSSE() {
     if (!waiterState.token) return;
 
-    // Le token est passé en query param car EventSource ne supporte pas les headers custom
     const url = `${API_BASE_URL}/orders/stream?token=${encodeURIComponent(waiterState.token)}`;
     sseSource = new EventSource(url);
 
@@ -830,8 +830,6 @@ function initSSE() {
     });
 
     sseSource.onerror = () => {
-        // Reconnexion automatique gérée par le browser
-        // Fallback polling si SSE échoue après plusieurs tentatives
         if (sseSource.readyState === EventSource.CLOSED) {
             startFallbackPolling();
         }
@@ -839,16 +837,14 @@ function initSSE() {
 }
 
 function handleOrderStatusChange(data) {
-    const { orderId, orderNumber, status, tableNumber } = data;
+    const { orderNumber, status, tableNumber } = data;
 
-    // Notification pour les commandes "ready" (prêtes à servir)
     if (status === 'ready') {
         showToast(`🍽️ Commande ${orderNumber} — Table ${tableNumber} est prête !`, 'success', 6000);
     } else if (status === 'preparing') {
         showToast(`👨‍🍳 Commande ${orderNumber} — Table ${tableNumber} en préparation`, 'info', 4000);
     }
 
-    // Rafraîchir la liste si on est sur la page commandes
     const activePage = document.querySelector('.page.active');
     if (activePage && activePage.id === 'page-orders') {
         loadOrders();
@@ -858,7 +854,7 @@ function handleOrderStatusChange(data) {
 let fallbackInterval = null;
 
 function startFallbackPolling() {
-    if (fallbackInterval) return; // déjà actif
+    if (fallbackInterval) return;
     fallbackInterval = setInterval(() => {
         const activePage = document.querySelector('.page.active');
         if (activePage && activePage.id === 'page-orders') {

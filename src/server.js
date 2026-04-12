@@ -17,6 +17,8 @@ const paymentRoutes = require('./modules/payments/routes');
 const invoiceRoutes = require('./modules/invoices/routes');
 const subscriptionRoutes = require('./modules/subscriptions/routes');
 const onboardingRoutes = require('./modules/onboarding/routes');
+const publicRoutes = require('./modules/public/routes');
+const customerRoutes = require('./modules/customers/routes');
 
 const path = require('path');
 
@@ -24,9 +26,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middlewares globaux
-app.use(helmet({
-  contentSecurityPolicy: false
-}));
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -51,6 +51,8 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/public', publicRoutes);
+app.use('/api/customers', customerRoutes);
 
 // Route de santé
 app.get('/health', (req, res) => {
