@@ -398,10 +398,41 @@ function fillProfileForm() {
 // LOYALTY
 // ============================================
 
-function renderLoyalty() {
+async function renderLoyalty() {
   if (!state.customer) return;
-  document.getElementById('loyalty-pts').textContent = state.customer.loyalty_points || 0;
   document.getElementById('loyalty-name').textContent = `${state.customer.first_name} ${state.customer.last_name}`;
+  const ptsEl = document.getElementById('loyalty-pts');
+  const histEl = document.getElementById('loyalty-history');
+
+  try {
+    const data = await apiCall('/customers/me/loyalty');
+    ptsEl.textContent = data.points || 0;
+    // garder le solde à jour localement
+    if (state.customer) state.customer.loyalty_points = data.points || 0;
+
+    const txns = data.transactions || [];
+    if (!txns.length) {
+      histEl.innerHTML = `<div class="lh-empty"><span>✨</span>Aucun point pour le moment.<br>Passez une commande pour en gagner !</div>`;
+      return;
+    }
+    const typeLabel = { earn: 'Points gagnés', redeem: 'Points utilisés', adjust: 'Ajustement' };
+    histEl.innerHTML = txns.map(t => {
+      const date = new Date(t.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+      const sign = t.points > 0 ? '+' : '';
+      const cls = t.points >= 0 ? 'earn' : 'redeem';
+      return `
+        <div class="lh-item">
+          <div class="lh-left">
+            <h4>${t.description || typeLabel[t.type] || 'Mouvement'}</h4>
+            <span>${date}</span>
+          </div>
+          <div class="lh-points ${cls}">${sign}${t.points} pts</div>
+        </div>`;
+    }).join('');
+  } catch {
+    ptsEl.textContent = state.customer.loyalty_points || 0;
+    histEl.innerHTML = `<div class="lh-empty">Impossible de charger l'historique.</div>`;
+  }
 }
 
 // ============================================

@@ -1,6 +1,7 @@
 const { Payment, Order, OrderItem } = require('../../models');
 const InvoiceService = require('../invoices/service');
 const OrderService = require('../orders/service');
+const LoyaltyService = require('../loyalty/service');
 const logger = require('../../utils/logger');
 const { createError } = require('../../utils/errorMessages');
 const flutterwave = require('./providers/flutterwave');
@@ -350,6 +351,9 @@ class PaymentService {
           // Commande staff (paiement en fin de parcours) → terminale 'paid'.
           await order.update({ status: 'paid' }, { transaction });
         }
+
+        // 🎁 Fidélité : créditer les points (si la commande est liée à un client)
+        await LoyaltyService.creditForOrder(payment.restaurant_id, order, transaction);
       }
 
       await transaction.commit();

@@ -1,0 +1,81 @@
+const { Customer, LoyaltyTransaction } = require('../../models');
+
+// Règle d'acquisition : 1 point par tranche de 100 FCFA dépensés.
+const FCFA_PER_POINT = 100;
+
+class LoyaltyService {
+  pointsForAmount(amount) {
+    return Math.floor(Number(amount || 0) / FCFA_PER_POINT);
+  }
+
+  /**
+   * Crédite les points de fidélité d'une commande payée.
+   * Idempotent (un seul gain par commande grâce à l'index unique order_id+type).
+   * À appeler DANS la transaction de règlement du paiement.
+   * @returns {Promise<LoyaltyTransaction|null>}
+   */
+  async creditForOrder(restaurantId, order, transaction = null) {
+    if (!order || !order.customer_id) return null;
+
+    const points = this.pointsForAmount(order.total_amount);
+    if (points <= 0) return null;
+
+    // Idempotence : déjà crédité pour cette commande ?
+    const existing = await LoyaltyTransaction.findOne({
+      where: { order_id: order.id, type: 'earn' },
+      transaction
+    });
+    if (existing) return existing;
+
+    try {
+      // Incrément atomique du solde client
+      await Customer.increment('loyalty_points', {
+        by: points,
+        where: { id: order.customer_id },
+        transaction
+      });
+
+      const customer = await Customer.findByPk(order.customer_id, { transaction });
+      const balanceAfter = customer ? customer.loyalty_points : points;
+
+      return await LoyaltyTransaction.create({
+        restaurant_id: restaurantId,
+        customer_id: order.customer_id,
+        order_id: order.id,
+        points,
+        type: 'earn',
+        balance_after: balanceAfter,
+        description: `Commande ${order.order_number || ''}`.trim()
+      }, { transaction });
+    } catch (err) {
+      // Course possible sur l'index unique → on récupère l'existant.
+      if (err.name === 'SequelizeUniqueConstraintError') {
+        return LoyaltyTransaction.findOne({
+          where: { order_id: order.id, type: 'earn' }, transaction
+        });
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Solde + historique des points d'un client.
+   */
+  async getHistory(customerId, restaurantId, limit = 30) {
+    const customer = await Customer.findOne({
+      where: { id: customerId, restaurant_id: restaurantId },
+      attributes: ['id', 'loyalty_points']
+    });
+    if (!customer) throw new Error('Client non trouvé');
+
+    const transactions = await LoyaltyTransaction.findAll({
+      where: { customer_id: customerId, restaurant_id: restaurantId },
+      order: [['created_at', 'DESC']],
+      limit
+    });
+
+    return { points: customer.loyalty_points || 0, transactions };
+  }
+}
+
+module.exports = new LoyaltyService();

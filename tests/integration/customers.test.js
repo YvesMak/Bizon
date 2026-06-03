@@ -27,6 +27,18 @@ describe('Parcours client (customers)', () => {
       expect(res.body.customer.loyalty_points).toBe(0);
     });
 
+    it('accepte une inscription avec un email vide (traité comme absent)', async () => {
+      const res = await request(app)
+        .post('/api/customers/register')
+        .send({
+          restaurantId: restaurant.id,
+          first_name: 'Sans', last_name: 'Email',
+          phone: '+237690777888', email: '', password: 'motdepasse'
+        });
+      expect(res.status).toBe(201);
+      expect(res.body.customer.email).toBeNull();
+    });
+
     it('refuse un téléphone déjà inscrit dans le même restaurant', async () => {
       const payload = {
         restaurantId: restaurant.id,
