@@ -27,5 +27,6 @@ router.get('/me', customerAuth, CustomerController.getProfile.bind(CustomerContr
 router.put('/me', customerAuth, CustomerController.updateProfile.bind(CustomerController));
 router.get('/me/orders', customerAuth, CustomerController.getOrders.bind(CustomerController));
 router.post('/orders', customerAuth, CustomerController.createOrder.bind(CustomerController));
+router.get('/me/loyalty', customerAuth, CustomerController.getLoyalty.bind(CustomerController));
 
 module.exports = router;

@@ -1,6 +1,7 @@
 const CustomerService = require('./service');
 const OrderService = require('../orders/service');
 const PaymentService = require('../payments/service');
+const LoyaltyService = require('../loyalty/service');
 const { Restaurant, Customer } = require('../../models');
 
 class CustomerController {
@@ -80,6 +81,16 @@ class CustomerController {
       res.status(201).json({ order, payment });
     } catch (error) {
       res.status(400).json({ error: error.message });
+    }
+  }
+
+  // GET /api/customers/me/loyalty — solde + historique des points
+  async getLoyalty(req, res) {
+    try {
+      const data = await LoyaltyService.getHistory(req.customerId, req.restaurantId);
+      res.json(data);
+    } catch (error) {
+      res.status(404).json({ error: error.message });
     }
   }
 }

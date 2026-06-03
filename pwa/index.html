@@ -355,6 +355,18 @@
     .voucher-desc { color: var(--text-muted); font-size: 0.875rem; margin: 6px 0 14px; }
     .voucher-code { background: var(--bg-subtle); border-radius: 6px; padding: 5px 14px; font-family: 'Courier New', monospace; font-size: 0.9375rem; font-weight: 700; color: var(--text); display: inline-block; letter-spacing: 0.05em; }
 
+    /* ---- Historique fidélité ---- */
+    .lh-item { display: flex; justify-content: space-between; align-items: center;
+      padding: 0.875rem 1rem; background: var(--bg-surface);
+      border: 1.5px solid var(--border-subtle); border-radius: 12px; margin-bottom: 8px; }
+    .lh-left h4 { font-size: 0.9rem; font-weight: 600; margin: 0 0 2px; color: var(--text); }
+    .lh-left span { font-size: 0.8125rem; color: var(--text-muted); }
+    .lh-points { font-weight: 700; font-size: 1rem; white-space: nowrap; }
+    .lh-points.earn { color: var(--success); }
+    .lh-points.redeem { color: var(--primary); }
+    .lh-empty { text-align: center; color: var(--text-muted); padding: 2rem 0; font-size: 0.9375rem; }
+    .lh-empty span { display: block; font-size: 2rem; margin-bottom: 0.5rem; }
+
     /* ---- Bottom Navigation (mobile) ---- */
     .bottom-nav {
       display: none;
@@ -560,22 +572,16 @@
           <div class="loyalty-points-sub">points accumulés</div>
           <div class="loyalty-card-name" id="loyalty-name"></div>
         </div>
-        <h2 style="font-size:1.0625rem;font-weight:700;margin-bottom:1rem;color:var(--text)">Bons de réduction disponibles</h2>
-        <div class="vouchers-grid">
-          <div class="voucher-card">
-            <div class="voucher-pct">10%</div>
-            <div class="voucher-desc">Sur votre prochaine commande</div>
-            <div class="voucher-code">BIZON10</div>
-          </div>
-          <div class="voucher-card" style="opacity:0.45">
-            <div class="voucher-pct">20%</div>
-            <div class="voucher-desc">À partir de 500 points</div>
-            <div class="voucher-code">500 pts requis</div>
-          </div>
+        <h2 style="font-size:1.0625rem;font-weight:700;margin-bottom:1rem;color:var(--text)">Historique des points</h2>
+        <div id="loyalty-history">
+          <div class="loading"><span>Chargement…</span></div>
         </div>
         <p style="color:var(--text-muted);font-size:0.8125rem;margin-top:1.5rem;line-height:1.6">
-          1 point = 100 FCFA dépensé &nbsp;·&nbsp; Les points sont crédités après validation du paiement
+          1 point gagné par tranche de 100 FCFA dépensés &nbsp;·&nbsp; Les points sont crédités après validation du paiement.
         </p>
+        <div style="margin-top:1.25rem;padding:1rem 1.25rem;background:var(--bg-subtle);border-radius:12px;text-align:center;color:var(--text-muted);font-size:0.875rem">
+          🎁 Bons de réduction : <strong>bientôt disponibles</strong>
+        </div>
       </div>
 
     </main>

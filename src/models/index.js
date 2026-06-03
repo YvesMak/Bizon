@@ -9,6 +9,7 @@ const OrderItem = require('./OrderItem');
 const Payment = require('./Payment');
 const Invoice = require('./Invoice');
 const Subscription = require('./Subscription');
+const LoyaltyTransaction = require('./LoyaltyTransaction');
 
 // Définition des relations
 const initModels = () => {
@@ -68,6 +69,12 @@ const initModels = () => {
   // Subscription relations
   Subscription.belongsTo(Restaurant, { foreignKey: 'restaurant_id', as: 'restaurant' });
 
+  // LoyaltyTransaction relations
+  LoyaltyTransaction.belongsTo(Customer, { foreignKey: 'customer_id', as: 'customer' });
+  LoyaltyTransaction.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
+  LoyaltyTransaction.belongsTo(Restaurant, { foreignKey: 'restaurant_id', as: 'restaurant' });
+  Customer.hasMany(LoyaltyTransaction, { foreignKey: 'customer_id', as: 'loyaltyTransactions' });
+
   if (process.env.NODE_ENV !== 'test') {
     console.log('✅ Relations des modèles initialisées');
   }
@@ -85,5 +92,6 @@ module.exports = {
   Payment,
   Invoice,
   Subscription,
+  LoyaltyTransaction,
   initModels
 };

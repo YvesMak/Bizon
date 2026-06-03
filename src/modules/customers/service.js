@@ -11,7 +11,9 @@ class CustomerService {
   }
 
   async register(restaurantId, data) {
-    const { first_name, last_name, phone, email, password } = data;
+    const { first_name, last_name, phone, password } = data;
+    // Un email vide ('') doit être traité comme absent (sinon échec isEmail).
+    const email = data.email && data.email.trim() ? data.email.trim() : null;
 
     if (email) {
       const existing = await Customer.findOne({ where: { email, restaurant_id: restaurantId } });
@@ -68,7 +70,8 @@ class CustomerService {
   async updateProfile(customerId, data) {
     const customer = await Customer.findByPk(customerId);
     if (!customer) throw new Error('Client non trouvé');
-    const { first_name, last_name, phone, email, address } = data;
+    const { first_name, last_name, phone, address } = data;
+    const email = data.email && data.email.trim() ? data.email.trim() : null;
     await customer.update({ first_name, last_name, phone, email, address });
     const result = customer.toJSON();
     delete result.password_hash;
