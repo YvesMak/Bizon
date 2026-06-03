@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Tests (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20.x', '22.x']
+
+    # Base PostgreSQL éphémère pour les tests d'intégration.
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bizon_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME_TEST: bizon_test
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: ci_test_secret_not_for_production
+      JWT_EXPIRES_IN: 7d
+      INVOICE_STORAGE_PATH: ./storage/invoices
+      MOBILE_MONEY_API_URL: http://localhost/mock
+      MOBILE_MONEY_API_KEY: ci_test_key
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Vérifie que la migration baseline s'applique ET se défait proprement
+      # sur une base vierge (garde-fou contre toute dérive schéma/migration).
+      - name: Verify migrations (up + down)
+        run: |
+          npm run db:migrate:test
+          npx cross-env NODE_ENV=test sequelize-cli db:migrate:undo:all
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-node-${{ matrix.node }}
+          path: coverage/
+          if-no-files-found: ignore
+          retention-days: 7

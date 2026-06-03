@@ -1,9 +1,16 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
+const isTest = process.env.NODE_ENV === 'test';
+
+// En test, on cible une base dédiée et isolée pour ne jamais toucher aux données réelles.
+const dbName = isTest
+  ? (process.env.DB_NAME_TEST || 'bizon_test')
+  : process.env.DB_NAME;
+
 // Configuration de la connexion PostgreSQL
 const sequelize = new Sequelize(
-  process.env.DB_NAME,
+  dbName,
   process.env.DB_USER,
   process.env.DB_PASSWORD,
   {

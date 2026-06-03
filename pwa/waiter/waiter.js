@@ -3,7 +3,7 @@
 // Espace serveur pour gestion des commandes
 // ============================================
 
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = '/api';
 
 // ============================================
 // STATE MANAGEMENT
@@ -36,7 +36,7 @@ const waiterState = {
  */
 function checkWaiterAuth() {
     if (!waiterState.token) {
-        window.location.href = '../index.html';
+        window.location.href = '../staff/login.html';
         return false;
     }
 
@@ -47,7 +47,7 @@ function checkWaiterAuth() {
 
         if (payload.role !== 'waiter') {
             showToast('Accès refusé : rôle serveur requis', 'error');
-            setTimeout(() => window.location.href = '../index.html', 2000);
+            setTimeout(() => window.location.href = '../staff/login.html', 2000);
             return false;
         }
 
@@ -59,7 +59,7 @@ function checkWaiterAuth() {
     } catch (error) {
         console.error('Token invalide:', error);
         localStorage.removeItem('bizon_token');
-        window.location.href = '../index.html';
+        window.location.href = '../staff/login.html';
         return false;
     }
 }
@@ -91,7 +91,7 @@ async function apiCall(endpoint, options = {}) {
                 showToast('Session expirée', 'error');
                 setTimeout(() => {
                     localStorage.removeItem('bizon_token');
-                    window.location.href = '../index.html';
+                    window.location.href = '../staff/login.html';
                 }, 1500);
                 return null;
             }
@@ -174,14 +174,14 @@ async function getCategories() {
 /**
  * Affiche un toast de notification
  */
-function showToast(message, type = 'info') {
+function showToast(message, type = 'info', duration = 3000) {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
     container.appendChild(toast);
 
-    setTimeout(() => toast.remove(), 3000);
+    setTimeout(() => toast.remove(), duration);
 }
 
 /**
@@ -243,12 +243,13 @@ async function loadOrders() {
 
     try {
         const response = await getOrders(waiterState.filters.status);
-        
-        if (!response || !response.orders) {
+
+        if (!response) {
             throw new Error('Erreur lors du chargement des commandes');
         }
 
-        waiterState.orders = response.orders;
+        // L'API peut retourner un tableau direct ou un objet { orders: [] }
+        waiterState.orders = Array.isArray(response) ? response : (response.orders || []);
 
         if (waiterState.orders.length === 0) {
             container.innerHTML = `
@@ -635,13 +636,14 @@ async function viewOrderDetail(orderId) {
 
     try {
         const response = await getOrderDetail(orderId);
-        
-        if (!response || !response.order) {
+
+        if (!response) {
             throw new Error('Commande introuvable');
         }
 
-        waiterState.currentOrderDetail = response.order;
-        renderOrderDetail(response.order);
+        const order = response.order || response;
+        waiterState.currentOrderDetail = order;
+        renderOrderDetail(order);
 
     } catch (error) {
         showToast(error.message, 'error');
@@ -778,7 +780,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-logout').addEventListener('click', () => {
         localStorage.removeItem('bizon_token');
         localStorage.removeItem('bizon_restaurant_id');
-        window.location.href = '../index.html';
+        window.location.href = '../staff/login.html';
     });
 
     // Navigation
@@ -806,11 +808,57 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('modal-cancel').addEventListener('click', closeModal);
     document.getElementById('modal-confirm-btn').addEventListener('click', confirmModal);
 
-    // Auto-refresh toutes les 30s
-    setInterval(() => {
+    // Connexion SSE pour les notifications temps réel
+    initSSE();
+});
+
+// ============================================
+// SSE — TEMPS RÉEL
+// ============================================
+
+let sseSource = null;
+
+function initSSE() {
+    if (!waiterState.token) return;
+
+    const url = `${API_BASE_URL}/orders/stream?token=${encodeURIComponent(waiterState.token)}`;
+    sseSource = new EventSource(url);
+
+    sseSource.addEventListener('order_status_changed', (e) => {
+        const data = JSON.parse(e.data);
+        handleOrderStatusChange(data);
+    });
+
+    sseSource.onerror = () => {
+        if (sseSource.readyState === EventSource.CLOSED) {
+            startFallbackPolling();
+        }
+    };
+}
+
+function handleOrderStatusChange(data) {
+    const { orderNumber, status, tableNumber } = data;
+
+    if (status === 'ready') {
+        showToast(`🍽️ Commande ${orderNumber} — Table ${tableNumber} est prête !`, 'success', 6000);
+    } else if (status === 'preparing') {
+        showToast(`👨‍🍳 Commande ${orderNumber} — Table ${tableNumber} en préparation`, 'info', 4000);
+    }
+
+    const activePage = document.querySelector('.page.active');
+    if (activePage && activePage.id === 'page-orders') {
+        loadOrders();
+    }
+}
+
+let fallbackInterval = null;
+
+function startFallbackPolling() {
+    if (fallbackInterval) return;
+    fallbackInterval = setInterval(() => {
         const activePage = document.querySelector('.page.active');
         if (activePage && activePage.id === 'page-orders') {
             loadOrders();
         }
     }, 30000);
-});
+}

@@ -12,17 +12,12 @@ class InvoiceService {
     const today = new Date();
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0');
+    const prefix = `INV-${year}${month}-`;
 
-    const count = await Invoice.count({
-      where: {
-        restaurant_id: restaurantId,
-        created_at: {
-          [Op.gte]: new Date(today.getFullYear(), today.getMonth(), 1)
-        }
-      }
-    });
+    // Count all invoices globally to avoid unique constraint violations
+    const totalCount = await Invoice.count();
 
-    return `INV-${year}${month}-${String(count + 1).padStart(5, '0')}`;
+    return `${prefix}${String(totalCount + 1).padStart(5, '0')}`;
   }
 
   async getAll(restaurantId, filters = {}) {

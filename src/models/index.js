@@ -68,7 +68,9 @@ const initModels = () => {
   // Subscription relations
   Subscription.belongsTo(Restaurant, { foreignKey: 'restaurant_id', as: 'restaurant' });
 
-  console.log('✅ Relations des modèles initialisées');
+  if (process.env.NODE_ENV !== 'test') {
+    console.log('✅ Relations des modèles initialisées');
+  }
 };
 
 module.exports = {

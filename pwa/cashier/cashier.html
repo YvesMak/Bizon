@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bizon - Espace Caissier</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="cashier.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#C62828">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-circle">B</div>
+                <span class="logo-name">Bizon</span>
+                <span class="role-badge">CAISSIER</span>
+            </div>
+            <nav class="main-nav">
+                <a href="#orders" class="nav-link active" data-page="orders" onclick="navigateTo('orders')">COMMANDES</a>
+                <a href="#invoices" class="nav-link" data-page="invoices" onclick="navigateTo('invoices')">FACTURES</a>
+            </nav>
+            <div class="header-actions">
+                <span class="user-name" id="user-name"></span>
+                <button class="btn-secondary" id="btn-logout">Déconnexion</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container cashier-container">
+        <!-- Page: Liste des commandes -->
+        <div id="page-orders" class="page active">
+            <div class="page-header">
+                <h1>Commandes à encaisser</h1>
+            </div>
+
+            <!-- Filtres -->
+            <div class="filters">
+                <button class="filter-btn active" data-status="ready">Prêtes</button>
+                <button class="filter-btn" data-status="paid">Payées</button>
+                <button class="filter-btn" data-status="all">Toutes</button>
+            </div>
+
+            <!-- Liste des commandes -->
+            <div class="orders-list" id="orders-list">
+                <div class="loading">Chargement des commandes...</div>
+            </div>
+        </div>
+
+        <!-- Page: Paiement -->
+        <div id="page-payment" class="page">
+            <div class="page-header">
+                <button class="btn-back" onclick="backToOrders()">← Retour</button>
+                <h1>Paiement <span id="payment-order-number"></span></h1>
+            </div>
+
+            <div class="payment-layout">
+                <!-- Résumé commande -->
+                <div class="order-recap">
+                    <h3>Récapitulatif commande</h3>
+                    <div class="recap-info">
+                        <div class="info-row">
+                            <span class="label">Table:</span>
+                            <span class="value" id="pay-table"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Client:</span>
+                            <span class="value" id="pay-customer"></span>
+                        </div>
+                    </div>
+                    <div class="recap-items" id="pay-items"></div>
+                    <div class="recap-total">
+                        <span>Total à encaisser</span>
+                        <span class="total-amount" id="pay-total">0 FCFA</span>
+                    </div>
+                </div>
+
+                <!-- Formulaire paiement -->
+                <div class="payment-form">
+                    <h3>Mode de paiement</h3>
+                    <div class="payment-methods">
+                        <button class="method-btn active" data-method="cash" onclick="selectMethod('cash')">
+                            <span class="method-icon">💵</span>
+                            <span>Espèces</span>
+                        </button>
+                        <button class="method-btn" data-method="mobile_money" onclick="selectMethod('mobile_money')">
+                            <span class="method-icon">📱</span>
+                            <span>Mobile Money</span>
+                        </button>
+                        <button class="method-btn" data-method="card" onclick="selectMethod('card')">
+                            <span class="method-icon">💳</span>
+                            <span>Carte</span>
+                        </button>
+                    </div>
+
+                    <!-- Champs Mobile Money -->
+                    <div class="mobile-money-fields" id="mobile-money-fields" style="display: none;">
+                        <div class="form-group">
+                            <label>Numéro de téléphone</label>
+                            <input type="tel" id="phone-number" placeholder="Ex: 77 123 45 67">
+                        </div>
+                        <div class="form-group">
+                            <label>Opérateur</label>
+                            <select id="provider">
+                                <option value="orange_money">Orange Money</option>
+                                <option value="wave">Wave</option>
+                                <option value="free_money">Free Money</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Code de transaction</label>
+                            <input type="text" id="transaction-code" placeholder="Ex: TXN123456">
+                        </div>
+                    </div>
+
+                    <button class="btn-primary btn-block btn-large" id="btn-submit-payment">
+                        Valider le paiement
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page: Vérification Mobile Money -->
+        <div id="page-verify" class="page">
+            <div class="page-header">
+                <button class="btn-back" onclick="backToOrders()">← Retour</button>
+                <h1>Vérification paiement</h1>
+            </div>
+
+            <div class="verify-container">
+                <div class="verify-info">
+                    <div class="info-row">
+                        <span class="label">Commande:</span>
+                        <span class="value" id="verify-order-number"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Montant:</span>
+                        <span class="value" id="verify-amount"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Opérateur:</span>
+                        <span class="value" id="verify-provider"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Téléphone:</span>
+                        <span class="value" id="verify-phone"></span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Code de transaction reçu</label>
+                    <input type="text" id="verify-transaction-code" placeholder="Saisissez le code de transaction (min. 6 caractères)">
+                </div>
+
+                <button class="btn-primary btn-block btn-large" id="btn-verify-payment">
+                    Vérifier le paiement
+                </button>
+            </div>
+        </div>
+
+        <!-- Page: Factures -->
+        <div id="page-invoices" class="page">
+            <div class="page-header">
+                <h1>Factures</h1>
+            </div>
+
+            <div class="invoices-list" id="invoices-list">
+                <div class="loading">Chargement des factures...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container"></div>
+
+    <!-- Modal Confirmation -->
+    <div class="modal" id="modal-confirm">
+        <div class="modal-content">
+            <h3 id="modal-title">Confirmer l'action</h3>
+            <p id="modal-message"></p>
+            <div class="modal-actions">
+                <button class="btn-secondary" id="modal-cancel">Annuler</button>
+                <button class="btn-primary" id="modal-confirm-btn">Confirmer</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="cashier.js"></script>
+</body>
+</html>

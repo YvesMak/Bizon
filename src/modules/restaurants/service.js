@@ -1,5 +1,6 @@
 const { Restaurant, User, Order, Product, Payment, Subscription } = require('../../models');
 const { Op } = require('sequelize');
+const { sequelize } = require('../../config/database');
 
 class RestaurantService {
   /**

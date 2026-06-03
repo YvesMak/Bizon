@@ -67,7 +67,7 @@ npx serve pwa -p 8080
    - Nom restaurant : "Le Bistrot"
    - Prénom/Nom : "Jean Dupont"
    - Email : "jean@bistrot.com"
-   - Téléphone : "+221771234567"
+   - Téléphone : "+237690000000"
    - Mot de passe : (au choix)
    - Template : Restaurant (23 produits pré-créés)
 3. Cliquer "Créer mon restaurant"

@@ -1,6 +1,10 @@
 # Bizon - Plateforme de Gestion de Commandes et Paiements Mobile Money
 
+[![CI](https://github.com/YvesMak/Bizon/actions/workflows/ci.yml/badge.svg)](https://github.com/YvesMak/Bizon/actions/workflows/ci.yml)
+
 Application SaaS multi-tenant pour la gestion des commandes et des paiements Mobile Money dans les restaurants.
+
+> 🧪 Tests & migrations : voir [`docs/TESTING_AND_MIGRATIONS.md`](docs/TESTING_AND_MIGRATIONS.md).
 
 ## 🎯 Vue d'ensemble
 

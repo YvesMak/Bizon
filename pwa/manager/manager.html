@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bizon - Espace Manager</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="manager.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#C62828">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-circle">B</div>
+                <span class="logo-name">Bizon</span>
+                <span class="role-badge" id="role-badge">MANAGER</span>
+            </div>
+            <nav class="main-nav">
+                <a href="#dashboard" class="nav-link active" data-page="dashboard" onclick="navigateTo('dashboard')">TABLEAU DE BORD</a>
+                <a href="#orders" class="nav-link" data-page="orders" onclick="navigateTo('orders')">COMMANDES</a>
+                <a href="#menus" class="nav-link" data-page="menus" onclick="navigateTo('menus')">MENU</a>
+                <a href="#products" class="nav-link" data-page="products" onclick="navigateTo('products')">PRODUITS</a>
+                <a href="#users" class="nav-link" data-page="users" onclick="navigateTo('users')">EQUIPE</a>
+            </nav>
+            <div class="header-actions">
+                <span class="user-name" id="user-name"></span>
+                <button class="btn-secondary" id="btn-logout">Déconnexion</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container manager-container">
+
+        <!-- Page: Tableau de bord -->
+        <div id="page-dashboard" class="page active">
+            <div class="page-header">
+                <h1>Tableau de bord</h1>
+            </div>
+
+            <div class="stats-grid" id="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📦</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="stat-orders-total">-</div>
+                        <div class="stat-label">Commandes totales</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📋</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="stat-orders-today">-</div>
+                        <div class="stat-label">Commandes aujourd'hui</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="stat-revenue-total">-</div>
+                        <div class="stat-label">Chiffre d'affaires total</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📈</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="stat-revenue-today">-</div>
+                        <div class="stat-label">Chiffre d'affaires du jour</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-secondary">
+                <div class="stat-card-sm">
+                    <span class="stat-label">Produits</span>
+                    <span class="stat-value" id="stat-products-total">-</span>
+                </div>
+                <div class="stat-card-sm stat-warning">
+                    <span class="stat-label">Stock bas</span>
+                    <span class="stat-value" id="stat-products-low">-</span>
+                </div>
+                <div class="stat-card-sm">
+                    <span class="stat-label">Utilisateurs actifs</span>
+                    <span class="stat-value" id="stat-users-active">-</span>
+                </div>
+            </div>
+
+            <!-- Owner only: Subscription limits -->
+            <div class="owner-only" id="subscription-section" style="display:none;">
+                <h3>Abonnement</h3>
+                <div class="subscription-info" id="subscription-info">
+                    <div class="loading">Chargement...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page: Commandes -->
+        <div id="page-orders" class="page">
+            <div class="page-header">
+                <h1>Toutes les commandes</h1>
+            </div>
+
+            <div class="filters">
+                <button class="filter-btn active" data-status="all">Toutes</button>
+                <button class="filter-btn" data-status="draft">Brouillon</button>
+                <button class="filter-btn" data-status="confirmed">Confirmées</button>
+                <button class="filter-btn" data-status="preparing">En préparation</button>
+                <button class="filter-btn" data-status="ready">Prêtes</button>
+                <button class="filter-btn" data-status="paid">Payées</button>
+                <button class="filter-btn" data-status="cancelled">Annulées</button>
+            </div>
+
+            <div class="orders-list" id="orders-list">
+                <div class="loading">Chargement des commandes...</div>
+            </div>
+        </div>
+
+        <!-- Page: Détail commande -->
+        <div id="page-order-detail" class="page">
+            <div class="page-header">
+                <button class="btn-back" onclick="navigateTo('orders')">← Retour</button>
+                <h1>Commande <span id="order-number"></span></h1>
+            </div>
+
+            <div class="order-detail-container">
+                <div class="detail-section">
+                    <div class="detail-info">
+                        <div class="info-row">
+                            <span class="label">Table:</span>
+                            <span class="value" id="detail-table"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Client:</span>
+                            <span class="value" id="detail-customer"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Statut:</span>
+                            <span id="detail-status"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Montant:</span>
+                            <span class="value" id="detail-amount"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Créée le:</span>
+                            <span class="value" id="detail-date"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <h3>Produits commandés</h3>
+                    <div class="order-items" id="detail-items"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page: Menus & Catégories -->
+        <div id="page-menus" class="page">
+            <div class="page-header">
+                <h1>Gestion des menus</h1>
+                <button class="btn-primary" onclick="showMenuForm()">+ Nouveau menu</button>
+            </div>
+
+            <div class="menus-list" id="menus-list">
+                <div class="loading">Chargement des menus...</div>
+            </div>
+        </div>
+
+        <!-- Page: Produits -->
+        <div id="page-products" class="page">
+            <div class="page-header">
+                <h1>Gestion des produits</h1>
+                <button class="btn-primary" onclick="showProductForm()">+ Nouveau produit</button>
+            </div>
+
+            <div class="products-list" id="products-list">
+                <div class="loading">Chargement des produits...</div>
+            </div>
+        </div>
+
+        <!-- Page: Equipe -->
+        <div id="page-users" class="page">
+            <div class="page-header">
+                <h1>Gestion de l'équipe</h1>
+                <button class="btn-primary" onclick="showUserForm()">+ Nouvel utilisateur</button>
+            </div>
+
+            <div class="users-list" id="users-list">
+                <div class="loading">Chargement des utilisateurs...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container"></div>
+
+    <!-- Modal Confirmation -->
+    <div class="modal" id="modal-confirm">
+        <div class="modal-content">
+            <h3 id="modal-title">Confirmer l'action</h3>
+            <p id="modal-message"></p>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeModal()">Annuler</button>
+                <button class="btn-primary" onclick="confirmModal()">Confirmer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Formulaire -->
+    <div class="modal" id="modal-form">
+        <div class="modal-content modal-form-content">
+            <div class="modal-form-header">
+                <h3 id="form-title">Formulaire</h3>
+                <button class="btn-close" onclick="closeFormModal()">&times;</button>
+            </div>
+            <div id="form-body">
+                <!-- Contenu dynamique -->
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeFormModal()">Annuler</button>
+                <button class="btn-primary" id="form-submit-btn" onclick="submitForm()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="manager.js"></script>
+</body>
+</html>

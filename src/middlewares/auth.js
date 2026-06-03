@@ -7,8 +7,8 @@ const { User } = require('../models');
  */
 const auth = async (req, res, next) => {
   try {
-    // Récupération du token depuis le header Authorization
-    const token = req.headers.authorization?.split(' ')[1];
+    // Récupération du token depuis le header Authorization ou query param (pour SSE)
+    const token = req.headers.authorization?.split(' ')[1] || req.query.token;
 
     if (!token) {
       return res.status(401).json({ error: 'Token d\'authentification manquant' });

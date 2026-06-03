@@ -75,14 +75,20 @@ class PaymentService {
 
     // Si paiement cash ou card, générer immédiatement la facture
     if (method !== 'mobile_money') {
-      await InvoiceService.generate(restaurantId, order_id);
-      
-      // Mettre à jour le statut de la commande si pas déjà completed
-      if (order.status !== 'completed') {
-        await order.update({ 
-          status: 'completed',
-          completed_at: new Date()
-        });
+      try {
+        await InvoiceService.generate(restaurantId, order_id);
+      } catch (invoiceError) {
+        console.error('Erreur génération facture:', invoiceError);
+      }
+
+      // Mettre à jour le statut de la commande
+      try {
+        await Order.update(
+          { status: 'paid' },
+          { where: { id: order_id, restaurant_id: restaurantId } }
+        );
+      } catch (updateError) {
+        console.error('Erreur mise à jour statut commande:', updateError);
       }
     }
 
@@ -159,10 +165,9 @@ class PaymentService {
 
       // Mise à jour du statut de la commande
       const order = payment.order;
-      if (order.status !== 'completed') {
+      if (order.status !== 'paid') {
         await order.update({
-          status: 'completed',
-          completed_at: new Date()
+          status: 'paid'
         }, { transaction });
       }
 
