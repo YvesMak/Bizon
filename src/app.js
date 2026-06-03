@@ -17,6 +17,7 @@ const subscriptionRoutes = require('./modules/subscriptions/routes');
 const onboardingRoutes = require('./modules/onboarding/routes');
 const publicRoutes = require('./modules/public/routes');
 const customerRoutes = require('./modules/customers/routes');
+const paymentWebhookRoutes = require('./modules/payments/webhook.routes');
 
 const { errorTranslationMiddleware } = require('./utils/errorTranslator');
 
@@ -30,6 +31,11 @@ app.use(express.urlencoded({ extended: true }));
 
 // Servir les fichiers statiques PWA
 app.use(express.static(path.join(__dirname, '..', 'pwa')));
+
+// Webhooks paiement — PUBLICS, montés AVANT le rate-limiter
+// (les webhooks proviennent d'un nombre réduit d'IP Flutterwave qui seraient
+//  sinon rapidement limitées). Sécurité : signature + revérification serveur.
+app.use('/api/payments/webhook', paymentWebhookRoutes);
 
 // Rate limiting (désactivé en environnement de test pour éviter les faux négatifs)
 if (process.env.NODE_ENV !== 'test') {

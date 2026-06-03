@@ -1,5 +1,7 @@
 const CustomerService = require('./service');
-const { Restaurant } = require('../../models');
+const OrderService = require('../orders/service');
+const PaymentService = require('../payments/service');
+const { Restaurant, Customer } = require('../../models');
 
 class CustomerController {
   // Résout le restaurantId depuis query param ou premier restaurant actif
@@ -55,6 +57,29 @@ class CustomerController {
       res.json(orders);
     } catch (error) {
       res.status(500).json({ error: error.message });
+    }
+  }
+
+  // POST /api/customers/orders — crée la commande ET initie le paiement (immédiat)
+  async createOrder(req, res) {
+    try {
+      const order = await OrderService.createForCustomer(
+        req.restaurantId, req.customerId, req.body
+      );
+
+      const customer = await Customer.findByPk(req.customerId);
+      const payment = await PaymentService.initiateFlutterwave(req.restaurantId, {
+        order_id: order.id,
+        customer: {
+          email: customer.email,
+          phone: customer.phone,
+          name: `${customer.first_name} ${customer.last_name}`.trim()
+        }
+      });
+
+      res.status(201).json({ order, payment });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
     }
   }
 }

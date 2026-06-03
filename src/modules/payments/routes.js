@@ -6,7 +6,11 @@ const tenantIsolation = require('../../middlewares/tenantIsolation');
 
 router.use(auth, tenantIsolation);
 
-// Création et vérification de paiement
+// Flutterwave : initiation + suivi de statut
+router.post('/initiate', PaymentController.initiate);
+router.get('/:id/status', PaymentController.status);
+
+// Création et vérification de paiement (cash / manuel)
 router.post('/', PaymentController.create);
 router.post('/:id/verify', PaymentController.verify);
 router.get('/order/:orderId', PaymentController.getByOrder);

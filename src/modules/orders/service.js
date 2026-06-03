@@ -320,6 +320,135 @@ class OrderService {
   }
 
   /**
+   * Décrémente le stock des produits d'une commande de façon atomique
+   * (protection contre les races). Réutilisé par updateStatus (draft→confirmed)
+   * et par le règlement d'un paiement client (Flutterwave).
+   * @param {{items: Array}} order - commande avec ses `items` chargés
+   */
+  async decrementStockForOrder(order, transaction) {
+    for (const item of order.items) {
+      const product = await Product.findByPk(item.product_id, { transaction });
+      if (!product) {
+        throw new Error(`Produit ${item.product_id} non trouvé`);
+      }
+      if (product.track_stock) {
+        const [updatedRows] = await sequelize.query(
+          `UPDATE products
+           SET stock_quantity = stock_quantity - :quantity, updated_at = NOW()
+           WHERE id = :productId
+           AND stock_quantity >= :quantity
+           AND track_stock = true`,
+          {
+            replacements: { productId: product.id, quantity: item.quantity },
+            transaction,
+            type: sequelize.QueryTypes.UPDATE
+          }
+        );
+        if (updatedRows === 0) {
+          throw new Error(
+            `Stock insuffisant pour "${product.name}". ` +
+            `Commande annulée, rechargez la liste des produits.`
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * =================================================================
+   * CRÉATION COMMANDE CLIENT (self-service)
+   * =================================================================
+   * Commande passée par le client lui-même (sans staff → user_id null).
+   * Créée en DRAFT, stock NON engagé : il le sera au règlement du paiement.
+   * Types supportés : dine_in (table), takeaway, delivery (adresse).
+   */
+  async createForCustomer(restaurantId, customerId, data) {
+    const transaction = await sequelize.transaction();
+    try {
+      const { type = 'dine_in', table_number, delivery_address, items, notes } = data;
+
+      if (!['dine_in', 'takeaway', 'delivery'].includes(type)) {
+        throw new Error('Type de commande invalide');
+      }
+      if (!items || items.length === 0) {
+        throw new Error('La commande doit contenir au moins un produit');
+      }
+      if (type === 'dine_in' && !table_number) {
+        throw new Error('Le numéro de table est obligatoire (sur place)');
+      }
+      if (type === 'delivery' && !delivery_address) {
+        throw new Error('L\'adresse de livraison est obligatoire');
+      }
+
+      const customer = await Customer.findOne({
+        where: { id: customerId, restaurant_id: restaurantId }, transaction
+      });
+      if (!customer) throw new Error('Client non trouvé');
+
+      const orderNumber = await this.generateOrderNumber(restaurantId);
+
+      let subtotal = 0;
+      const validatedItems = [];
+      for (const item of items) {
+        const product = await Product.findOne({
+          where: { id: item.product_id, restaurant_id: restaurantId }, transaction
+        });
+        if (!product) throw new Error(`Produit ${item.product_id} non trouvé`);
+        if (!product.is_available) throw new Error(`Le produit "${product.name}" n'est pas disponible`);
+        if (product.track_stock && product.stock_quantity < item.quantity) {
+          throw new Error(`Stock insuffisant pour "${product.name}"`);
+        }
+        const itemSubtotal = parseFloat(product.price) * item.quantity;
+        subtotal += itemSubtotal;
+        validatedItems.push({
+          product_id: product.id, product_name: product.name,
+          quantity: item.quantity, unit_price: product.price,
+          subtotal: itemSubtotal, notes: item.notes
+        });
+      }
+
+      const taxAmount = subtotal * 0.18;
+      const totalAmount = subtotal + taxAmount;
+
+      const order = await Order.create({
+        restaurant_id: restaurantId,
+        customer_id: customerId,
+        user_id: null,
+        order_number: orderNumber,
+        type,
+        status: 'draft',
+        table_number: type === 'dine_in' ? table_number : null,
+        delivery_address: type === 'delivery' ? delivery_address : null,
+        customer_name: `${customer.first_name} ${customer.last_name}`.trim(),
+        subtotal,
+        tax_amount: taxAmount,
+        discount_amount: 0,
+        total_amount: totalAmount,
+        notes
+      }, { transaction });
+
+      for (const item of validatedItems) {
+        await OrderItem.create({ order_id: order.id, ...item }, { transaction });
+      }
+
+      await transaction.commit();
+      return {
+        id: order.id,
+        order_number: orderNumber,
+        status: 'draft',
+        type: order.type,
+        delivery_address: order.delivery_address,
+        table_number: order.table_number,
+        total_amount: totalAmount,
+        created_at: order.created_at
+      };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  }
+
+  /**
    * =================================================================
    * MISE À JOUR STATUT - DÉCLENCHE LA GESTION DU STOCK
    * =================================================================
@@ -354,54 +483,7 @@ class OrderService {
       // 🎯 GESTION DU STOCK : DÉCRÉMENTATION AU PASSAGE À CONFIRMED
       // =================================================================
       if (order.status === 'draft' && newStatus === 'confirmed') {
-        // logger.info('ORDER_CONFIRMING', JSON.stringify({
-        //   restaurant_id: restaurantId,
-        //   order_id: orderId,
-        //   items_count: order.items.length
-        // }));
-
-        // Décrémentation atomique avec protection race condition
-        for (const item of order.items) {
-          const product = await Product.findByPk(item.product_id, { transaction });
-
-          if (!product) {
-            throw new Error(`Produit ${item.product_id} non trouvé`);
-          }
-
-          if (product.track_stock) {
-            // UPDATE atomique avec vérification stock dans la query
-            const [updatedRows] = await sequelize.query(
-              `UPDATE products 
-               SET stock_quantity = stock_quantity - :quantity, updated_at = NOW() 
-               WHERE id = :productId 
-               AND stock_quantity >= :quantity 
-               AND track_stock = true`,
-              {
-                replacements: { 
-                  productId: product.id, 
-                  quantity: item.quantity 
-                },
-                transaction,
-                type: sequelize.QueryTypes.UPDATE
-              }
-            );
-
-            if (updatedRows === 0) {
-              throw new Error(
-                `Stock insuffisant pour "${product.name}". ` +
-                `Commande annulée, rechargez la liste des produits.`
-              );
-            }
-
-            // logger.info('STOCK_DECREMENTED', JSON.stringify({
-            //   restaurant_id: restaurantId,
-            //   order_id: orderId,
-            //   product_id: product.id,
-            //   product_name: product.name,
-            //   quantity: item.quantity
-            // }));
-          }
-        }
+        await this.decrementStockForOrder(order, transaction);
       }
 
       // Mise à jour du statut
