@@ -100,3 +100,22 @@ npm run db:migrate
 
 > ⚠️ Ne plus utiliser `sequelize.sync({ alter: true })` ni les `ALTER TABLE`
 > manuels en production : toute évolution de schéma passe par une migration.
+
+---
+
+## 🤖 Intégration continue (GitHub Actions)
+
+Workflow : `.github/workflows/ci.yml`. Déclenché à chaque `push` (toutes branches)
+et sur les `pull_request` vers `main`.
+
+Pour chaque version de Node (**20.x** et **22.x**) :
+
+1. Démarre un service **PostgreSQL 15** éphémère (base `bizon_test`).
+2. `npm ci` — installation reproductible depuis `package-lock.json`.
+3. **Vérifie les migrations** : `db:migrate` puis `db:migrate:undo:all`
+   (garde-fou : la baseline doit s'appliquer **et** se défaire proprement).
+4. `npm run test:coverage` — les 68 tests + rapport de couverture.
+5. Publie la couverture en artefact téléchargeable.
+
+Les variables d'environnement (DB, JWT…) sont injectées par le workflow ; aucun
+`.env.test` n'est nécessaire en CI (il reste git-ignoré).
