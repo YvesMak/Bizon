@@ -2,6 +2,7 @@
 const {
   Restaurant, User, Customer, Menu, Category, Product
 } = require('../../src/models');
+const authService = require('../../src/modules/auth/service');
 
 let counter = 0;
 const uniq = (prefix) => `${prefix}-${Date.now()}-${counter++}`;
@@ -69,9 +70,21 @@ async function createFullMenu(restaurantId, { productPrice = 2000 } = {}) {
   return { menu, category, product };
 }
 
+// Inscrit un owner via le service d'auth réel → renvoie token + entités.
+async function registerOwner(overrides = {}) {
+  return authService.register({
+    name: overrides.name || uniq('Resto'),
+    email: overrides.email || `${uniq('owner')}@test.cm`,
+    password: overrides.password || 'password123',
+    phone: '+237690000000',
+    address: 'Douala'
+  });
+}
+
 module.exports = {
   createRestaurant,
   createUser,
   createCustomer,
-  createFullMenu
+  createFullMenu,
+  registerOwner
 };

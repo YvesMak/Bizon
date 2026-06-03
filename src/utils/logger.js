@@ -67,7 +67,9 @@ const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: customFormat,
   transports,
-  exitOnError: false
+  exitOnError: false,
+  // En test : pas de bruit console ni d'écriture de fichiers de log.
+  silent: process.env.NODE_ENV === 'test'
 });
 
 /**
@@ -130,11 +132,10 @@ logger.critical = function(event, details) {
   });
 };
 
-/**
- * Compatibilité logger.info générique
- */
-logger.log = function(level, message, meta = {}) {
-  this[level](message, meta);
-};
+// NB : ne PAS surcharger `logger.log`. Winston expose déjà
+// `logger.log(level, message, meta)` ; le redéfinir pour appeler
+// `this[level](...)` provoque une récursion infinie (les méthodes de niveau
+// de winston appellent `this.log(...)` en interne) → "Maximum call stack size
+// exceeded" dès qu'une erreur est journalisée (ex. échec de paiement).
 
 module.exports = logger;
