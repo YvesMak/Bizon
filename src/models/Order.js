@@ -25,7 +25,7 @@ const Order = sequelize.define('Order', {
   },
   user_id: {
     type: DataTypes.UUID,
-    allowNull: false,
+    allowNull: true, // null = commande passée par le client lui-même (self-service)
     references: {
       model: 'users',
       key: 'id'
@@ -37,8 +37,13 @@ const Order = sequelize.define('Order', {
     unique: true
   },
   type: {
-    type: DataTypes.ENUM('dine_in', 'takeaway'),
+    type: DataTypes.ENUM('dine_in', 'takeaway', 'delivery'),
     defaultValue: 'dine_in'
+  },
+  delivery_address: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'Adresse de livraison (type = delivery)'
   },
   status: {
     type: DataTypes.ENUM('draft', 'confirmed', 'preparing', 'ready', 'paid', 'cancelled'),

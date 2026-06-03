@@ -10,7 +10,8 @@ const state = {
   allProducts: [], // tous les produits chargés
   currentCategory: null,
   menus: [],
-  cart: JSON.parse(localStorage.getItem('bizon_cart') || '[]')
+  cart: JSON.parse(localStorage.getItem('bizon_cart') || '[]'),
+  orderType: 'dine_in'
 };
 
 // ============================================
@@ -282,6 +283,20 @@ function changeQty(index, delta) {
   renderCartPanel();
 }
 
+function selectOrderType(type, btn) {
+  state.orderType = type;
+  document.querySelectorAll('.otype').forEach(b => b.classList.toggle('active', b === btn));
+  // Champ conditionnel : table (sur place) / adresse (livraison)
+  const tableInput = document.getElementById('order-table');
+  const addressInput = document.getElementById('order-address');
+  tableInput.style.display = type === 'dine_in' ? '' : 'none';
+  addressInput.style.display = type === 'delivery' ? '' : 'none';
+  // Pré-remplir l'adresse depuis le profil si disponible
+  if (type === 'delivery' && !addressInput.value && state.customer?.address) {
+    addressInput.value = state.customer.address;
+  }
+}
+
 // ============================================
 // AUTH CLIENT
 // ============================================
@@ -480,20 +495,43 @@ document.getElementById('btn-checkout').addEventListener('click', async () => {
     return;
   }
   if (!state.cart.length) return;
+
+  // Construire le corps selon le type de commande
+  const body = {
+    type: state.orderType,
+    items: state.cart.map(i => ({ product_id: i.id, quantity: i.quantity }))
+  };
+  if (state.orderType === 'dine_in') {
+    const table = document.getElementById('order-table').value.trim();
+    if (!table) { showToast('Indiquez le numéro de table', 'error'); return; }
+    body.table_number = table;
+  } else if (state.orderType === 'delivery') {
+    const address = document.getElementById('order-address').value.trim();
+    if (!address) { showToast('Indiquez l\'adresse de livraison', 'error'); return; }
+    body.delivery_address = address;
+  }
+
+  const btn = document.getElementById('btn-checkout');
+  btn.disabled = true;
+  btn.textContent = 'Redirection vers le paiement…';
   try {
-    const orderData = {
-      type: 'dine_in',
-      table_number: 1,
-      items: state.cart.map(i => ({ product_id: i.id, quantity: i.quantity, unit_price: i.price }))
-    };
-    await apiCall('/orders', { method: 'POST', body: JSON.stringify(orderData) });
+    const { payment } = await apiCall('/customers/orders', {
+      method: 'POST', body: JSON.stringify(body)
+    });
+    // Vider le panier puis rediriger vers la page de paiement Flutterwave
     state.cart = [];
     saveCart();
     updateCartBadge();
-    closeCart();
-    showToast('Commande envoyée ! 🎉', 'success');
+    if (payment?.link) {
+      window.location.href = payment.link;
+    } else {
+      closeCart();
+      showToast('Commande créée, mais le paiement n\'a pas pu démarrer.', 'error');
+    }
   } catch (err) {
     showToast(err.message, 'error');
+    btn.disabled = false;
+    btn.textContent = 'Commander & payer';
   }
 });
 

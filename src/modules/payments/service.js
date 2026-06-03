@@ -1,5 +1,6 @@
-const { Payment, Order } = require('../../models');
+const { Payment, Order, OrderItem } = require('../../models');
 const InvoiceService = require('../invoices/service');
+const OrderService = require('../orders/service');
 const logger = require('../../utils/logger');
 const { createError } = require('../../utils/errorMessages');
 const flutterwave = require('./providers/flutterwave');
@@ -336,8 +337,19 @@ class PaymentService {
 
       await InvoiceService.generate(payment.restaurant_id, payment.order_id, transaction);
 
-      if (payment.order && payment.order.status !== 'paid') {
-        await payment.order.update({ status: 'paid' }, { transaction });
+      const order = payment.order;
+      if (order) {
+        // Commande client en self-service (pas de staff) payée d'avance :
+        // le paiement vaut confirmation → on engage le stock et on l'envoie en
+        // cuisine ('confirmed'). Le paiement est attesté par le Payment completed.
+        if (!order.user_id && order.status === 'draft') {
+          const items = await OrderItem.findAll({ where: { order_id: order.id }, transaction });
+          await OrderService.decrementStockForOrder({ items }, transaction);
+          await order.update({ status: 'confirmed' }, { transaction });
+        } else if (order.status !== 'paid') {
+          // Commande staff (paiement en fin de parcours) → terminale 'paid'.
+          await order.update({ status: 'paid' }, { transaction });
+        }
       }
 
       await transaction.commit();

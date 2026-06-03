@@ -254,6 +254,25 @@
     }
     .empty-cart-msg span { display: block; font-size: 2.5rem; margin-bottom: 0.5rem; }
 
+    /* ---- Type de commande ---- */
+    .order-type-select { display: flex; gap: 6px; margin-bottom: 0.75rem; }
+    .otype {
+      flex: 1; padding: 0.5rem 0.25rem; border-radius: 10px;
+      border: 1.5px solid var(--border); background: var(--bg-surface);
+      color: var(--text-muted); font-family: inherit; font-size: 0.8125rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .otype:hover { border-color: var(--primary); color: var(--primary); }
+    .otype.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .order-type-field { margin-bottom: 1rem; }
+    .order-type-field input {
+      width: 100%; padding: 0.7rem 0.9rem; border: 1.5px solid var(--border);
+      border-radius: 10px; font-family: inherit; font-size: 0.9375rem;
+      background: var(--bg-surface); color: var(--text); outline: none; box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+    .order-type-field input:focus { border-color: var(--primary); }
+
     /* ---- Forms ---- */
     .form-page-wrap {
       min-height: calc(100dvh - 140px);
@@ -572,11 +591,21 @@
       </div>
       <div class="cart-items" id="cart-items-list"></div>
       <div class="cart-footer">
+        <!-- Type de commande -->
+        <div class="order-type-select" id="order-type-select">
+          <button type="button" class="otype active" data-type="dine_in" onclick="selectOrderType('dine_in', this)">Sur place</button>
+          <button type="button" class="otype" data-type="takeaway" onclick="selectOrderType('takeaway', this)">À emporter</button>
+          <button type="button" class="otype" data-type="delivery" onclick="selectOrderType('delivery', this)">Livraison</button>
+        </div>
+        <div class="order-type-field">
+          <input type="text" id="order-table" placeholder="Numéro de table" inputmode="numeric">
+          <input type="text" id="order-address" placeholder="Adresse de livraison" style="display:none">
+        </div>
         <div class="cart-total-row">
           <span class="cart-total-label">Total</span>
           <span class="cart-total-amount" id="cart-total-amount">0 FCFA</span>
         </div>
-        <button class="btn-order" id="btn-checkout">Commander</button>
+        <button class="btn-order" id="btn-checkout">Commander &amp; payer</button>
       </div>
     </div>
   </div>
