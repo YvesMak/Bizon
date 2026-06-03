@@ -11,122 +11,374 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#C62828">
   <style>
-    /* ---- Layout ---- */
-    .app-layout { display: flex; min-height: calc(100vh - 64px); }
-    .sidebar { width: 220px; flex-shrink: 0; padding: 1.5rem 1rem; border-right: 1px solid var(--border); background: var(--surface); position: sticky; top: 64px; height: calc(100vh - 64px); overflow-y: auto; }
-    .main-content { flex: 1; padding: 2rem; max-width: 900px; }
+    /* ============================================================
+       CUSTOMER APP — styles spécifiques (surcharge de styles.css)
+       ============================================================ */
+
+    /* ---- Layout principal ---- */
+    .app-layout { display: flex; min-height: calc(100dvh - 64px); }
+    .sidebar-cats {
+      width: 200px; flex-shrink: 0; padding: 1.5rem 1rem;
+      border-right: 1px solid var(--border);
+      background: var(--bg-surface);
+      position: sticky; top: 64px;
+      height: calc(100dvh - 64px); overflow-y: auto;
+    }
+    .main-content { flex: 1; padding: 2rem; overflow-x: hidden; }
     .page { display: none; }
-    .page.active { display: block; }
+    .page.active { display: block; animation: fadeSlideUp 0.25s var(--ease) both; }
 
-    /* ---- Sidebar ---- */
-    .sidebar-section { margin-bottom: 1.5rem; }
-    .sidebar-section-title { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-light); padding: 0 8px; margin-bottom: 6px; }
-    .sidebar-link { display: block; padding: 8px 10px; border-radius: 8px; color: var(--text-secondary); font-size: 0.875rem; text-decoration: none; cursor: pointer; transition: background 0.15s; }
-    .sidebar-link:hover, .sidebar-link.active { background: var(--bg-subtle); color: var(--text); font-weight: 500; }
+    /* ---- Catégories sidebar ---- */
+    .cat-sidebar-link {
+      display: block; padding: 8px 12px; border-radius: 8px;
+      color: var(--text-muted); font-size: 0.875rem; font-weight: 500;
+      cursor: pointer; transition: all 0.15s; margin-bottom: 2px;
+      text-decoration: none; border-left: 3px solid transparent;
+    }
+    .cat-sidebar-link:hover { background: var(--bg-subtle); color: var(--text); }
+    .cat-sidebar-link.active {
+      background: rgba(198,40,40,0.08);
+      color: var(--primary); font-weight: 600;
+      border-left-color: var(--primary);
+    }
 
-    /* ---- Category Nav (mobile) ---- */
-    .category-pills { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 1.5rem; scrollbar-width: none; }
+    /* ---- Category pills (mobile) ---- */
+    .category-pills {
+      display: flex; gap: 8px; overflow-x: auto;
+      padding-bottom: 4px; margin-bottom: 1.5rem;
+      scrollbar-width: none; -ms-overflow-style: none;
+    }
     .category-pills::-webkit-scrollbar { display: none; }
-    .cat-pill { padding: 6px 16px; border-radius: 100px; border: 1.5px solid var(--border); background: var(--surface); color: var(--text-secondary); font-size: 0.8125rem; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
+    .cat-pill {
+      padding: 6px 16px; border-radius: 100px;
+      border: 1.5px solid var(--border);
+      background: var(--bg-surface);
+      color: var(--text-muted); font-size: 0.8125rem; font-weight: 500;
+      cursor: pointer; white-space: nowrap;
+      transition: all 0.15s; flex-shrink: 0;
+    }
+    .cat-pill:hover { border-color: var(--primary); color: var(--primary); }
     .cat-pill.active { background: var(--primary); border-color: var(--primary); color: #fff; }
 
     /* ---- Products Grid ---- */
-    .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
-    .product-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; cursor: pointer; transition: all 0.2s; }
-    .product-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: var(--primary-light, #ef9a9a); }
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+    .product-card {
+      background: var(--bg-surface);
+      border: 1.5px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      overflow: hidden; cursor: pointer;
+      transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), border-color 0.2s;
+      display: flex; flex-direction: column;
+    }
+    .product-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+      border-color: rgba(198,40,40,0.25);
+    }
     .product-card:active { transform: scale(0.98); }
-    .product-img { width: 100%; height: 140px; object-fit: cover; background: var(--bg-subtle); }
-    .product-body { padding: 0.875rem; }
+
+    .product-img-wrap {
+      width: 100%; height: 140px;
+      background: var(--bg-subtle);
+      position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .product-img-wrap img {
+      width: 100%; height: 100%; object-fit: cover;
+      position: absolute; inset: 0;
+    }
+    .product-img-placeholder {
+      font-size: 2.5rem; opacity: 0.3; user-select: none;
+    }
+    .product-body { padding: 0.875rem; flex: 1; display: flex; flex-direction: column; }
     .product-name { font-weight: 600; font-size: 0.9375rem; color: var(--text); margin-bottom: 4px; }
-    .product-desc { font-size: 0.8rem; color: var(--text-light); line-height: 1.4; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .product-footer { display: flex; justify-content: space-between; align-items: center; }
-    .product-price { font-weight: 700; color: var(--primary); font-size: 0.9375rem; }
-    .btn-add { width: 32px; height: 32px; border-radius: 50%; background: var(--primary); color: #fff; border: none; font-size: 1.25rem; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
-    .btn-add:hover { transform: scale(1.1); }
+    .product-desc {
+      font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 8px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+      flex: 1;
+    }
+    .product-footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; gap: 8px; }
+    .product-price { font-weight: 700; color: var(--primary); font-size: 0.9375rem; white-space: nowrap; flex: 1; }
+    .btn-add {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: var(--primary); color: #fff; border: none;
+      font-size: 1.375rem; line-height: 1; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.15s, box-shadow 0.15s; flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(198,40,40,0.3);
+    }
+    .btn-add:hover { transform: scale(1.12); box-shadow: 0 4px 14px rgba(198,40,40,0.4); }
+    .btn-add:active { transform: scale(0.95); }
 
-    /* ---- Menu unavailable ---- */
+    /* ---- Menu section title ---- */
+    .menu-section-title {
+      font-size: 1.25rem; font-weight: 700; color: var(--text);
+      margin-bottom: 1.25rem; padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--border);
+    }
+
+    /* ---- Menu indisponible ---- */
     .menu-unavailable { text-align: center; padding: 5rem 2rem; }
-    .menu-unavailable .unavail-emoji { font-size: 4rem; margin-bottom: 1rem; }
-    .menu-unavailable h2 { font-size: 1.5rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem; }
-    .menu-unavailable p { color: var(--text-secondary); font-size: 1rem; }
+    .menu-unavailable .unavail-icon { font-size: 3.5rem; margin-bottom: 1rem; }
+    .menu-unavailable h2 { font-size: 1.375rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem; }
+    .menu-unavailable p { color: var(--text-muted); font-size: 0.9375rem; max-width: 340px; margin: 0 auto; }
 
-    /* ---- Cart Fab ---- */
-    .cart-fab { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--primary); color: #fff; border: none; border-radius: 100px; padding: 0.875rem 1.5rem; font-size: 1rem; font-weight: 600; font-family: var(--font); cursor: pointer; box-shadow: 0 4px 24px rgba(198,40,40,0.35); display: flex; align-items: center; gap: 10px; z-index: 100; transition: all 0.2s; }
-    .cart-fab:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(198,40,40,0.45); }
+    /* ---- Cart FAB ---- */
+    .cart-fab {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      background: var(--primary); color: #fff; border: none;
+      border-radius: 100px; padding: 0.875rem 1.375rem;
+      font-size: 0.9375rem; font-weight: 600; font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 4px 24px rgba(198,40,40,0.4);
+      display: flex; align-items: center; gap: 10px;
+      z-index: 100; transition: all 0.2s var(--ease);
+    }
+    .cart-fab:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(198,40,40,0.5); }
+    .cart-fab:active { transform: scale(0.97); }
     .cart-fab.hidden { display: none; }
-    .cart-badge { background: #fff; color: var(--primary); border-radius: 100px; padding: 2px 8px; font-size: 0.8125rem; font-weight: 700; }
+    .cart-badge {
+      background: rgba(255,255,255,0.25); color: #fff;
+      border-radius: 100px; padding: 2px 9px;
+      font-size: 0.8125rem; font-weight: 700;
+      border: 1.5px solid rgba(255,255,255,0.4);
+    }
+
+    /* ---- Cart Button in header ---- */
+    .btn-cart {
+      background: rgba(255,255,255,0.10);
+      border: 1.5px solid rgba(255,255,255,0.15);
+      border-radius: var(--radius-full);
+      color: var(--text-inverse);
+      padding: 0.5rem 0.875rem;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+      font-family: inherit; font-size: 0.8125rem; font-weight: 600;
+      transition: all 0.2s; position: relative;
+      min-height: 38px;
+    }
+    .btn-cart:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.3); }
+    .btn-cart .cart-count {
+      position: static; width: auto; height: auto;
+      background: var(--primary); color: #fff;
+      border-radius: 100px; padding: 1px 7px;
+      font-size: 11px; font-weight: 700;
+      border: 2px solid transparent;
+      display: none;
+    }
+    .btn-cart .cart-count.visible { display: inline-flex; align-items: center; }
+
+    /* ---- Header user button ---- */
+    .header-user-btn {
+      background: rgba(255,255,255,0.10);
+      border: 1.5px solid rgba(255,255,255,0.15);
+      border-radius: 100px; padding: 6px 14px 6px 10px;
+      font-size: 0.8125rem; font-weight: 500; cursor: pointer;
+      color: var(--text-inverse);
+      display: flex; align-items: center; gap: 7px;
+      transition: all 0.2s;
+    }
+    .header-user-btn:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.3); }
+    .header-user-avatar {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--primary); color: #fff;
+      font-size: 0.6875rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
 
     /* ---- Cart Panel ---- */
     .cart-sheet { position: fixed; inset: 0; z-index: 200; display: none; }
     .cart-sheet.open { display: flex; }
-    .cart-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.4); }
-    .cart-panel { position: absolute; right: 0; top: 0; bottom: 0; width: 100%; max-width: 440px; background: var(--surface); display: flex; flex-direction: column; box-shadow: -4px 0 40px rgba(0,0,0,0.15); }
-    .cart-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .cart-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(2px); }
+    .cart-panel {
+      position: absolute; right: 0; top: 0; bottom: 0;
+      width: min(440px, 100%);
+      background: var(--bg-surface);
+      display: flex; flex-direction: column;
+      box-shadow: -8px 0 48px rgba(0,0,0,0.18);
+    }
+    .cart-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
     .cart-header h2 { font-size: 1.125rem; font-weight: 700; margin: 0; }
-    .btn-close-cart { background: var(--bg-subtle); border: none; border-radius: 50%; width: 36px; height: 36px; font-size: 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-    .cart-items { flex: 1; overflow-y: auto; padding: 1rem 1.5rem; }
-    .cart-item { display: flex; gap: 12px; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
-    .cart-item-img { width: 52px; height: 52px; border-radius: 8px; object-fit: cover; background: var(--bg-subtle); flex-shrink: 0; }
-    .cart-item-info { flex: 1; }
-    .cart-item-name { font-weight: 600; font-size: 0.9rem; color: var(--text); }
-    .cart-item-price { font-size: 0.8125rem; color: var(--text-secondary); }
-    .cart-qty { display: flex; align-items: center; gap: 8px; }
-    .qty-btn { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--border); background: var(--surface); cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
-    .qty-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .btn-close-cart {
+      background: var(--bg-subtle); border: none; border-radius: 50%;
+      width: 36px; height: 36px; font-size: 1rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted); transition: all 0.15s;
+    }
+    .btn-close-cart:hover { background: var(--border); color: var(--text); }
+    .cart-items { flex: 1; overflow-y: auto; padding: 0.75rem 1.5rem; }
+    .cart-item {
+      display: flex; gap: 12px; align-items: center;
+      padding: 0.75rem 0; border-bottom: 1px solid var(--border-subtle);
+    }
+    .cart-item:last-child { border-bottom: none; }
+    .cart-item-img {
+      width: 52px; height: 52px; border-radius: 10px;
+      object-fit: cover; background: var(--bg-subtle); flex-shrink: 0;
+    }
+    .cart-item-info { flex: 1; min-width: 0; }
+    .cart-item-name { font-weight: 600; font-size: 0.9rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cart-item-price { font-size: 0.8125rem; color: var(--text-muted); margin-top: 2px; }
+    .cart-qty { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .qty-btn {
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 1.5px solid var(--border); background: var(--bg-surface);
+      cursor: pointer; font-size: 1rem; font-family: inherit;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s; color: var(--text);
+    }
+    .qty-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(198,40,40,0.06); }
     .cart-footer { padding: 1.25rem 1.5rem; border-top: 1px solid var(--border); }
-    .cart-total-row { display: flex; justify-content: space-between; margin-bottom: 1rem; }
+    .cart-total-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem; }
     .cart-total-label { font-weight: 600; color: var(--text); }
-    .cart-total-amount { font-weight: 700; font-size: 1.125rem; color: var(--primary); }
-    .btn-order { width: 100%; padding: 0.875rem; background: var(--primary); color: #fff; border: none; border-radius: 12px; font-size: 1rem; font-weight: 600; font-family: var(--font); cursor: pointer; }
-    .empty-cart-msg { text-align: center; color: var(--text-light); padding: 3rem 0; }
+    .cart-total-amount { font-weight: 700; font-size: 1.25rem; color: var(--primary); }
+    .btn-order {
+      width: 100%; padding: 0.9rem; background: var(--primary);
+      color: #fff; border: none; border-radius: var(--radius-lg);
+      font-size: 1rem; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-order:hover { background: var(--primary-hover); transform: translateY(-1px); }
+    .btn-order:active { transform: scale(0.98); }
+    .empty-cart-msg {
+      text-align: center; color: var(--text-muted);
+      padding: 3rem 0; font-size: 0.9375rem;
+    }
+    .empty-cart-msg span { display: block; font-size: 2.5rem; margin-bottom: 0.5rem; }
 
     /* ---- Forms ---- */
-    .form-wrap { max-width: 480px; margin: 0 auto; }
-    .form-wrap h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.25rem; }
-    .form-wrap .form-sub { color: var(--text-secondary); margin-bottom: 2rem; }
+    .form-page-wrap {
+      min-height: calc(100dvh - 140px);
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 2.5rem 1rem;
+    }
+    .form-wrap { width: 100%; max-width: 460px; }
+    .form-wrap h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.25rem; color: var(--text); }
+    .form-sub { color: var(--text-muted); margin-bottom: 2rem; font-size: 0.9375rem; }
     .form-group { margin-bottom: 1rem; }
-    .form-group label { display: block; font-size: 0.8125rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
-    .form-group input { width: 100%; padding: 0.75rem 1rem; border: 1.5px solid var(--border); border-radius: 10px; font-size: 1rem; font-family: var(--font); background: var(--surface); color: var(--text); box-sizing: border-box; outline: none; transition: border-color 0.2s; }
-    .form-group input:focus { border-color: var(--primary); }
+    .form-group label { display: block; font-size: 0.8125rem; font-weight: 600; color: var(--text); margin-bottom: 6px; letter-spacing: 0.01em; }
+    .form-group input {
+      width: 100%; padding: 0.75rem 1rem;
+      border: 1.5px solid var(--border); border-radius: var(--radius-md);
+      font-size: 0.9375rem; font-family: inherit;
+      background: var(--bg-surface); color: var(--text);
+      box-sizing: border-box; outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-group input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+    .form-group input::placeholder { color: var(--text-muted); }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .form-footer-link { text-align: center; margin-top: 1.25rem; font-size: 0.875rem; color: var(--text-secondary); }
+    .form-footer-link { text-align: center; margin-top: 1.25rem; font-size: 0.875rem; color: var(--text-muted); }
     .form-footer-link a { color: var(--primary); text-decoration: none; font-weight: 600; }
+    .form-footer-link a:hover { text-decoration: underline; }
+    .btn-primary-full {
+      width: 100%; margin-top: 0.5rem; padding: 0.875rem;
+      background: var(--primary); color: #fff; border: none;
+      border-radius: var(--radius-lg); font-size: 1rem; font-weight: 600;
+      font-family: inherit; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-primary-full:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: var(--shadow-primary); }
+    .btn-primary-full:active { transform: scale(0.98); }
+    .btn-primary-full:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
-    /* ---- Orders List ---- */
-    .order-history-item { background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    /* ---- Orders ---- */
+    .page-heading { font-size: 1.625rem; font-weight: 700; margin-bottom: 1.5rem; color: var(--text); }
+    .order-history-item {
+      background: var(--bg-surface); border: 1.5px solid var(--border-subtle);
+      border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 10px;
+      display: flex; justify-content: space-between; align-items: center;
+      transition: border-color 0.15s;
+    }
+    .order-history-item:hover { border-color: var(--border); }
     .oh-left h4 { font-size: 0.9375rem; font-weight: 600; margin: 0 0 4px; color: var(--text); }
-    .oh-left span { font-size: 0.8125rem; color: var(--text-secondary); }
+    .oh-left span { font-size: 0.8125rem; color: var(--text-muted); }
     .oh-right { text-align: right; }
-    .oh-amount { font-weight: 700; color: var(--primary); font-size: 1rem; }
+    .oh-amount { font-weight: 700; color: var(--primary); font-size: 1rem; white-space: nowrap; }
     .oh-status { font-size: 0.75rem; padding: 3px 10px; border-radius: 100px; font-weight: 600; margin-top: 4px; display: inline-block; }
-    .status-paid { background: var(--success-bg, #e8f5e9); color: var(--success, #2e7d32); }
-    .status-cancelled { background: var(--error-bg, #ffebee); color: var(--error, #c62828); }
-    .status-ready { background: #fff3e0; color: #e65100; }
-    .status-preparing { background: #e3f2fd; color: #1565c0; }
-    .status-confirmed { background: #f3e5f5; color: #6a1b9a; }
+    .status-paid { background: #f0fdf4; color: #15803d; }
+    .status-cancelled { background: var(--error-bg); color: var(--error-text); }
+    .status-ready { background: #fff7ed; color: #c2410c; }
+    .status-preparing { background: #eff6ff; color: #1d4ed8; }
+    .status-confirmed { background: #fdf4ff; color: #7e22ce; }
+    .status-draft { background: var(--bg-subtle); color: var(--text-muted); }
 
     /* ---- Loyalty ---- */
-    .loyalty-card { background: linear-gradient(135deg, var(--primary) 0%, #EF5350 100%); border-radius: 20px; padding: 1.75rem 2rem; color: #fff; margin-bottom: 2rem; position: relative; overflow: hidden; }
-    .loyalty-card::before { content: ''; position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: rgba(255,255,255,0.08); border-radius: 50%; }
-    .loyalty-points-label { font-size: 0.8125rem; font-weight: 500; opacity: 0.8; margin-bottom: 4px; }
-    .loyalty-points-value { font-size: 3rem; font-weight: 800; line-height: 1; }
-    .loyalty-points-sub { font-size: 0.875rem; opacity: 0.7; margin-top: 4px; }
-    .loyalty-card-name { position: absolute; bottom: 1.5rem; right: 1.75rem; font-size: 0.875rem; opacity: 0.7; }
-    .vouchers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }
-    .voucher-card { border: 2px dashed var(--border); border-radius: 12px; padding: 1.25rem; text-align: center; }
-    .voucher-pct { font-size: 2rem; font-weight: 800; color: var(--primary); }
-    .voucher-desc { color: var(--text-secondary); font-size: 0.875rem; margin: 4px 0 12px; }
-    .voucher-code { background: var(--bg-subtle); border-radius: 6px; padding: 4px 12px; font-family: monospace; font-size: 0.875rem; font-weight: 700; color: var(--text); display: inline-block; }
+    .loyalty-card {
+      background: linear-gradient(135deg, #B71C1C 0%, var(--primary) 50%, #EF5350 100%);
+      border-radius: 20px; padding: 2rem 2rem; color: #fff;
+      margin-bottom: 2rem; position: relative; overflow: hidden;
+    }
+    .loyalty-card::before {
+      content: ''; position: absolute;
+      top: -50px; right: -50px; width: 180px; height: 180px;
+      background: rgba(255,255,255,0.07); border-radius: 50%;
+    }
+    .loyalty-card::after {
+      content: ''; position: absolute;
+      bottom: -30px; left: -30px; width: 120px; height: 120px;
+      background: rgba(255,255,255,0.05); border-radius: 50%;
+    }
+    .loyalty-points-label { font-size: 0.8125rem; font-weight: 500; opacity: 0.8; margin-bottom: 4px; letter-spacing: 0.04em; text-transform: uppercase; }
+    .loyalty-points-value { font-size: 3.5rem; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
+    .loyalty-points-sub { font-size: 0.875rem; opacity: 0.7; margin-top: 6px; }
+    .loyalty-card-name { position: absolute; bottom: 1.5rem; right: 1.75rem; font-size: 0.875rem; opacity: 0.6; font-weight: 500; }
+    .vouchers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+    .voucher-card { border: 2px dashed var(--border); border-radius: var(--radius-lg); padding: 1.5rem; text-align: center; background: var(--bg-surface); }
+    .voucher-pct { font-size: 2.25rem; font-weight: 800; color: var(--primary); line-height: 1; }
+    .voucher-desc { color: var(--text-muted); font-size: 0.875rem; margin: 6px 0 14px; }
+    .voucher-code { background: var(--bg-subtle); border-radius: 6px; padding: 5px 14px; font-family: 'Courier New', monospace; font-size: 0.9375rem; font-weight: 700; color: var(--text); display: inline-block; letter-spacing: 0.05em; }
 
-    /* ---- Header tweaks ---- */
-    .header-user-btn { background: var(--bg-subtle); border: 1.5px solid var(--border); border-radius: 100px; padding: 6px 14px; font-size: 0.875rem; font-weight: 500; cursor: pointer; color: var(--text); display: flex; align-items: center; gap: 6px; }
-    .header-user-btn:hover { border-color: var(--primary); }
+    /* ---- Bottom Navigation (mobile) ---- */
+    .bottom-nav {
+      display: none;
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--bg-dark);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      z-index: 150;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .bnav-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      padding: 0.5rem 0.25rem 0.375rem;
+      color: rgba(250,250,249,0.45);
+      background: none; border: none; cursor: pointer;
+      font-family: inherit; font-size: 0.625rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      transition: color 0.2s; gap: 3px;
+    }
+    .bnav-item:hover { color: rgba(250,250,249,0.75); }
+    .bnav-item.active { color: #fff; }
+    .bnav-item.active .bnav-icon-wrap { background: rgba(198,40,40,0.2); border-radius: 10px; }
+    .bnav-icon-wrap { padding: 4px 12px; margin-bottom: 1px; transition: background 0.2s; border-radius: 10px; }
 
-    /* Responsive */
+    /* ---- Responsive mobile ---- */
     @media (max-width: 768px) {
-      .sidebar { display: none; }
-      .main-content { padding: 1rem; }
+      .main-nav { display: none !important; }
+      /* Sur mobile, cacher les boutons Connexion/S'inscrire — la bottom nav gère la nav */
+      #header-auth-zone { display: none !important; }
+      .bottom-nav { display: flex; }
+      .main-content { padding: 1rem 1rem calc(5.5rem + env(safe-area-inset-bottom)); }
+      .cart-fab { bottom: calc(5rem + env(safe-area-inset-bottom)); right: 1rem; }
+      /* Cart panel ne doit pas aller sous la bottom nav */
+      .cart-panel { bottom: calc(63px + env(safe-area-inset-bottom)); }
+      .sidebar-cats { display: none; }
+      .products-grid { grid-template-columns: 1fr; }
       .form-row { grid-template-columns: 1fr; }
+      .form-page-wrap { padding: 1.5rem 0.5rem; align-items: flex-start; }
+      #toast-container { bottom: calc(5.5rem + env(safe-area-inset-bottom)); right: 0.75rem; left: 0.75rem; }
+      .toast { max-width: 100%; }
+    }
+
+    @media (min-width: 769px) {
+      .bottom-nav { display: none !important; }
     }
   </style>
 </head>
@@ -138,17 +390,21 @@
         <div class="logo-circle">B</div>
         <span class="logo-name">Bizon</span>
       </div>
-      <nav class="main-nav">
-        <a class="nav-link active" id="nav-menu" onclick="showSection('menu')">MENU</a>
-        <a class="nav-link" id="nav-orders" onclick="requireAuth(() => showSection('orders'))">MES COMMANDES</a>
-        <a class="nav-link" id="nav-loyalty" onclick="requireAuth(() => showSection('loyalty'))">MES AVANTAGES</a>
+      <nav class="main-nav" aria-label="Navigation principale">
+        <a class="nav-link active" id="nav-menu" onclick="showSection('menu')" href="#">MENU</a>
+        <a class="nav-link" id="nav-orders" onclick="requireAuth(() => showSection('orders'))" href="#">COMMANDES</a>
+        <a class="nav-link" id="nav-loyalty" onclick="requireAuth(() => showSection('loyalty'))" href="#">AVANTAGES</a>
       </nav>
       <div class="header-actions">
-        <div id="header-auth-zone">
-          <!-- Injecté par JS -->
-        </div>
-        <button class="btn-icon" id="btn-cart-open">
-          🛒 <span class="cart-count" id="cart-count">0</span>
+        <div id="header-auth-zone"><!-- injecté par JS --></div>
+        <button class="btn-cart" id="btn-cart-open" aria-label="Voir le panier">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <path d="M16 10a4 4 0 01-8 0"/>
+          </svg>
+          <span>Panier</span>
+          <span class="cart-count" id="cart-count">0</span>
         </button>
       </div>
     </div>
@@ -156,8 +412,8 @@
 
   <!-- Layout -->
   <div class="app-layout">
-    <!-- Sidebar (catégories) -->
-    <aside class="sidebar" id="sidebar" style="display:none">
+    <!-- Sidebar catégories (desktop) -->
+    <aside class="sidebar-cats" id="sidebar-cats" style="display:none">
       <div id="sidebar-categories"></div>
     </aside>
 
@@ -168,112 +424,139 @@
       <div id="page-menu" class="page active">
         <!-- Unavailable state -->
         <div class="menu-unavailable" id="menu-unavailable" style="display:none">
-          <div class="unavail-emoji">🍽️</div>
+          <div class="unavail-icon">🍽️</div>
           <h2>Menu bientôt disponible</h2>
-          <p>Notre équipe prépare quelque chose de délicieux. Revenez bientôt !</p>
+          <p>Notre équipe prépare quelque chose de délicieux pour vous. Revenez bientôt !</p>
         </div>
         <!-- Loading -->
-        <div id="menu-loading" style="text-align:center;padding:4rem;color:var(--text-light)">
-          Chargement du menu…
+        <div id="menu-loading" class="loading" style="min-height:40vh">
+          <span>Chargement du menu…</span>
         </div>
         <!-- Menu content -->
         <div id="menu-content" style="display:none">
           <div class="category-pills" id="category-pills"></div>
-          <div id="menu-section-title" style="font-size:1.375rem;font-weight:700;margin-bottom:1.25rem;color:var(--text)"></div>
+          <div class="menu-section-title" id="menu-section-title"></div>
           <div class="products-grid" id="products-grid"></div>
         </div>
       </div>
 
       <!-- Page: Login -->
       <div id="page-login" class="page">
-        <div class="form-wrap">
-          <h1>Bon retour !</h1>
-          <p class="form-sub">Connectez-vous à votre compte client</p>
-          <form id="form-login">
-            <div class="form-group">
-              <label>Email ou téléphone</label>
-              <input type="text" id="login-identifier" placeholder="email ou +237…" required>
+        <div class="form-page-wrap">
+          <div class="form-wrap">
+            <h1>Bon retour !</h1>
+            <p class="form-sub">Connectez-vous à votre compte client</p>
+            <form id="form-login">
+              <div class="form-group">
+                <label>Email ou téléphone</label>
+                <input type="text" id="login-identifier" placeholder="email ou +237 6XX XXX XXX" required autocomplete="username">
+              </div>
+              <div class="form-group">
+                <label>Mot de passe</label>
+                <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+              </div>
+              <button type="submit" class="btn-primary-full" id="btn-login">Se connecter</button>
+            </form>
+            <div class="form-footer-link">
+              Pas encore de compte ? <a href="#" onclick="event.preventDefault();showSection('register')">Créer un compte</a>
             </div>
-            <div class="form-group">
-              <label>Mot de passe</label>
-              <input type="password" id="login-password" placeholder="••••••••" required>
-            </div>
-            <button type="submit" class="btn-primary btn-block" id="btn-login">Se connecter</button>
-          </form>
-          <div class="form-footer-link">
-            Pas encore de compte ? <a href="#" onclick="showSection('register')">Créer un compte</a>
           </div>
         </div>
       </div>
 
       <!-- Page: Register -->
       <div id="page-register" class="page">
-        <div class="form-wrap">
-          <h1>Créer un compte</h1>
-          <p class="form-sub">Rejoignez le programme fidélité Bizon</p>
-          <form id="form-register">
-            <div class="form-row">
-              <div class="form-group"><label>Prénom</label><input type="text" id="reg-firstname" required></div>
-              <div class="form-group"><label>Nom</label><input type="text" id="reg-lastname" required></div>
+        <div class="form-page-wrap">
+          <div class="form-wrap">
+            <h1>Créer un compte</h1>
+            <p class="form-sub">Rejoignez le programme fidélité Bizon</p>
+            <form id="form-register">
+              <div class="form-row">
+                <div class="form-group"><label>Prénom</label><input type="text" id="reg-firstname" placeholder="Jean" required autocomplete="given-name"></div>
+                <div class="form-group"><label>Nom</label><input type="text" id="reg-lastname" placeholder="Dupont" required autocomplete="family-name"></div>
+              </div>
+              <div class="form-group">
+                <label>Téléphone <span style="color:var(--primary)">*</span></label>
+                <input type="tel" id="reg-phone" placeholder="+237 6XX XXX XXX" required autocomplete="tel">
+              </div>
+              <div class="form-group">
+                <label>Email <span style="color:var(--text-muted);font-weight:400">(optionnel)</span></label>
+                <input type="email" id="reg-email" placeholder="votre@email.com" autocomplete="email">
+              </div>
+              <div class="form-group">
+                <label>Mot de passe</label>
+                <input type="password" id="reg-password" placeholder="Minimum 6 caractères" required autocomplete="new-password">
+              </div>
+              <button type="submit" class="btn-primary-full" id="btn-register">Créer mon compte</button>
+            </form>
+            <div class="form-footer-link">
+              Déjà inscrit ? <a href="#" onclick="event.preventDefault();showSection('login')">Se connecter</a>
             </div>
-            <div class="form-group"><label>Téléphone *</label><input type="tel" id="reg-phone" placeholder="+237690000000" required></div>
-            <div class="form-group"><label>Email (optionnel)</label><input type="email" id="reg-email" placeholder="votre@email.com"></div>
-            <div class="form-group"><label>Mot de passe</label><input type="password" id="reg-password" placeholder="Min. 6 caractères" required></div>
-            <button type="submit" class="btn-primary btn-block" id="btn-register">Créer mon compte</button>
-          </form>
-          <div class="form-footer-link">
-            Déjà inscrit ? <a href="#" onclick="showSection('login')">Se connecter</a>
           </div>
         </div>
       </div>
 
-      <!-- Page: Profil / Livraison -->
+      <!-- Page: Profil -->
       <div id="page-profile" class="page">
-        <div class="form-wrap">
-          <h1>Mon profil</h1>
-          <p class="form-sub">Gérez vos informations personnelles et de livraison</p>
-          <form id="form-profile">
-            <div class="form-row">
-              <div class="form-group"><label>Prénom</label><input type="text" id="prof-firstname"></div>
-              <div class="form-group"><label>Nom</label><input type="text" id="prof-lastname"></div>
+        <div class="form-page-wrap">
+          <div class="form-wrap">
+            <h1>Mon profil</h1>
+            <p class="form-sub">Gérez vos informations et adresse de livraison</p>
+            <form id="form-profile">
+              <div class="form-row">
+                <div class="form-group"><label>Prénom</label><input type="text" id="prof-firstname" autocomplete="given-name"></div>
+                <div class="form-group"><label>Nom</label><input type="text" id="prof-lastname" autocomplete="family-name"></div>
+              </div>
+              <div class="form-group"><label>Téléphone</label><input type="tel" id="prof-phone" autocomplete="tel"></div>
+              <div class="form-group"><label>Email</label><input type="email" id="prof-email" autocomplete="email"></div>
+              <div class="form-group">
+                <label>Adresse de livraison</label>
+                <input type="text" id="prof-address" placeholder="Votre adresse complète" autocomplete="street-address">
+              </div>
+              <button type="submit" class="btn-primary-full" id="btn-save-profile">Enregistrer les modifications</button>
+            </form>
+            <div style="text-align:center;margin-top:1.5rem">
+              <button onclick="logout()" style="background:none;border:none;color:var(--error);font-size:0.875rem;cursor:pointer;font-family:inherit;font-weight:500">
+                Déconnexion
+              </button>
             </div>
-            <div class="form-group"><label>Téléphone</label><input type="tel" id="prof-phone"></div>
-            <div class="form-group"><label>Email</label><input type="email" id="prof-email"></div>
-            <div class="form-group"><label>Adresse de livraison</label><input type="text" id="prof-address" placeholder="Votre adresse complète"></div>
-            <button type="submit" class="btn-primary" id="btn-save-profile">Enregistrer</button>
-          </form>
+          </div>
         </div>
       </div>
 
       <!-- Page: Mes commandes -->
       <div id="page-orders" class="page">
-        <h1 style="font-size:1.75rem;font-weight:700;margin-bottom:1.5rem">Mes commandes</h1>
-        <div id="orders-list"><div style="text-align:center;color:var(--text-light);padding:3rem">Chargement…</div></div>
+        <h1 class="page-heading">Mes commandes</h1>
+        <div id="orders-list">
+          <div class="loading"><span>Chargement…</span></div>
+        </div>
       </div>
 
       <!-- Page: Fidélité & Avantages -->
       <div id="page-loyalty" class="page">
-        <h1 style="font-size:1.75rem;font-weight:700;margin-bottom:1.5rem">Mes avantages</h1>
+        <h1 class="page-heading">Mes avantages</h1>
         <div class="loyalty-card">
           <div class="loyalty-points-label">Points fidélité</div>
           <div class="loyalty-points-value" id="loyalty-pts">0</div>
           <div class="loyalty-points-sub">points accumulés</div>
           <div class="loyalty-card-name" id="loyalty-name"></div>
         </div>
-        <h2 style="font-size:1.125rem;font-weight:700;margin-bottom:1rem">Bons de réduction disponibles</h2>
+        <h2 style="font-size:1.0625rem;font-weight:700;margin-bottom:1rem;color:var(--text)">Bons de réduction disponibles</h2>
         <div class="vouchers-grid">
           <div class="voucher-card">
             <div class="voucher-pct">10%</div>
             <div class="voucher-desc">Sur votre prochaine commande</div>
             <div class="voucher-code">BIZON10</div>
           </div>
-          <div class="voucher-card" style="opacity:0.5">
+          <div class="voucher-card" style="opacity:0.45">
             <div class="voucher-pct">20%</div>
             <div class="voucher-desc">À partir de 500 points</div>
             <div class="voucher-code">500 pts requis</div>
           </div>
         </div>
-        <p style="color:var(--text-light);font-size:0.875rem;margin-top:1.5rem">1 point = 100 FCFA dépensé · Les points sont crédités après paiement</p>
+        <p style="color:var(--text-muted);font-size:0.8125rem;margin-top:1.5rem;line-height:1.6">
+          1 point = 100 FCFA dépensé &nbsp;·&nbsp; Les points sont crédités après validation du paiement
+        </p>
       </div>
 
     </main>
@@ -299,12 +582,54 @@
   </div>
 
   <!-- Cart FAB -->
-  <button class="cart-fab hidden" id="cart-fab" onclick="openCart()">
-    🛒 Panier · <span class="cart-badge" id="cart-fab-count">0</span>
+  <button class="cart-fab hidden" id="cart-fab" onclick="openCart()" aria-label="Ouvrir le panier">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <path d="M16 10a4 4 0 01-8 0"/>
+    </svg>
+    Panier
+    <span class="cart-badge" id="cart-fab-count">0</span>
   </button>
 
+  <!-- Bottom Navigation (mobile) -->
+  <nav class="bottom-nav" id="bottom-nav" aria-label="Navigation">
+    <button class="bnav-item active" id="bnav-menu" onclick="showSection('menu')">
+      <span class="bnav-icon-wrap">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      </span>
+      <span class="bnav-label">Menu</span>
+    </button>
+    <button class="bnav-item" id="bnav-orders" onclick="requireAuth(() => showSection('orders'))">
+      <span class="bnav-icon-wrap">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+        </svg>
+      </span>
+      <span class="bnav-label">Commandes</span>
+    </button>
+    <button class="bnav-item" id="bnav-loyalty" onclick="requireAuth(() => showSection('loyalty'))">
+      <span class="bnav-icon-wrap">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+      </span>
+      <span class="bnav-label">Avantages</span>
+    </button>
+    <button class="bnav-item" id="bnav-profile" onclick="state.customer ? showSection('profile') : showSection('login')">
+      <span class="bnav-icon-wrap">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+      </span>
+      <span class="bnav-label" id="bnav-profile-label">Connexion</span>
+    </button>
+  </nav>
+
   <!-- Toast -->
-  <div id="toast-container"></div>
+  <div id="toast-container" aria-live="polite"></div>
 
   <script src="app.js"></script>
 </body>

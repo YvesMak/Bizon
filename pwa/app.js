@@ -19,12 +19,24 @@ const state = {
 
 function showSection(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById(`page-${name}`).classList.add('active');
+  const page = document.getElementById(`page-${name}`);
+  if (page) page.classList.add('active');
 
-  // Mettre à jour la nav
+  // Sync nav links (desktop)
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
   const navMap = { menu: 'nav-menu', orders: 'nav-orders', loyalty: 'nav-loyalty' };
   if (navMap[name]) document.getElementById(navMap[name])?.classList.add('active');
+
+  // Sync bottom nav (mobile)
+  document.querySelectorAll('.bnav-item').forEach(b => b.classList.remove('active'));
+  const bnavMap = {
+    menu: 'bnav-menu', orders: 'bnav-orders', loyalty: 'bnav-loyalty',
+    login: 'bnav-profile', register: 'bnav-profile', profile: 'bnav-profile'
+  };
+  if (bnavMap[name]) document.getElementById(bnavMap[name])?.classList.add('active');
+
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 
   // Actions spécifiques
   if (name === 'orders') loadOrders();
@@ -47,19 +59,23 @@ function requireAuth(callback) {
 function renderAuthZone() {
   const zone = document.getElementById('header-auth-zone');
   if (state.customer) {
+    const initials = ((state.customer.first_name || '?')[0] + (state.customer.last_name || '')[0]).toUpperCase();
     zone.innerHTML = `
       <button class="header-user-btn" onclick="showSection('profile')">
-        👤 ${state.customer.first_name}
-      </button>
-      <button class="btn-secondary" onclick="logout()" style="margin-left:8px;font-size:0.8125rem;padding:6px 12px">
-        Déconnexion
+        <span class="header-user-avatar">${initials}</span>
+        ${state.customer.first_name}
       </button>
     `;
+    // Mettre à jour le label du tab profil (mobile)
+    const profileLabel = document.getElementById('bnav-profile-label');
+    if (profileLabel) profileLabel.textContent = 'Profil';
   } else {
     zone.innerHTML = `
       <button class="btn-secondary" onclick="showSection('login')">Connexion</button>
-      <button class="btn-primary" onclick="showSection('register')" style="margin-left:8px">S'inscrire</button>
+      <button class="btn-primary" onclick="showSection('register')">S'inscrire</button>
     `;
+    const profileLabel = document.getElementById('bnav-profile-label');
+    if (profileLabel) profileLabel.textContent = 'Connexion';
   }
 }
 
@@ -128,14 +144,17 @@ async function loadMenu() {
       </button>
     `).join('');
 
-    // Sidebar
+    // Sidebar catégories (desktop)
     const sidebarEl = document.getElementById('sidebar-categories');
-    sidebarEl.innerHTML = categories.map((cat, i) => `
-      <a class="sidebar-link ${i === 0 ? 'active' : ''}" data-cat="${cat.id}" onclick="filterByCategory('${cat.id}', this)">
-        ${cat.name}
-      </a>
-    `).join('');
-    document.getElementById('sidebar').style.display = '';
+    if (sidebarEl) {
+      sidebarEl.innerHTML = categories.map((cat, i) => `
+        <a class="cat-sidebar-link ${i === 0 ? 'active' : ''}" data-cat="${cat.id}" onclick="filterByCategory('${cat.id}', this)">
+          ${cat.name}
+        </a>
+      `).join('');
+    }
+    const sidebarCats = document.getElementById('sidebar-cats');
+    if (sidebarCats) sidebarCats.style.display = '';
 
     // Afficher la première catégorie
     filterByCategory(categories[0].id, pillsEl.querySelector('.cat-pill'));
@@ -150,7 +169,7 @@ function filterByCategory(categoryId, clickedEl) {
 
   // Update active pills
   document.querySelectorAll('.cat-pill').forEach(p => p.classList.toggle('active', p.dataset.cat === categoryId));
-  document.querySelectorAll('.sidebar-link[data-cat]').forEach(l => l.classList.toggle('active', l.dataset.cat === categoryId));
+  document.querySelectorAll('.cat-sidebar-link[data-cat]').forEach(l => l.classList.toggle('active', l.dataset.cat === categoryId));
 
   const products = state.allProducts.filter(p => p._categoryId === categoryId);
   const categoryName = products[0]?._categoryName || '';
@@ -161,23 +180,31 @@ function filterByCategory(categoryId, clickedEl) {
 function renderProducts(products) {
   const grid = document.getElementById('products-grid');
   if (!products.length) {
-    grid.innerHTML = '<p style="color:var(--text-light)">Aucun produit disponible</p>';
+    grid.innerHTML = '<p style="color:var(--text-muted);padding:1rem 0">Aucun produit disponible dans cette catégorie</p>';
     return;
   }
-  grid.innerHTML = products.map(p => `
-    <div class="product-card" onclick="addToCart(${JSON.stringify(p).replace(/"/g, '&quot;')})">
-      <img class="product-img" src="${p.image_url || 'https://via.placeholder.com/300x140?text=Produit'}"
-           alt="${p.name}" onerror="this.src='https://via.placeholder.com/300x140?text=Produit'">
-      <div class="product-body">
-        <div class="product-name">${p.name}</div>
-        ${p.description ? `<div class="product-desc">${p.description}</div>` : ''}
-        <div class="product-footer">
-          <span class="product-price">${Number(p.price).toLocaleString('fr-FR')} FCFA</span>
-          <button class="btn-add" onclick="event.stopPropagation();addToCart(${JSON.stringify(p).replace(/"/g, '&quot;')})">+</button>
+  grid.innerHTML = products.map(p => {
+    const pData = JSON.stringify(p).replace(/"/g, '&quot;');
+    const imgHtml = p.image_url
+      ? `<img src="${p.image_url}" alt="${p.name}" loading="lazy" onerror="this.style.display='none'">`
+      : '';
+    return `
+      <div class="product-card" onclick="addToCart(${pData})" role="button" tabindex="0">
+        <div class="product-img-wrap">
+          ${imgHtml}
+          ${!p.image_url ? '<span class="product-img-placeholder">🍽️</span>' : ''}
+        </div>
+        <div class="product-body">
+          <div class="product-name">${p.name}</div>
+          ${p.description ? `<div class="product-desc">${p.description}</div>` : '<div class="product-desc"></div>'}
+          <div class="product-footer">
+            <span class="product-price">${Number(p.price).toLocaleString('fr-FR')} FCFA</span>
+            <button class="btn-add" onclick="event.stopPropagation();addToCart(${pData})" aria-label="Ajouter ${p.name}">+</button>
+          </div>
         </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 // ============================================
@@ -197,10 +224,18 @@ function saveCart() { localStorage.setItem('bizon_cart', JSON.stringify(state.ca
 
 function updateCartBadge() {
   const count = state.cart.reduce((s, i) => s + i.quantity, 0);
-  document.getElementById('cart-count').textContent = count;
-  document.getElementById('cart-fab-count').textContent = count;
+  // Header cart button badge
+  const cartCount = document.getElementById('cart-count');
+  if (cartCount) {
+    cartCount.textContent = count;
+    cartCount.classList.toggle('visible', count > 0);
+  }
+  // FAB badge
+  const fabCount = document.getElementById('cart-fab-count');
+  if (fabCount) fabCount.textContent = count;
+  // FAB visibility
   const fab = document.getElementById('cart-fab');
-  fab.classList.toggle('hidden', count === 0);
+  if (fab) fab.classList.toggle('hidden', count === 0);
 }
 
 function openCart() {
@@ -213,21 +248,25 @@ function closeCart() { document.getElementById('cart-sheet').classList.remove('o
 function renderCartPanel() {
   const list = document.getElementById('cart-items-list');
   if (!state.cart.length) {
-    list.innerHTML = '<div class="empty-cart-msg">Votre panier est vide</div>';
+    list.innerHTML = '<div class="empty-cart-msg"><span>🛒</span>Votre panier est vide</div>';
     document.getElementById('cart-total-amount').textContent = '0 FCFA';
     return;
   }
   list.innerHTML = state.cart.map((item, i) => `
     <div class="cart-item">
-      <img class="cart-item-img" src="${item.image || 'https://via.placeholder.com/52'}" alt="${item.name}">
+      <div class="cart-item-img" style="display:flex;align-items:center;justify-content:center;background:var(--bg-subtle);border-radius:10px;overflow:hidden;width:52px;height:52px;flex-shrink:0">
+        ${item.image
+          ? `<img src="${item.image}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='<span style=font-size:1.5rem>🍽️</span>'">`
+          : '<span style="font-size:1.5rem">🍽️</span>'}
+      </div>
       <div class="cart-item-info">
         <div class="cart-item-name">${item.name}</div>
-        <div class="cart-item-price">${Number(item.price).toLocaleString('fr-FR')} FCFA</div>
+        <div class="cart-item-price">${Number(item.price).toLocaleString('fr-FR')} FCFA × ${item.quantity}</div>
       </div>
       <div class="cart-qty">
-        <button class="qty-btn" onclick="changeQty(${i}, -1)">−</button>
-        <span>${item.quantity}</span>
-        <button class="qty-btn" onclick="changeQty(${i}, 1)">+</button>
+        <button class="qty-btn" onclick="changeQty(${i}, -1)" aria-label="Diminuer">−</button>
+        <span style="font-weight:700;min-width:20px;text-align:center">${item.quantity}</span>
+        <button class="qty-btn" onclick="changeQty(${i}, 1)" aria-label="Augmenter">+</button>
       </div>
     </div>
   `).join('');
@@ -281,7 +320,7 @@ function logout() {
   localStorage.removeItem('bizon_customer_token');
   renderAuthZone();
   showSection('menu');
-  showToast('Déconnecté', 'info');
+  showToast('Vous êtes déconnecté', 'info');
 }
 
 async function loadCustomerProfile() {
