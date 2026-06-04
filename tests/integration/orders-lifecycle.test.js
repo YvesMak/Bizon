@@ -29,11 +29,11 @@ describe('Cycle de vie des commandes (service + DB)', () => {
       expect(refreshed.stock_quantity).toBe(stockBefore); // stock inchangé
     });
 
-    it('calcule le total avec TVA 18%', async () => {
+    it('calcule le total sans TVA (montant = sous-total)', async () => {
       const { resto, user, product } = await setup();
-      // 2 × 1000 = 2000 ; +18% = 2360
+      // 2 × 1000 = 2000, pas de TVA ajoutée
       const order = await orderService.create(resto.id, user.id, baseOrder(product.id, 2));
-      expect(Number(order.total_amount)).toBeCloseTo(2360, 2);
+      expect(Number(order.total_amount)).toBeCloseTo(2000, 2);
     });
 
     it('exige une table ou un nom de client', async () => {

@@ -262,9 +262,9 @@ class OrderService {
         });
       }
       
-      // Calcul des taxes et total
-      const taxAmount = subtotal * 0.18;
-      const totalAmount = subtotal + taxAmount;
+      // Pas de TVA ajoutée au montant à payer
+      const taxAmount = 0;
+      const totalAmount = subtotal;
 
       // 🎯 CRÉATION EN DRAFT PAR DÉFAUT
       const order = await Order.create({
@@ -420,8 +420,9 @@ class OrderService {
       }
 
       const discountedSubtotal = subtotal - discount;
-      const taxAmount = discountedSubtotal * 0.18;
-      const totalAmount = discountedSubtotal + taxAmount;
+      // Pas de TVA ajoutée au montant à payer
+      const taxAmount = 0;
+      const totalAmount = discountedSubtotal;
 
       const order = await Order.create({
         restaurant_id: restaurantId,

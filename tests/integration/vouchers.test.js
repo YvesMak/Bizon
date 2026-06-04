@@ -124,7 +124,7 @@ describe('Aperçu client + application à la commande', () => {
     const { resto, customer, product } = await customerCtx();
     const voucher = await createVoucher(resto.id, { code: 'BIZON10', discount_value: 10 });
 
-    // sous-total 2×1000 = 2000 ; -10% = 1800 ; +18% = 2124
+    // sous-total 2×1000 = 2000 ; -10% = 1800 (pas de TVA ajoutée)
     const order = await orderService.createForCustomer(resto.id, customer.id, {
       type: 'takeaway',
       items: [{ product_id: product.id, quantity: 2 }],
@@ -132,7 +132,7 @@ describe('Aperçu client + application à la commande', () => {
     });
 
     expect(Number(order.discount_amount)).toBe(200);
-    expect(Number(order.total_amount)).toBeCloseTo(2124, 0);
+    expect(Number(order.total_amount)).toBeCloseTo(1800, 0);
 
     const dbOrder = await Order.findByPk(order.id);
     expect(Number(dbOrder.discount_amount)).toBe(200);
