@@ -653,6 +653,55 @@ class OrderService {
       throw error;
     }
   }
+
+  /**
+   * =================================================================
+   * NETTOYAGE : EXPIRATION DES COMMANDES CLIENT NON PAYÉES
+   * =================================================================
+   * Les commandes self-service (user_id null) restées en DRAFT au-delà du
+   * délai sont annulées (aucun stock engagé en draft → rien à restaurer),
+   * et leur paiement en attente est marqué échoué.
+   * Les brouillons du staff (user_id renseigné) ne sont jamais touchés.
+   *
+   * @param {number} olderThanMinutes délai d'expiration (défaut 30 min)
+   * @returns {Promise<number>} nombre de commandes expirées
+   */
+  async expireStaleCustomerDrafts(olderThanMinutes = 30) {
+    const cutoff = new Date(Date.now() - olderThanMinutes * 60 * 1000);
+    const transaction = await sequelize.transaction();
+    try {
+      const stale = await Order.findAll({
+        where: {
+          user_id: null,
+          status: 'draft',
+          created_at: { [Op.lt]: cutoff }
+        },
+        attributes: ['id'],
+        transaction
+      });
+
+      if (stale.length === 0) {
+        await transaction.commit();
+        return 0;
+      }
+
+      const ids = stale.map(o => o.id);
+      await Order.update(
+        { status: 'cancelled' },
+        { where: { id: ids }, transaction }
+      );
+      await Payment.update(
+        { status: 'failed' },
+        { where: { order_id: ids, status: 'pending' }, transaction }
+      );
+
+      await transaction.commit();
+      return ids.length;
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  }
 }
 
 module.exports = new OrderService();
