@@ -186,34 +186,75 @@ function filterByCategory(categoryId, clickedEl) {
   renderProducts(products);
 }
 
+function productCardHTML(p) {
+  const pData = JSON.stringify(p).replace(/"/g, '&quot;');
+  const imgHtml = p.image_url
+    ? `<img src="${p.image_url}" alt="${p.name}" loading="lazy" onerror="this.style.display='none'">`
+    : '';
+  return `
+    <div class="product-card" onclick="addToCart(${pData})" role="button" tabindex="0">
+      <div class="product-img-wrap">
+        ${imgHtml}
+        ${!p.image_url ? '<span class="product-img-placeholder">🍽️</span>' : ''}
+      </div>
+      <div class="product-body">
+        <div class="product-name">${p.name}</div>
+        ${p.description ? `<div class="product-desc">${p.description}</div>` : '<div class="product-desc"></div>'}
+        <div class="product-footer">
+          <span class="product-price">${Number(p.price).toLocaleString('fr-FR')} FCFA</span>
+          <button class="btn-add" onclick="event.stopPropagation();addToCart(${pData})" aria-label="Ajouter ${p.name}">+</button>
+        </div>
+      </div>
+    </div>`;
+}
+
 function renderProducts(products) {
   const grid = document.getElementById('products-grid');
   if (!products.length) {
     grid.innerHTML = '<p style="color:var(--text-muted);padding:1rem 0">Aucun produit disponible dans cette catégorie</p>';
     return;
   }
-  grid.innerHTML = products.map(p => {
-    const pData = JSON.stringify(p).replace(/"/g, '&quot;');
-    const imgHtml = p.image_url
-      ? `<img src="${p.image_url}" alt="${p.name}" loading="lazy" onerror="this.style.display='none'">`
-      : '';
-    return `
-      <div class="product-card" onclick="addToCart(${pData})" role="button" tabindex="0">
-        <div class="product-img-wrap">
-          ${imgHtml}
-          ${!p.image_url ? '<span class="product-img-placeholder">🍽️</span>' : ''}
-        </div>
-        <div class="product-body">
-          <div class="product-name">${p.name}</div>
-          ${p.description ? `<div class="product-desc">${p.description}</div>` : '<div class="product-desc"></div>'}
-          <div class="product-footer">
-            <span class="product-price">${Number(p.price).toLocaleString('fr-FR')} FCFA</span>
-            <button class="btn-add" onclick="event.stopPropagation();addToCart(${pData})" aria-label="Ajouter ${p.name}">+</button>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
+  grid.innerHTML = products.map(productCardHTML).join('');
+}
+
+// Recherche transversale (tous les produits chargés)
+function searchProducts(query) {
+  const q = (query || '').trim().toLowerCase();
+  const pills = document.getElementById('category-pills');
+  const title = document.getElementById('menu-section-title');
+  const grid = document.getElementById('products-grid');
+  const banner = document.getElementById('promo-banner');
+  const results = document.getElementById('search-results');
+
+  const setMenuView = (show) => {
+    [pills, title, grid].forEach(el => { if (el) el.style.display = show ? '' : 'none'; });
+    if (banner) banner.style.display = show ? '' : 'none';
+  };
+
+  if (!q) {
+    setMenuView(true);
+    results.style.display = 'none';
+    results.innerHTML = '';
+    return;
+  }
+
+  setMenuView(false);
+  results.style.display = '';
+  const matches = state.allProducts.filter(p =>
+    p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q)
+  );
+  if (!matches.length) {
+    results.innerHTML = `
+      <div class="empty-state-c">
+        <span class="empty-icon">🔍</span>
+        <h3>Aucun résultat</h3>
+        <p>Aucun plat ne correspond à « ${query.trim()} ».</p>
+      </div>`;
+    return;
+  }
+  results.innerHTML = `
+    <div class="menu-section-title">${matches.length} résultat${matches.length > 1 ? 's' : ''}</div>
+    <div class="products-grid">${matches.map(productCardHTML).join('')}</div>`;
 }
 
 // ============================================
