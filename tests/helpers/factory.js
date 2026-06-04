@@ -92,7 +92,9 @@ async function createVoucher(restaurantId, overrides = {}) {
     active: overrides.active !== undefined ? overrides.active : true,
     expires_at: overrides.expires_at || null,
     max_uses: overrides.max_uses || null,
-    used_count: overrides.used_count || 0
+    used_count: overrides.used_count || 0,
+    points_cost: overrides.points_cost || 0,
+    customer_id: overrides.customer_id || null
   });
 }
 

@@ -24,7 +24,14 @@ const Voucher = sequelize.define('Voucher', {
   expires_at: { type: DataTypes.DATE, allowNull: true },
   // null = illimité
   max_uses: { type: DataTypes.INTEGER, allowNull: true },
-  used_count: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 }
+  used_count: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+  // Coût en points : 0 = code promo public ; > 0 = récompense échangeable contre des points
+  points_cost: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+  // null = code public/modèle ; renseigné = bon personnel issu d'un échange de points
+  customer_id: {
+    type: DataTypes.UUID, allowNull: true,
+    references: { model: 'customers', key: 'id' }
+  }
 }, {
   tableName: 'vouchers',
   timestamps: true,

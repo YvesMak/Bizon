@@ -29,5 +29,7 @@ router.get('/me/orders', customerAuth, CustomerController.getOrders.bind(Custome
 router.post('/orders', customerAuth, CustomerController.createOrder.bind(CustomerController));
 router.get('/me/loyalty', customerAuth, CustomerController.getLoyalty.bind(CustomerController));
 router.post('/validate-voucher', customerAuth, CustomerController.validateVoucher.bind(CustomerController));
+router.get('/me/rewards', customerAuth, CustomerController.getRewards.bind(CustomerController));
+router.post('/me/redeem', customerAuth, CustomerController.redeemReward.bind(CustomerController));
 
 module.exports = router;

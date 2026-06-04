@@ -456,6 +456,8 @@ async function renderLoyalty() {
   const ptsEl = document.getElementById('loyalty-pts');
   const histEl = document.getElementById('loyalty-history');
 
+  renderRewards();
+
   try {
     const data = await apiCall('/customers/me/loyalty');
     ptsEl.textContent = data.points || 0;
@@ -484,6 +486,80 @@ async function renderLoyalty() {
   } catch {
     ptsEl.textContent = state.customer.loyalty_points || 0;
     histEl.innerHTML = `<div class="lh-empty">Impossible de charger l'historique.</div>`;
+  }
+}
+
+function voucherLabel(v) {
+  return v.discount_type === 'percentage'
+    ? `${Math.round(v.discount_value)}% de réduction`
+    : `${Number(v.discount_value).toLocaleString('fr-FR')} FCFA de réduction`;
+}
+
+async function renderRewards() {
+  const availEl = document.getElementById('rewards-available');
+  const myWrap = document.getElementById('my-vouchers-wrap');
+  const myEl = document.getElementById('my-vouchers');
+  try {
+    const data = await apiCall('/customers/me/rewards');
+    const points = data.points || 0;
+
+    // Récompenses échangeables
+    if (!data.available || !data.available.length) {
+      availEl.innerHTML = `<div class="lh-empty" style="padding:1.5rem 0"><span>🎁</span>Aucune récompense disponible pour le moment.</div>`;
+    } else {
+      availEl.innerHTML = data.available.map(r => {
+        const affordable = points >= r.points_cost;
+        return `
+          <div class="reward-item">
+            <div class="reward-info">
+              <h4>${voucherLabel(r)}</h4>
+              <span>${r.description || r.code}${Number(r.min_order_amount) > 0 ? ` · dès ${Number(r.min_order_amount).toLocaleString('fr-FR')} FCFA` : ''}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="reward-cost">${r.points_cost} pts</span>
+              <button class="btn-redeem" ${affordable ? '' : 'disabled'} onclick="redeemReward('${r.id}')">
+                ${affordable ? 'Échanger' : 'Trop peu'}
+              </button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // Mes bons personnels
+    const mine = data.myVouchers || [];
+    if (!mine.length) {
+      myWrap.style.display = 'none';
+    } else {
+      myWrap.style.display = '';
+      myEl.innerHTML = mine.map(v => {
+        const used = v.used_count >= (v.max_uses || 1);
+        return `
+          <div class="voucher-item ${used ? 'used' : ''}">
+            <div>
+              <div class="voucher-code-tag">${v.code}</div>
+              <small>${voucherLabel(v)}</small>
+            </div>
+            ${used ? '<span class="voucher-used-badge">Utilisé</span>'
+                   : '<span class="reward-cost">Disponible</span>'}
+          </div>`;
+      }).join('');
+    }
+  } catch {
+    availEl.innerHTML = `<div class="lh-empty">Impossible de charger les récompenses.</div>`;
+  }
+}
+
+async function redeemReward(rewardId) {
+  try {
+    const res = await apiCall('/customers/me/redeem', {
+      method: 'POST', body: JSON.stringify({ reward_id: rewardId })
+    });
+    showToast(`Bon obtenu : ${res.voucher.code} 🎉`, 'success', 5000);
+    // Rafraîchir le solde + listes
+    await loadCustomerProfile();
+    renderLoyalty();
+  } catch (err) {
+    showToast(err.message, 'error');
   }
 }
 

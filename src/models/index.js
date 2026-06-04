@@ -79,6 +79,8 @@ const initModels = () => {
   // Voucher relations
   Voucher.belongsTo(Restaurant, { foreignKey: 'restaurant_id', as: 'restaurant' });
   Restaurant.hasMany(Voucher, { foreignKey: 'restaurant_id', as: 'vouchers' });
+  Voucher.belongsTo(Customer, { foreignKey: 'customer_id', as: 'customer' });
+  Customer.hasMany(Voucher, { foreignKey: 'customer_id', as: 'vouchers' });
 
   if (process.env.NODE_ENV !== 'test') {
     console.log('✅ Relations des modèles initialisées');

@@ -95,12 +95,38 @@ class CustomerController {
     }
   }
 
+  // GET /api/customers/me/rewards — récompenses échangeables + mes bons + solde
+  async getRewards(req, res) {
+    try {
+      const [available, myVouchers, loyalty] = await Promise.all([
+        VoucherService.listRewards(req.restaurantId),
+        VoucherService.listCustomerVouchers(req.restaurantId, req.customerId),
+        LoyaltyService.getHistory(req.customerId, req.restaurantId)
+      ]);
+      res.json({ points: loyalty.points, available, myVouchers });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  // POST /api/customers/me/redeem — échange des points contre un bon personnel
+  async redeemReward(req, res) {
+    try {
+      const voucher = await VoucherService.redeem(
+        req.restaurantId, req.customerId, req.body.reward_id
+      );
+      res.status(201).json({ message: 'Récompense échangée', voucher });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
   // POST /api/customers/validate-voucher — aperçu de la réduction (avant commande)
   async validateVoucher(req, res) {
     try {
       const { code, subtotal } = req.body;
       const { voucher, discount } = await VoucherService.validateAndCompute(
-        req.restaurantId, code, subtotal || 0
+        req.restaurantId, code, subtotal || 0, { customerId: req.customerId }
       );
       res.json({
         code: voucher.code,
