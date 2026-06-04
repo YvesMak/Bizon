@@ -11,7 +11,8 @@ const state = {
   currentCategory: null,
   menus: [],
   cart: JSON.parse(localStorage.getItem('bizon_cart') || '[]'),
-  orderType: 'dine_in'
+  orderType: 'dine_in',
+  appliedVoucher: null
 };
 
 // ============================================
@@ -216,6 +217,7 @@ function addToCart(product) {
   const existing = state.cart.find(i => i.id === product.id);
   if (existing) existing.quantity++;
   else state.cart.push({ id: product.id, name: product.name, price: product.price, image: product.image_url, quantity: 1 });
+  resetVoucher();
   saveCart();
   updateCartBadge();
   showToast(`${product.name} ajouté`, 'success');
@@ -271,13 +273,63 @@ function renderCartPanel() {
       </div>
     </div>
   `).join('');
-  const total = state.cart.reduce((s, i) => s + i.price * i.quantity, 0);
-  document.getElementById('cart-total-amount').textContent = `${Number(total).toLocaleString('fr-FR')} FCFA`;
+  const subtotal = state.cart.reduce((s, i) => s + i.price * i.quantity, 0);
+  const discount = state.appliedVoucher ? state.appliedVoucher.discount : 0;
+
+  const discountRow = document.getElementById('cart-discount-row');
+  if (discount > 0) {
+    discountRow.style.display = '';
+    document.getElementById('cart-discount-amount').textContent =
+      `-${Number(discount).toLocaleString('fr-FR')} FCFA`;
+  } else {
+    discountRow.style.display = 'none';
+  }
+  document.getElementById('cart-total-amount').textContent =
+    `${Number(Math.max(0, subtotal - discount)).toLocaleString('fr-FR')} FCFA`;
+}
+
+async function applyPromo() {
+  const codeInput = document.getElementById('promo-code');
+  const fb = document.getElementById('promo-feedback');
+  const code = codeInput.value.trim();
+  if (!code) return;
+  if (!state.token) {
+    fb.className = 'err';
+    fb.textContent = 'Connectez-vous pour utiliser un code promo';
+    return;
+  }
+  const subtotal = state.cart.reduce((s, i) => s + i.price * i.quantity, 0);
+  const btn = document.getElementById('btn-apply-promo');
+  btn.disabled = true;
+  try {
+    const res = await apiCall('/customers/validate-voucher', {
+      method: 'POST', body: JSON.stringify({ code, subtotal })
+    });
+    state.appliedVoucher = { code: res.code, discount: res.discount };
+    fb.className = 'ok';
+    fb.textContent = `Code ${res.code} appliqué : −${Number(res.discount).toLocaleString('fr-FR')} FCFA`;
+    renderCartPanel();
+  } catch (err) {
+    state.appliedVoucher = null;
+    fb.className = 'err';
+    fb.textContent = err.message;
+    renderCartPanel();
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Le code promo dépend du sous-total : on le réinitialise à chaque changement de panier.
+function resetVoucher() {
+  state.appliedVoucher = null;
+  const fb = document.getElementById('promo-feedback');
+  if (fb) { fb.textContent = ''; fb.className = ''; }
 }
 
 function changeQty(index, delta) {
   state.cart[index].quantity += delta;
   if (state.cart[index].quantity <= 0) state.cart.splice(index, 1);
+  resetVoucher();
   saveCart();
   updateCartBadge();
   renderCartPanel();
@@ -532,6 +584,7 @@ document.getElementById('btn-checkout').addEventListener('click', async () => {
     type: state.orderType,
     items: state.cart.map(i => ({ product_id: i.id, quantity: i.quantity }))
   };
+  if (state.appliedVoucher) body.voucher_code = state.appliedVoucher.code;
   if (state.orderType === 'dine_in') {
     const table = document.getElementById('order-table').value.trim();
     if (!table) { showToast('Indiquez le numéro de table', 'error'); return; }
@@ -551,6 +604,7 @@ document.getElementById('btn-checkout').addEventListener('click', async () => {
     });
     // Vider le panier puis rediriger vers la page de paiement Flutterwave
     state.cart = [];
+    resetVoucher();
     saveCart();
     updateCartBadge();
     if (payment?.link) {

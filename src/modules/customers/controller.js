@@ -2,6 +2,7 @@ const CustomerService = require('./service');
 const OrderService = require('../orders/service');
 const PaymentService = require('../payments/service');
 const LoyaltyService = require('../loyalty/service');
+const VoucherService = require('../vouchers/service');
 const { Restaurant, Customer } = require('../../models');
 
 class CustomerController {
@@ -91,6 +92,24 @@ class CustomerController {
       res.json(data);
     } catch (error) {
       res.status(404).json({ error: error.message });
+    }
+  }
+
+  // POST /api/customers/validate-voucher — aperçu de la réduction (avant commande)
+  async validateVoucher(req, res) {
+    try {
+      const { code, subtotal } = req.body;
+      const { voucher, discount } = await VoucherService.validateAndCompute(
+        req.restaurantId, code, subtotal || 0
+      );
+      res.json({
+        code: voucher.code,
+        description: voucher.description,
+        discount_type: voucher.discount_type,
+        discount
+      });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
     }
   }
 }

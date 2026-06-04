@@ -28,5 +28,6 @@ router.put('/me', customerAuth, CustomerController.updateProfile.bind(CustomerCo
 router.get('/me/orders', customerAuth, CustomerController.getOrders.bind(CustomerController));
 router.post('/orders', customerAuth, CustomerController.createOrder.bind(CustomerController));
 router.get('/me/loyalty', customerAuth, CustomerController.getLoyalty.bind(CustomerController));
+router.post('/validate-voucher', customerAuth, CustomerController.validateVoucher.bind(CustomerController));
 
 module.exports = router;

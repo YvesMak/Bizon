@@ -2,6 +2,7 @@ const { Order, OrderItem, Product, Customer, Payment } = require('../../models')
 const { sequelize } = require('../../config/database');
 const { Op } = require('sequelize');
 const ProductService = require('../products/service');
+const VoucherService = require('../vouchers/service');
 const logger = require('../../utils/logger');
 
 /**
@@ -365,7 +366,7 @@ class OrderService {
   async createForCustomer(restaurantId, customerId, data) {
     const transaction = await sequelize.transaction();
     try {
-      const { type = 'dine_in', table_number, delivery_address, items, notes } = data;
+      const { type = 'dine_in', table_number, delivery_address, items, notes, voucher_code } = data;
 
       if (!['dine_in', 'takeaway', 'delivery'].includes(type)) {
         throw new Error('Type de commande invalide');
@@ -407,8 +408,20 @@ class OrderService {
         });
       }
 
-      const taxAmount = subtotal * 0.18;
-      const totalAmount = subtotal + taxAmount;
+      // Code promo éventuel : réduction appliquée sur le sous-total.
+      let discount = 0;
+      let appliedVoucher = null;
+      if (voucher_code) {
+        const res = await VoucherService.validateAndCompute(
+          restaurantId, voucher_code, subtotal, { transaction }
+        );
+        discount = res.discount;
+        appliedVoucher = res.voucher;
+      }
+
+      const discountedSubtotal = subtotal - discount;
+      const taxAmount = discountedSubtotal * 0.18;
+      const totalAmount = discountedSubtotal + taxAmount;
 
       const order = await Order.create({
         restaurant_id: restaurantId,
@@ -422,13 +435,17 @@ class OrderService {
         customer_name: `${customer.first_name} ${customer.last_name}`.trim(),
         subtotal,
         tax_amount: taxAmount,
-        discount_amount: 0,
+        discount_amount: discount,
         total_amount: totalAmount,
         notes
       }, { transaction });
 
       for (const item of validatedItems) {
         await OrderItem.create({ order_id: order.id, ...item }, { transaction });
+      }
+
+      if (appliedVoucher) {
+        await VoucherService.consume(appliedVoucher.id, transaction);
       }
 
       await transaction.commit();
@@ -439,6 +456,8 @@ class OrderService {
         type: order.type,
         delivery_address: order.delivery_address,
         table_number: order.table_number,
+        subtotal,
+        discount_amount: discount,
         total_amount: totalAmount,
         created_at: order.created_at
       };

@@ -273,6 +273,28 @@
     }
     .order-type-field input:focus { border-color: var(--primary); }
 
+    /* ---- Code promo ---- */
+    .promo-row { display: flex; gap: 8px; margin-bottom: 0.5rem; }
+    .promo-row input {
+      flex: 1; padding: 0.7rem 0.9rem; border: 1.5px solid var(--border);
+      border-radius: 10px; font-family: inherit; font-size: 0.9375rem;
+      background: var(--bg-surface); color: var(--text); outline: none;
+      text-transform: uppercase; box-sizing: border-box; transition: border-color 0.2s;
+    }
+    .promo-row input:focus { border-color: var(--primary); }
+    #btn-apply-promo {
+      padding: 0 1.1rem; border: 1.5px solid var(--primary); background: transparent;
+      color: var(--primary); border-radius: 10px; font-family: inherit;
+      font-size: 0.875rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+      transition: all 0.15s;
+    }
+    #btn-apply-promo:hover { background: var(--primary); color: #fff; }
+    #btn-apply-promo:disabled { opacity: 0.5; cursor: default; }
+    #promo-feedback { font-size: 0.8125rem; margin-bottom: 0.5rem; min-height: 0; }
+    #promo-feedback.ok { color: var(--success); }
+    #promo-feedback.err { color: var(--error); }
+    .cart-discount-val { color: var(--success); font-weight: 600; }
+
     /* ---- Forms ---- */
     .form-page-wrap {
       min-height: calc(100dvh - 140px);
@@ -606,6 +628,16 @@
         <div class="order-type-field">
           <input type="text" id="order-table" placeholder="Numéro de table" inputmode="numeric">
           <input type="text" id="order-address" placeholder="Adresse de livraison" style="display:none">
+        </div>
+        <!-- Code promo -->
+        <div class="promo-row">
+          <input type="text" id="promo-code" placeholder="Code promo" autocapitalize="characters">
+          <button type="button" id="btn-apply-promo" onclick="applyPromo()">Appliquer</button>
+        </div>
+        <div id="promo-feedback"></div>
+        <div class="cart-total-row" id="cart-discount-row" style="display:none">
+          <span class="cart-total-label">Réduction</span>
+          <span id="cart-discount-amount" class="cart-discount-val">-0 FCFA</span>
         </div>
         <div class="cart-total-row">
           <span class="cart-total-label">Total</span>
