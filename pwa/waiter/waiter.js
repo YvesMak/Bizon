@@ -262,9 +262,9 @@ async function loadOrders() {
         }
 
         container.innerHTML = waiterState.orders.map(order => `
-            <div class="order-card" onclick="viewOrderDetail(${order.id})">
+            <div class="order-card" onclick="viewOrderDetail('${order.id}')">
                 <div class="order-card-header">
-                    <span class="order-number">#${order.id}</span>
+                    <span class="order-number">#${order.order_number || order.id}</span>
                     ${getStatusBadge(order.status)}
                 </div>
                 <div class="order-card-info">
@@ -277,13 +277,13 @@ async function loadOrders() {
                         </div>
                     ` : ''}
                     <div class="info-item">
-                        <strong>Créée:</strong> ${formatDate(order.created_at)}
+                        <strong>Créée:</strong> ${formatDate(order.createdAt || order.created_at)}
                     </div>
                 </div>
                 <div class="order-card-footer">
                     <span class="order-amount">${formatAmount(order.total_amount)}</span>
                     ${order.status === 'confirmed' ? `
-                        <button class="btn-secondary btn-small" onclick="event.stopPropagation(); confirmCancelOrder(${order.id})">
+                        <button class="btn-secondary btn-small" onclick="event.stopPropagation(); confirmCancelOrder('${order.id}')">
                             Annuler
                         </button>
                     ` : ''}
@@ -410,8 +410,8 @@ function renderProducts(category = 'all') {
         const isSelected = !!itemInCart;
 
         return `
-            <div class="product-item ${isSelected ? 'selected' : ''}" 
-                 onclick="toggleProductSelection(${product.id})">
+            <div class="product-item ${isSelected ? 'selected' : ''}"
+                 onclick="toggleProductSelection('${product.id}')">
                 <div class="product-name">${product.name}</div>
                 <div class="product-price">${formatAmount(product.price)}</div>
                 ${isSelected ? `<div class="product-qty">Qté: ${itemInCart.quantity}</div>` : ''}
@@ -660,7 +660,7 @@ function renderOrderDetail(order) {
     document.getElementById('detail-customer').textContent = order.customer_name || 'Client anonyme';
     document.getElementById('detail-status').innerHTML = getStatusBadge(order.status);
     document.getElementById('detail-amount').textContent = formatAmount(order.total_amount);
-    document.getElementById('detail-date').textContent = formatDate(order.created_at);
+    document.getElementById('detail-date').textContent = formatDate(order.createdAt || order.created_at);
 
     // Items
     const itemsContainer = document.getElementById('detail-items');
@@ -681,7 +681,7 @@ function renderOrderDetail(order) {
     
     if (order.status === 'confirmed') {
         actionsContainer.innerHTML = `
-            <button class="btn-secondary" onclick="confirmCancelOrder(${order.id})">
+            <button class="btn-secondary" onclick="confirmCancelOrder('${order.id}')">
                 ❌ Annuler la commande
             </button>
         `;
