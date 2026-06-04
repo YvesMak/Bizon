@@ -1,6 +1,6 @@
 // Fabriques de données de test : créent des entités valides minimales.
 const {
-  Restaurant, User, Customer, Menu, Category, Product
+  Restaurant, User, Customer, Menu, Category, Product, Voucher
 } = require('../../src/models');
 const authService = require('../../src/modules/auth/service');
 
@@ -81,10 +81,26 @@ async function registerOwner(overrides = {}) {
   });
 }
 
+async function createVoucher(restaurantId, overrides = {}) {
+  return Voucher.create({
+    restaurant_id: restaurantId,
+    code: overrides.code || uniq('PROMO').toUpperCase(),
+    discount_type: overrides.discount_type || 'percentage',
+    discount_value: overrides.discount_value != null ? overrides.discount_value : 10,
+    min_order_amount: overrides.min_order_amount || 0,
+    max_discount: overrides.max_discount || null,
+    active: overrides.active !== undefined ? overrides.active : true,
+    expires_at: overrides.expires_at || null,
+    max_uses: overrides.max_uses || null,
+    used_count: overrides.used_count || 0
+  });
+}
+
 module.exports = {
   createRestaurant,
   createUser,
   createCustomer,
   createFullMenu,
-  registerOwner
+  registerOwner,
+  createVoucher
 };
