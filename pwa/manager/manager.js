@@ -251,8 +251,53 @@ async function loadDashboard() {
         if (mgrState.isOwner) {
             loadSubscriptionLimits();
         }
+
+        loadAnalytics();
     } catch (error) {
         showToast('Erreur chargement statistiques: ' + error.message, 'error');
+    }
+}
+
+async function loadAnalytics() {
+    try {
+        const a = await apiCall('/analytics');
+        if (!a) return;
+
+        // CA 7 jours — barres CSS
+        const max = Math.max(1, ...a.revenue7d.map(d => d.total));
+        document.getElementById('revenue-chart').innerHTML = a.revenue7d.map(d => {
+            const h = Math.max(2, Math.round((d.total / max) * 100));
+            const label = new Date(d.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'short' });
+            return `<div class="bar-col">
+                <div class="bar-wrap"><div class="bar" style="height:${h}%" title="${formatAmount(d.total)}"></div></div>
+                <span class="bar-label">${label}</span>
+            </div>`;
+        }).join('');
+
+        // Top produits
+        const tp = a.topProducts || [];
+        document.getElementById('top-products').innerHTML = tp.length
+            ? tp.map((p, i) => `
+                <div class="tp-row">
+                    <span class="tp-rank">${i + 1}</span>
+                    <span class="tp-name">${escapeHtml(p.name)}</span>
+                    <span class="tp-qty">${p.quantity} vendu${p.quantity > 1 ? 's' : ''}</span>
+                </div>`).join('')
+            : '<p class="analytics-empty">Aucune vente pour le moment</p>';
+
+        // Codes promo
+        document.getElementById('voucher-stats').innerHTML = `
+            <div class="mini-row"><span>Commandes avec réduction</span><strong>${a.vouchers.orders_with_discount}</strong></div>
+            <div class="mini-row"><span>Réductions accordées</span><strong>${formatAmount(a.vouchers.total_discount)}</strong></div>`;
+
+        // Fidélité
+        document.getElementById('loyalty-stats').innerHTML = `
+            <div class="mini-row"><span>Membres actifs</span><strong>${a.loyalty.members}</strong></div>
+            <div class="mini-row"><span>Points gagnés</span><strong>${a.loyalty.earned.toLocaleString('fr-FR')}</strong></div>
+            <div class="mini-row"><span>Points échangés</span><strong>${a.loyalty.redeemed.toLocaleString('fr-FR')}</strong></div>`;
+    } catch (error) {
+        // Analytics non bloquant pour le dashboard
+        console.error('Analytics:', error.message);
     }
 }
 

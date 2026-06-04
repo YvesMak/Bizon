@@ -18,6 +18,7 @@ const onboardingRoutes = require('./modules/onboarding/routes');
 const publicRoutes = require('./modules/public/routes');
 const customerRoutes = require('./modules/customers/routes');
 const voucherRoutes = require('./modules/vouchers/routes');
+const analyticsRoutes = require('./modules/analytics/routes');
 const paymentWebhookRoutes = require('./modules/payments/webhook.routes');
 
 const { errorTranslationMiddleware } = require('./utils/errorTranslator');
@@ -60,6 +61,7 @@ app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/vouchers', voucherRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Route de santé
 app.get('/health', (req, res) => {
