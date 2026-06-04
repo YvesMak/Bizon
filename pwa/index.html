@@ -60,6 +60,42 @@
     .cat-pill:hover { border-color: var(--primary); color: var(--primary); }
     .cat-pill.active { background: var(--primary); border-color: var(--primary); color: #fff; }
 
+    /* ---- Recherche ---- */
+    .menu-search {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--bg-surface); border: 1.5px solid var(--border);
+      border-radius: 14px; padding: 0.75rem 1rem; margin-bottom: 1.25rem;
+      color: var(--text-muted); transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .menu-search:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+    .menu-search svg { flex-shrink: 0; }
+    .menu-search input {
+      flex: 1; min-width: 0; border: none; background: none; outline: none;
+      font-family: inherit; font-size: 0.9375rem; color: var(--text);
+    }
+
+    /* ---- Bannière promo / fidélité ---- */
+    .promo-banner {
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      background: linear-gradient(135deg, #B71C1C 0%, var(--primary) 60%, #EF5350 100%);
+      border-radius: 20px; padding: 1.25rem 1.4rem; margin-bottom: 1.75rem;
+      color: #fff; overflow: hidden; position: relative;
+      box-shadow: 0 8px 24px rgba(198,40,40,0.25);
+    }
+    .promo-text { z-index: 1; }
+    .promo-text h3 { font-size: 1.0625rem; font-weight: 700; margin: 0 0 4px; }
+    .promo-text p { font-size: 0.8125rem; opacity: 0.92; margin: 0 0 0.875rem; max-width: 220px; line-height: 1.4; }
+    .promo-btn {
+      background: #fff; color: var(--primary); border: none; border-radius: 100px;
+      padding: 0.5rem 1.15rem; font-family: inherit; font-weight: 700; font-size: 0.8125rem;
+      cursor: pointer; transition: transform 0.15s;
+    }
+    .promo-btn:hover { transform: translateY(-1px); }
+    .promo-emoji { font-size: 3.25rem; opacity: 0.9; flex-shrink: 0; }
+
+    /* Section title : moins « lourd » (style réf, plus aéré) */
+    .menu-search + .promo-banner { margin-top: 0; }
+
     /* ---- Products Grid ---- */
     .products-grid {
       display: grid;
@@ -69,23 +105,24 @@
     /* Carte produit horizontale (image à gauche, infos à droite) */
     .product-card {
       background: var(--bg-surface);
-      border: 1.5px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-subtle);
+      border-radius: 18px;
       overflow: hidden; cursor: pointer;
       transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), border-color 0.2s;
       display: flex; flex-direction: row; align-items: stretch;
-      padding: 0; gap: 0; text-align: left; min-height: 96px;
+      padding: 0; gap: 0; text-align: left; min-height: 100px;
+      box-shadow: 0 2px 10px rgba(28,25,23,0.05);
     }
     .product-card:hover {
       transform: translateY(-2px);
-      box-shadow: var(--shadow-md);
-      border-color: rgba(198,40,40,0.25);
+      box-shadow: 0 10px 24px rgba(28,25,23,0.10);
+      border-color: rgba(198,40,40,0.20);
     }
     .product-card:active { transform: scale(0.99); }
 
     .product-img-wrap {
-      width: 96px; flex-shrink: 0;
-      background: var(--bg-subtle);
+      width: 84px; flex-shrink: 0; margin: 11px;
+      background: var(--bg-subtle); border-radius: 14px;
       position: relative; overflow: hidden;
       display: flex; align-items: center; justify-content: center;
     }
@@ -95,7 +132,7 @@
     }
     .product-img-placeholder { font-size: 1.75rem; opacity: 0.35; user-select: none; }
 
-    .product-body { padding: 0.75rem 0.9rem; flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .product-body { padding: 0.8rem 0.95rem 0.8rem 0.25rem; flex: 1; min-width: 0; display: flex; flex-direction: column; }
     .product-name { font-weight: 600; font-size: 0.9375rem; color: var(--text); margin-bottom: 2px; }
     .product-desc {
       font-size: 0.8rem; color: var(--text-muted); line-height: 1.35; margin-bottom: 8px;
@@ -527,9 +564,31 @@
         </div>
         <!-- Menu content -->
         <div id="menu-content" style="display:none">
+          <!-- Recherche -->
+          <div class="menu-search">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="menu-search-input" placeholder="Rechercher un plat…" oninput="searchProducts(this.value)" autocomplete="off">
+          </div>
+
+          <!-- Bannière promo / fidélité -->
+          <div class="promo-banner" id="promo-banner">
+            <div class="promo-text">
+              <h3>Programme fidélité 🎁</h3>
+              <p>Gagnez des points à chaque commande, échangez-les contre des bons.</p>
+              <button class="promo-btn" onclick="requireAuth(() => showSection('loyalty'))">Mes avantages</button>
+            </div>
+            <div class="promo-emoji">🍽️</div>
+          </div>
+
+          <!-- Catégories + produits -->
           <div class="category-pills" id="category-pills"></div>
           <div class="menu-section-title" id="menu-section-title"></div>
           <div class="products-grid" id="products-grid"></div>
+
+          <!-- Résultats de recherche (masqué par défaut) -->
+          <div id="search-results" style="display:none"></div>
         </div>
       </div>
 
