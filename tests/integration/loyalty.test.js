@@ -79,6 +79,53 @@ describe('Fidélité — gain de points au paiement', () => {
   });
 });
 
+describe('Fidélité — paiements staff (cash / mobile money manuel)', () => {
+  async function staffOrderWithCustomer({ qty = 2, price = 1000 } = {}) {
+    const resto = await createRestaurant();
+    const user = await createUser(resto.id, { role: 'owner' });
+    const customer = await createCustomer(resto.id);
+    const { product } = await createFullMenu(resto.id, { productPrice: price });
+    const order = await orderService.create(resto.id, user.id, {
+      customer_id: customer.id, table_number: '1',
+      items: [{ product_id: product.id, quantity: qty }]
+    });
+    return { resto, customer, order };
+  }
+
+  it('un paiement cash crédite les points du client lié', async () => {
+    const { resto, customer, order } = await staffOrderWithCustomer(); // total 2360 → 23 pts
+    await paymentService.create(resto.id, {
+      order_id: order.id, amount: order.total_amount, method: 'cash'
+    });
+    const refreshed = await Customer.findByPk(customer.id);
+    expect(refreshed.loyalty_points).toBe(23);
+  });
+
+  it('un paiement mobile money vérifié crédite les points', async () => {
+    const { resto, customer, order } = await staffOrderWithCustomer();
+    const payment = await paymentService.create(resto.id, {
+      order_id: order.id, amount: order.total_amount, method: 'mobile_money'
+    });
+    await paymentService.verify(resto.id, payment.id, 'TX123456');
+    const refreshed = await Customer.findByPk(customer.id);
+    expect(refreshed.loyalty_points).toBe(23);
+  });
+
+  it('ne crédite rien pour un paiement cash sans client lié', async () => {
+    const resto = await createRestaurant();
+    const user = await createUser(resto.id, { role: 'owner' });
+    const { product } = await createFullMenu(resto.id, { productPrice: 1000 });
+    const order = await orderService.create(resto.id, user.id, {
+      table_number: '2', items: [{ product_id: product.id, quantity: 1 }]
+    });
+    await paymentService.create(resto.id, {
+      order_id: order.id, amount: order.total_amount, method: 'cash'
+    });
+    const count = await LoyaltyTransaction.count();
+    expect(count).toBe(0);
+  });
+});
+
 describe('GET /api/customers/me/loyalty', () => {
   it('refuse sans token', async () => {
     const res = await request(app).get('/api/customers/me/loyalty');

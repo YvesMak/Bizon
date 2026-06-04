@@ -95,6 +95,13 @@ class PaymentService {
       } catch (updateError) {
         console.error('Erreur mise à jour statut commande:', updateError);
       }
+
+      // 🎁 Fidélité : créditer les points si la commande est liée à un client
+      try {
+        await LoyaltyService.creditForOrder(restaurantId, order);
+      } catch (loyaltyError) {
+        console.error('Erreur crédit fidélité:', loyaltyError.message);
+      }
     }
 
     return payment;
@@ -175,6 +182,9 @@ class PaymentService {
           status: 'paid'
         }, { transaction });
       }
+
+      // 🎁 Fidélité : créditer les points si la commande est liée à un client
+      await LoyaltyService.creditForOrder(restaurantId, order, transaction);
 
       // 📝 LOG: Paiement vérifié avec succès
       await logger.critical('PAYMENT_VERIFIED', {
