@@ -141,6 +141,7 @@ function navigateTo(page) {
         case 'menus': loadMenus(); break;
         case 'products': loadProducts(); break;
         case 'users': loadUsers(); break;
+        case 'vouchers': loadVouchers(); break;
     }
 }
 
@@ -154,6 +155,12 @@ function formatDate(dateString) {
 
 function formatAmount(amount) {
     return `${Math.round(amount).toLocaleString('fr-FR')} FCFA`;
+}
+
+function escapeHtml(str) {
+    return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
 function getStatusBadge(status) {
@@ -218,6 +225,7 @@ async function submitForm() {
         case 'product': await saveProduct(); break;
         case 'user': await saveUser(); break;
         case 'stock': await saveStock(); break;
+        case 'voucher': await saveVoucher(); break;
     }
 }
 
@@ -919,6 +927,168 @@ function confirmDeleteUser(userId) {
             showToast(error.message, 'error');
         }
     });
+}
+
+// ============================================
+// CODES PROMO (VOUCHERS)
+// ============================================
+
+async function loadVouchers() {
+    const container = document.getElementById('vouchers-list');
+    container.innerHTML = '<div class="loading">Chargement des codes promo...</div>';
+
+    try {
+        const vouchers = await apiCall('/vouchers');
+        mgrState.vouchers = Array.isArray(vouchers) ? vouchers : [];
+
+        if (mgrState.vouchers.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🎟️</div>
+                    <p>Aucun code promo créé</p>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="products-table vouchers-table">
+                <div class="table-header">
+                    <span>Code</span>
+                    <span>Réduction</span>
+                    <span>Min. / Limite</span>
+                    <span>Utilisé</span>
+                    <span>Statut</span>
+                    <span>Actions</span>
+                </div>
+                ${mgrState.vouchers.map(v => {
+                    const value = v.discount_type === 'percentage'
+                        ? `${Math.round(v.discount_value)}%${v.max_discount ? ` (max ${formatAmount(v.max_discount)})` : ''}`
+                        : formatAmount(v.discount_value);
+                    const expired = v.expires_at && new Date(v.expires_at) < new Date();
+                    const min = Number(v.min_order_amount) > 0 ? formatAmount(v.min_order_amount) : '—';
+                    const uses = v.max_uses ? `${v.used_count}/${v.max_uses}` : `${v.used_count}`;
+                    const statusLabel = !v.active ? 'Inactif' : (expired ? 'Expiré' : 'Actif');
+                    const statusCls = !v.active || expired ? 'badge-inactive' : 'badge-active';
+                    return `
+                    <div class="table-row">
+                        <span class="product-name-col"><strong>${escapeHtml(v.code)}</strong>${v.description ? `<br><small style="color:var(--text-light)">${escapeHtml(v.description)}</small>` : ''}</span>
+                        <span>${value}</span>
+                        <span>min ${min}${v.max_uses ? ` · max ${v.max_uses}` : ''}</span>
+                        <span>${uses}</span>
+                        <span><span class="${statusCls}">${statusLabel}</span></span>
+                        <span class="actions-col">
+                            <button class="btn-secondary btn-xs" onclick="toggleVoucher('${v.id}', ${!v.active})">${v.active ? 'Désactiver' : 'Activer'}</button>
+                        </span>
+                    </div>`;
+                }).join('')}
+            </div>`;
+    } catch (error) {
+        showToast(error.message, 'error');
+        container.innerHTML = `<div class="error-message">${error.message}</div>`;
+    }
+}
+
+function showVoucherForm() {
+    mgrState.editingItem = null;
+    mgrState.formType = 'voucher';
+
+    showFormModal('Nouveau code promo', `
+        <div class="form-group">
+            <label>Code *</label>
+            <input type="text" id="form-voucher-code" placeholder="Ex: BIZON10" style="text-transform:uppercase">
+        </div>
+        <div class="form-group">
+            <label>Description</label>
+            <input type="text" id="form-voucher-desc" placeholder="Ex: 10% sur la commande">
+        </div>
+        <div class="form-row-2">
+            <div class="form-group">
+                <label>Type *</label>
+                <select id="form-voucher-type" onchange="onVoucherTypeChange()">
+                    <option value="percentage">Pourcentage (%)</option>
+                    <option value="fixed">Montant fixe (FCFA)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Valeur *</label>
+                <input type="number" id="form-voucher-value" min="0" placeholder="Ex: 10">
+            </div>
+        </div>
+        <div class="form-row-2">
+            <div class="form-group">
+                <label>Réduction max (FCFA)</label>
+                <input type="number" id="form-voucher-maxdiscount" min="0" placeholder="Optionnel (%)">
+            </div>
+            <div class="form-group">
+                <label>Commande minimum (FCFA)</label>
+                <input type="number" id="form-voucher-minorder" min="0" value="0">
+            </div>
+        </div>
+        <div class="form-row-2">
+            <div class="form-group">
+                <label>Nb d'utilisations max</label>
+                <input type="number" id="form-voucher-maxuses" min="1" placeholder="Illimité si vide">
+            </div>
+            <div class="form-group">
+                <label>Date d'expiration</label>
+                <input type="date" id="form-voucher-expires">
+            </div>
+        </div>
+    `);
+}
+
+function onVoucherTypeChange() {
+    const type = document.getElementById('form-voucher-type').value;
+    const maxEl = document.getElementById('form-voucher-maxdiscount');
+    // Le plafond ne s'applique qu'aux pourcentages
+    maxEl.disabled = type === 'fixed';
+    if (type === 'fixed') maxEl.value = '';
+}
+
+async function saveVoucher() {
+    const code = document.getElementById('form-voucher-code').value.trim();
+    const value = document.getElementById('form-voucher-value').value;
+    if (!code) { showToast('Le code est requis', 'error'); return; }
+    if (value === '' || parseFloat(value) < 0) { showToast('Valeur de réduction invalide', 'error'); return; }
+
+    const type = document.getElementById('form-voucher-type').value;
+    if (type === 'percentage' && parseFloat(value) > 100) {
+        showToast('Un pourcentage ne peut dépasser 100', 'error'); return;
+    }
+
+    const maxDiscount = document.getElementById('form-voucher-maxdiscount').value;
+    const maxUses = document.getElementById('form-voucher-maxuses').value;
+    const expires = document.getElementById('form-voucher-expires').value;
+
+    const data = {
+        code,
+        description: document.getElementById('form-voucher-desc').value.trim() || null,
+        discount_type: type,
+        discount_value: parseFloat(value),
+        min_order_amount: parseFloat(document.getElementById('form-voucher-minorder').value) || 0,
+        max_discount: type === 'percentage' && maxDiscount ? parseFloat(maxDiscount) : null,
+        max_uses: maxUses ? parseInt(maxUses) : null,
+        expires_at: expires || null
+    };
+
+    try {
+        await apiCall('/vouchers', { method: 'POST', body: JSON.stringify(data) });
+        showToast('Code promo créé', 'success');
+        closeFormModal();
+        loadVouchers();
+    } catch (error) {
+        showToast(error.message, 'error');
+    }
+}
+
+async function toggleVoucher(id, active) {
+    try {
+        await apiCall(`/vouchers/${id}`, { method: 'PATCH', body: JSON.stringify({ active }) });
+        showToast(active ? 'Code activé' : 'Code désactivé', 'success');
+        loadVouchers();
+    } catch (error) {
+        showToast(error.message, 'error');
+    }
 }
 
 // ============================================
