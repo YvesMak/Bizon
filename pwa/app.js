@@ -253,8 +253,12 @@ function renderCartPanel() {
   if (!state.cart.length) {
     list.innerHTML = '<div class="empty-cart-msg"><span>🛒</span>Votre panier est vide</div>';
     document.getElementById('cart-total-amount').textContent = '0 FCFA';
+    state.appliedVoucher = null;
+    document.getElementById('cart-discount-row').style.display = 'none';
+    renderVoucherApplied();
     return;
   }
+  renderVoucherApplied();
   list.innerHTML = state.cart.map((item, i) => `
     <div class="cart-item">
       <div class="cart-item-img" style="display:flex;align-items:center;justify-content:center;background:var(--bg-subtle);border-radius:10px;overflow:hidden;width:52px;height:52px;flex-shrink:0">
@@ -273,57 +277,83 @@ function renderCartPanel() {
       </div>
     </div>
   `).join('');
+  const fmt = (n) => `${Number(Math.round(n)).toLocaleString('fr-FR')} FCFA`;
+  const TAX_RATE = 0.18; // identique au serveur (OrderService)
+
   const subtotal = state.cart.reduce((s, i) => s + i.price * i.quantity, 0);
-  const discount = state.appliedVoucher ? state.appliedVoucher.discount : 0;
+  const discount = Math.min(state.appliedVoucher ? state.appliedVoucher.discount : 0, subtotal);
+  const discountedSubtotal = subtotal - discount;
+  const tax = discountedSubtotal * TAX_RATE;
+  const total = discountedSubtotal + tax;
+
+  document.getElementById('cart-subtotal-amount').textContent = fmt(subtotal);
+  document.getElementById('cart-tax-amount').textContent = fmt(tax);
+  document.getElementById('cart-total-amount').textContent = fmt(total);
 
   const discountRow = document.getElementById('cart-discount-row');
   if (discount > 0) {
     discountRow.style.display = '';
-    document.getElementById('cart-discount-amount').textContent =
-      `-${Number(discount).toLocaleString('fr-FR')} FCFA`;
+    document.getElementById('cart-discount-amount').textContent = `-${fmt(discount)}`;
   } else {
     discountRow.style.display = 'none';
   }
-  document.getElementById('cart-total-amount').textContent =
-    `${Number(Math.max(0, subtotal - discount)).toLocaleString('fr-FR')} FCFA`;
 }
 
-async function applyPromo() {
-  const codeInput = document.getElementById('promo-code');
-  const fb = document.getElementById('promo-feedback');
-  const code = codeInput.value.trim();
+async function applyVoucher() {
+  const input = document.getElementById('voucher-code-input');
+  const code = input.value.trim();
   if (!code) return;
   if (!state.token) {
-    fb.className = 'err';
-    fb.textContent = 'Connectez-vous pour utiliser un code promo';
+    showToast('Connectez-vous pour utiliser un code promo', 'info');
+    closeCart();
+    showSection('login');
     return;
   }
   const subtotal = state.cart.reduce((s, i) => s + i.price * i.quantity, 0);
-  const btn = document.getElementById('btn-apply-promo');
+  const btn = document.getElementById('btn-apply-voucher');
   btn.disabled = true;
   try {
     const res = await apiCall('/customers/validate-voucher', {
       method: 'POST', body: JSON.stringify({ code, subtotal })
     });
     state.appliedVoucher = { code: res.code, discount: res.discount };
-    fb.className = 'ok';
-    fb.textContent = `Code ${res.code} appliqué : −${Number(res.discount).toLocaleString('fr-FR')} FCFA`;
+    input.value = '';
+    renderVoucherApplied();
     renderCartPanel();
+    showToast(`Code ${res.code} appliqué 🎉`, 'success');
   } catch (err) {
-    state.appliedVoucher = null;
-    fb.className = 'err';
-    fb.textContent = err.message;
-    renderCartPanel();
+    showToast(err.message, 'error');
   } finally {
     btn.disabled = false;
   }
 }
 
+// Affiche/masque la puce "code appliqué" et la ligne de saisie.
+function renderVoucherApplied() {
+  const chip = document.getElementById('voucher-applied');
+  const row = document.querySelector('.voucher-row');
+  if (!chip) return;
+  if (state.appliedVoucher) {
+    chip.style.display = 'flex';
+    chip.innerHTML = `<span>✓ <strong>${state.appliedVoucher.code}</strong> &nbsp;·&nbsp; −${Number(state.appliedVoucher.discount).toLocaleString('fr-FR')} FCFA</span><button onclick="removeVoucher()" aria-label="Retirer le code">✕</button>`;
+    if (row) row.style.display = 'none';
+  } else {
+    chip.style.display = 'none';
+    chip.innerHTML = '';
+    if (row) row.style.display = 'flex';
+  }
+}
+
+function removeVoucher() {
+  state.appliedVoucher = null;
+  renderVoucherApplied();
+  renderCartPanel();
+}
+
 // Le code promo dépend du sous-total : on le réinitialise à chaque changement de panier.
 function resetVoucher() {
   state.appliedVoucher = null;
-  const fb = document.getElementById('promo-feedback');
-  if (fb) { fb.textContent = ''; fb.className = ''; }
+  renderVoucherApplied();
 }
 
 function changeQty(index, delta) {
