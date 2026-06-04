@@ -74,6 +74,19 @@ cloudflared tunnel --url http://localhost:3000
 
 …puis utiliser l'URL fournie comme `APP_BASE_URL` et dans le dashboard.
 
+## Commandes non payées (nettoyage automatique)
+
+Une commande client (self-service) est créée en `draft` puis le client est
+redirigé vers le paiement. S'il abandonne, la commande reste `draft` (aucun
+stock engagé). Un job périodique les expire :
+
+- `OrderService.expireStaleCustomerDrafts(minutes)` annule les `draft`
+  **client** (`user_id` null) plus vieux que le délai et marque leur paiement
+  en attente comme `failed`. Les brouillons du **staff** ne sont jamais touchés.
+- Planifié au démarrage (`src/server.js`) :
+  - `ORDER_DRAFT_TTL_MINUTES` (défaut 30) — délai d'expiration
+  - `CLEANUP_INTERVAL_MINUTES` (défaut 10) — fréquence
+
 ## Tests
 
 Les tests (`tests/integration/payments-flutterwave.test.js`,
