@@ -116,8 +116,15 @@ async function loadMenu() {
       return;
     }
 
-    // Stocker restaurant_id pour les futures requêtes
-    if (data.restaurant) state.restaurantId = data.restaurant.id;
+    // Stocker restaurant_id + afficher le nom du restaurant dans le header
+    if (data.restaurant) {
+      state.restaurantId = data.restaurant.id;
+      const nameEl = document.querySelector('.logo-name');
+      if (nameEl && data.restaurant.name) {
+        nameEl.textContent = data.restaurant.name;
+        document.title = `${data.restaurant.name} — Menu & Fidélité`;
+      }
+    }
 
     state.menus = data.menus;
     state.allProducts = [];
@@ -438,7 +445,13 @@ async function loadOrders() {
   try {
     const orders = await apiCall('/customers/me/orders');
     if (!orders.length) {
-      list.innerHTML = '<div style="text-align:center;color:var(--text-light);padding:3rem">Vous n\'avez pas encore de commandes</div>';
+      list.innerHTML = `
+        <div class="empty-state-c">
+          <span class="empty-icon">🧾</span>
+          <h3>Aucune commande</h3>
+          <p>Vos commandes apparaîtront ici une fois passées.</p>
+          <button class="btn-primary-full" style="max-width:240px" onclick="showSection('menu')">Découvrir le menu</button>
+        </div>`;
       return;
     }
     const statusLabels = { confirmed: 'Confirmée', preparing: 'En préparation', ready: 'Prête', paid: 'Payée', cancelled: 'Annulée', draft: 'Brouillon' };
