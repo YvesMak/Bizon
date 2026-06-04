@@ -413,7 +413,7 @@ class OrderService {
       let appliedVoucher = null;
       if (voucher_code) {
         const res = await VoucherService.validateAndCompute(
-          restaurantId, voucher_code, subtotal, { transaction }
+          restaurantId, voucher_code, subtotal, { transaction, customerId }
         );
         discount = res.discount;
         appliedVoucher = res.voucher;

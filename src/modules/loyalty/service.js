@@ -59,6 +59,34 @@ class LoyaltyService {
   }
 
   /**
+   * Dépense des points (échange contre une récompense).
+   * Vérifie le solde, décrémente atomiquement, écrit une ligne 'redeem'.
+   * À appeler DANS une transaction.
+   */
+  async spend(restaurantId, customerId, points, description, transaction = null) {
+    if (!(points > 0)) throw new Error('Nombre de points invalide');
+
+    const customer = await Customer.findByPk(customerId, { transaction });
+    if (!customer) throw new Error('Client non trouvé');
+    if ((customer.loyalty_points || 0) < points) throw new Error('Points insuffisants');
+
+    await Customer.decrement('loyalty_points', {
+      by: points, where: { id: customerId }, transaction
+    });
+    const updated = await Customer.findByPk(customerId, { transaction });
+
+    return LoyaltyTransaction.create({
+      restaurant_id: restaurantId,
+      customer_id: customerId,
+      order_id: null,
+      points: -points,
+      type: 'redeem',
+      balance_after: updated.loyalty_points,
+      description: description || 'Échange de points'
+    }, { transaction });
+  }
+
+  /**
    * Solde + historique des points d'un client.
    */
   async getHistory(customerId, restaurantId, limit = 30) {

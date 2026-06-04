@@ -971,7 +971,7 @@ async function loadVouchers() {
                     const statusCls = !v.active || expired ? 'badge-inactive' : 'badge-active';
                     return `
                     <div class="table-row">
-                        <span class="product-name-col"><strong>${escapeHtml(v.code)}</strong>${v.description ? `<br><small style="color:var(--text-light)">${escapeHtml(v.description)}</small>` : ''}</span>
+                        <span class="product-name-col"><strong>${escapeHtml(v.code)}</strong>${v.points_cost > 0 ? ` <span class="badge-active">🎁 ${v.points_cost} pts</span>` : ''}${v.description ? `<br><small style="color:var(--text-light)">${escapeHtml(v.description)}</small>` : ''}</span>
                         <span>${value}</span>
                         <span>min ${min}${v.max_uses ? ` · max ${v.max_uses}` : ''}</span>
                         <span>${uses}</span>
@@ -1034,6 +1034,10 @@ function showVoucherForm() {
                 <input type="date" id="form-voucher-expires">
             </div>
         </div>
+        <div class="form-group">
+            <label>Coût en points (0 = code promo public · > 0 = récompense échangeable)</label>
+            <input type="number" id="form-voucher-points" min="0" value="0">
+        </div>
     `);
 }
 
@@ -1068,7 +1072,8 @@ async function saveVoucher() {
         min_order_amount: parseFloat(document.getElementById('form-voucher-minorder').value) || 0,
         max_discount: type === 'percentage' && maxDiscount ? parseFloat(maxDiscount) : null,
         max_uses: maxUses ? parseInt(maxUses) : null,
-        expires_at: expires || null
+        expires_at: expires || null,
+        points_cost: parseInt(document.getElementById('form-voucher-points').value) || 0
     };
 
     try {

@@ -389,6 +389,27 @@
     .lh-empty { text-align: center; color: var(--text-muted); padding: 2rem 0; font-size: 0.9375rem; }
     .lh-empty span { display: block; font-size: 2rem; margin-bottom: 0.5rem; }
 
+    /* ---- Récompenses / bons ---- */
+    .reward-item { display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      padding: 1rem 1.25rem; background: var(--bg-surface); border: 1.5px solid var(--border-subtle);
+      border-radius: 12px; margin-bottom: 8px; }
+    .reward-info h4 { font-size: 0.95rem; font-weight: 600; margin: 0 0 2px; color: var(--text); }
+    .reward-info span { font-size: 0.8125rem; color: var(--text-muted); }
+    .reward-cost { font-weight: 700; color: var(--primary); font-size: 0.875rem; white-space: nowrap; }
+    .btn-redeem { padding: 0.5rem 1rem; border-radius: 10px; border: none; background: var(--primary);
+      color: #fff; font-family: inherit; font-size: 0.8125rem; font-weight: 600; cursor: pointer;
+      white-space: nowrap; transition: background 0.15s; }
+    .btn-redeem:hover { background: var(--primary-hover); }
+    .btn-redeem:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
+    .voucher-item { display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      padding: 0.875rem 1.25rem; border: 1.5px dashed var(--border); border-radius: 12px; margin-bottom: 8px;
+      background: var(--bg-surface); }
+    .voucher-item.used { opacity: 0.5; }
+    .voucher-code-tag { font-family: 'Courier New', monospace; font-weight: 700; font-size: 0.95rem;
+      color: var(--text); letter-spacing: 0.04em; }
+    .voucher-item small { color: var(--text-muted); font-size: 0.8125rem; }
+    .voucher-used-badge { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
+
     /* ---- Bottom Navigation (mobile) ---- */
     .bottom-nav {
       display: none;
@@ -594,16 +615,26 @@
           <div class="loyalty-points-sub">points accumulés</div>
           <div class="loyalty-card-name" id="loyalty-name"></div>
         </div>
-        <h2 style="font-size:1.0625rem;font-weight:700;margin-bottom:1rem;color:var(--text)">Historique des points</h2>
+        <!-- Récompenses à échanger -->
+        <h2 style="font-size:1.0625rem;font-weight:700;margin-bottom:1rem;color:var(--text)">Échanger mes points</h2>
+        <div id="rewards-available">
+          <div class="loading"><span>Chargement…</span></div>
+        </div>
+
+        <!-- Mes bons -->
+        <div id="my-vouchers-wrap" style="display:none">
+          <h2 style="font-size:1.0625rem;font-weight:700;margin:1.75rem 0 1rem;color:var(--text)">Mes bons</h2>
+          <div id="my-vouchers"></div>
+        </div>
+
+        <!-- Historique -->
+        <h2 style="font-size:1.0625rem;font-weight:700;margin:1.75rem 0 1rem;color:var(--text)">Historique des points</h2>
         <div id="loyalty-history">
           <div class="loading"><span>Chargement…</span></div>
         </div>
         <p style="color:var(--text-muted);font-size:0.8125rem;margin-top:1.5rem;line-height:1.6">
           1 point gagné par tranche de 100 FCFA dépensés &nbsp;·&nbsp; Les points sont crédités après validation du paiement.
         </p>
-        <div style="margin-top:1.25rem;padding:1rem 1.25rem;background:var(--bg-subtle);border-radius:12px;text-align:center;color:var(--text-muted);font-size:0.875rem">
-          🎁 Bons de réduction : <strong>bientôt disponibles</strong>
-        </div>
       </div>
 
     </main>
