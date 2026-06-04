@@ -862,3 +862,50 @@
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr; }
 }
+
+/* ============================================
+   ANALYTICS (dashboard)
+   ============================================ */
+.analytics-section { margin-top: 2rem; display: flex; flex-direction: column; gap: 1.25rem; }
+.analytics-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; }
+.analytics-card {
+  background: var(--bg-surface); border: 1.5px solid var(--border-subtle);
+  border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; box-shadow: var(--shadow-xs);
+}
+.analytics-card h3 {
+  font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-muted); margin: 0 0 1rem;
+}
+.analytics-empty { color: var(--text-muted); font-size: 14px; padding: 0.5rem 0; }
+
+/* Graphique CA en barres */
+.revenue-chart { display: flex; align-items: flex-end; gap: 0.75rem; height: 160px; }
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
+.bar-wrap { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.bar {
+  width: 100%; background: linear-gradient(180deg, var(--primary), #EF5350);
+  border-radius: 6px 6px 0 0; min-height: 2px; transition: opacity 0.15s;
+}
+.bar:hover { opacity: 0.8; }
+.bar-label { font-size: 11px; color: var(--text-muted); margin-top: 0.4rem; text-transform: capitalize; }
+
+/* Top produits */
+.tp-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.55rem 0; border-bottom: 1px solid var(--border-subtle); }
+.tp-row:last-child { border-bottom: none; }
+.tp-rank {
+  width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%;
+  background: var(--primary-light); color: var(--primary);
+  font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.tp-name { flex: 1; font-size: 14px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tp-qty { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+
+/* Mini stats (codes promo / fidélité) */
+.mini-row { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--border-subtle); font-size: 14px; }
+.mini-row:last-child { border-bottom: none; }
+.mini-row span { color: var(--text-muted); }
+.mini-row strong { color: var(--text); font-weight: 700; }
+
+@media (max-width: 768px) {
+  .analytics-grid { grid-template-columns: 1fr; }
+}
