@@ -237,9 +237,13 @@
     }
     .qty-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(198,40,40,0.06); }
     .cart-footer { padding: 1.25rem 1.5rem; border-top: 1px solid var(--border); }
-    .cart-total-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem; }
+    .cart-total-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
     .cart-total-label { font-weight: 600; color: var(--text); }
     .cart-total-amount { font-weight: 700; font-size: 1.25rem; color: var(--primary); }
+    .cart-line-muted { font-size: 0.875rem; }
+    .cart-line-muted .cart-total-label { font-weight: 500; color: var(--text-muted); }
+    .cart-line-muted span:last-child { color: var(--text-muted); }
+    .cart-total-final { margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px solid var(--border); margin-bottom: 1rem; }
     .btn-order {
       width: 100%; padding: 0.9rem; background: var(--primary);
       color: #fff; border: none; border-radius: var(--radius-lg);
@@ -675,11 +679,19 @@
           <input type="text" id="order-table" placeholder="Numéro de table" inputmode="numeric">
           <input type="text" id="order-address" placeholder="Adresse de livraison" style="display:none">
         </div>
+        <div class="cart-total-row cart-line-muted">
+          <span class="cart-total-label">Sous-total</span>
+          <span id="cart-subtotal-amount">0 FCFA</span>
+        </div>
         <div class="cart-total-row" id="cart-discount-row" style="display:none">
           <span class="cart-total-label" style="color:var(--success)">Réduction</span>
           <span style="font-weight:600;color:var(--success)" id="cart-discount-amount">0 FCFA</span>
         </div>
-        <div class="cart-total-row">
+        <div class="cart-total-row cart-line-muted">
+          <span class="cart-total-label">TVA (18%)</span>
+          <span id="cart-tax-amount">0 FCFA</span>
+        </div>
+        <div class="cart-total-row cart-total-final">
           <span class="cart-total-label">Total</span>
           <span class="cart-total-amount" id="cart-total-amount">0 FCFA</span>
         </div>
