@@ -37,17 +37,17 @@ async function paidCustomerOrder({ qty = 2, price = 1000 } = {}) {
 
 describe('Fidélité — gain de points au paiement', () => {
   it('crédite floor(total/100) points et écrit une ligne au ledger', async () => {
-    const { resto, customer, order } = await paidCustomerOrder(); // total 2360 → 23 pts
+    const { resto, customer, order } = await paidCustomerOrder(); // total 2000 → 20 pts
     await paymentService.settleFlutterwave({ transactionId: 1, txRef: order.order_number });
 
     const refreshed = await Customer.findByPk(customer.id);
-    expect(refreshed.loyalty_points).toBe(23);
+    expect(refreshed.loyalty_points).toBe(20);
 
     const txns = await LoyaltyTransaction.findAll({ where: { customer_id: customer.id } });
     expect(txns).toHaveLength(1);
     expect(txns[0].type).toBe('earn');
-    expect(txns[0].points).toBe(23);
-    expect(txns[0].balance_after).toBe(23);
+    expect(txns[0].points).toBe(20);
+    expect(txns[0].balance_after).toBe(20);
   });
 
   it('est idempotent : un seul gain même si le règlement est rejoué', async () => {
@@ -56,7 +56,7 @@ describe('Fidélité — gain de points au paiement', () => {
     await paymentService.settleFlutterwave({ transactionId: 1, txRef: order.order_number });
 
     const refreshed = await Customer.findByPk(customer.id);
-    expect(refreshed.loyalty_points).toBe(23); // pas 46
+    expect(refreshed.loyalty_points).toBe(20); // pas 40
     const txns = await LoyaltyTransaction.findAll({ where: { customer_id: customer.id } });
     expect(txns).toHaveLength(1);
   });
@@ -93,12 +93,12 @@ describe('Fidélité — paiements staff (cash / mobile money manuel)', () => {
   }
 
   it('un paiement cash crédite les points du client lié', async () => {
-    const { resto, customer, order } = await staffOrderWithCustomer(); // total 2360 → 23 pts
+    const { resto, customer, order } = await staffOrderWithCustomer(); // total 2000 → 20 pts
     await paymentService.create(resto.id, {
       order_id: order.id, amount: order.total_amount, method: 'cash'
     });
     const refreshed = await Customer.findByPk(customer.id);
-    expect(refreshed.loyalty_points).toBe(23);
+    expect(refreshed.loyalty_points).toBe(20);
   });
 
   it('un paiement mobile money vérifié crédite les points', async () => {
@@ -108,7 +108,7 @@ describe('Fidélité — paiements staff (cash / mobile money manuel)', () => {
     });
     await paymentService.verify(resto.id, payment.id, 'TX123456');
     const refreshed = await Customer.findByPk(customer.id);
-    expect(refreshed.loyalty_points).toBe(23);
+    expect(refreshed.loyalty_points).toBe(20);
   });
 
   it('ne crédite rien pour un paiement cash sans client lié', async () => {
@@ -142,8 +142,8 @@ describe('GET /api/customers/me/loyalty', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.points).toBe(23);
+    expect(res.body.points).toBe(20);
     expect(res.body.transactions).toHaveLength(1);
-    expect(res.body.transactions[0].points).toBe(23);
+    expect(res.body.transactions[0].points).toBe(20);
   });
 });

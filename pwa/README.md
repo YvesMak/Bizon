@@ -42,7 +42,7 @@ npx serve pwa -p 8080
 3. **Panier**
    - Ajout/suppression produits
    - Modification quantités
-   - Calcul automatique TVA (18%)
+   - Application d'un code promo (réduction)
    - Persistance localStorage
 
 4. **Commandes**

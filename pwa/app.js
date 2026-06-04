@@ -278,16 +278,12 @@ function renderCartPanel() {
     </div>
   `).join('');
   const fmt = (n) => `${Number(Math.round(n)).toLocaleString('fr-FR')} FCFA`;
-  const TAX_RATE = 0.18; // identique au serveur (OrderService)
 
   const subtotal = state.cart.reduce((s, i) => s + i.price * i.quantity, 0);
   const discount = Math.min(state.appliedVoucher ? state.appliedVoucher.discount : 0, subtotal);
-  const discountedSubtotal = subtotal - discount;
-  const tax = discountedSubtotal * TAX_RATE;
-  const total = discountedSubtotal + tax;
+  const total = subtotal - discount; // pas de TVA ajoutée
 
   document.getElementById('cart-subtotal-amount').textContent = fmt(subtotal);
-  document.getElementById('cart-tax-amount').textContent = fmt(tax);
   document.getElementById('cart-total-amount').textContent = fmt(total);
 
   const discountRow = document.getElementById('cart-discount-row');
