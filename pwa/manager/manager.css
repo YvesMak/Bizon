@@ -909,3 +909,26 @@
 @media (max-width: 768px) {
   .analytics-grid { grid-template-columns: 1fr; }
 }
+
+/* ============================================
+   UPLOAD IMAGE PRODUIT
+   ============================================ */
+.img-upload { display: flex; align-items: center; gap: 1rem; }
+.img-preview {
+  width: 72px; height: 72px; border-radius: 14px; background: var(--bg-subtle);
+  display: flex; align-items: center; justify-content: center; font-size: 1.75rem;
+  overflow: hidden; flex-shrink: 0; border: 1px solid var(--border-subtle);
+}
+.img-preview img { width: 100%; height: 100%; object-fit: cover; }
+.img-upload-btn {
+  background: var(--bg-surface); border: 1.5px solid var(--border); color: var(--text);
+  padding: 0.55rem 1rem; border-radius: 10px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all var(--dur) var(--ease);
+}
+.img-upload-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+
+/* Miniature produit dans la liste */
+.product-thumb {
+  width: 36px; height: 36px; border-radius: 9px; object-fit: cover;
+  vertical-align: middle; margin-right: 0.6rem; border: 1px solid var(--border-subtle);
+}

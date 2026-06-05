@@ -2,6 +2,7 @@ node_modules/
 .env
 .env.test
 storage/invoices/*.pdf
+storage/uploads/
 *.log
 .DS_Store
 .vscode/

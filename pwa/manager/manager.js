@@ -626,6 +626,7 @@ async function loadProducts() {
                 ${mgrState.products.map(product => `
                     <div class="table-row">
                         <span class="product-name-col">
+                            ${product.image_url ? `<img class="product-thumb" src="${product.image_url}" alt="">` : ''}
                             ${product.name}
                             ${!product.is_available ? '<span class="badge-inactive">Inactif</span>' : ''}
                         </span>
@@ -665,6 +666,19 @@ function showProductForm(productId = null) {
     });
 
     showFormModal(product ? 'Modifier le produit' : 'Nouveau produit', `
+        <div class="form-group">
+            <label>Photo du produit</label>
+            <div class="img-upload">
+                <div class="img-preview" id="form-prod-img-preview">
+                    ${product && product.image_url ? `<img src="${product.image_url}" alt="">` : '<span>🍽️</span>'}
+                </div>
+                <label class="img-upload-btn">
+                    Choisir une image
+                    <input type="file" id="form-prod-img-file" accept="image/*" onchange="previewProductImage(this)" hidden>
+                </label>
+                <input type="hidden" id="form-prod-img-url" value="${product ? (product.image_url || '') : ''}">
+            </div>
+        </div>
         <div class="form-group">
             <label>Nom du produit *</label>
             <input type="text" id="form-prod-name" value="${product ? product.name : ''}" placeholder="Ex: Thiéboudienne">
@@ -714,12 +728,49 @@ function showProductForm(productId = null) {
     }
 }
 
+// Aperçu local de l'image sélectionnée
+function previewProductImage(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        document.getElementById('form-prod-img-preview').innerHTML = `<img src="${e.target.result}" alt="">`;
+    };
+    reader.readAsDataURL(file);
+}
+
+// Upload d'un fichier image → renvoie l'URL servie
+async function uploadImage(file) {
+    const fd = new FormData();
+    fd.append('image', file);
+    const response = await fetch(`${API_BASE_URL}/uploads/image`, {
+        method: 'POST',
+        headers: { ...(mgrState.token && { Authorization: `Bearer ${mgrState.token}` }) },
+        body: fd
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Échec de l\'upload');
+    return data.url;
+}
+
 async function saveProduct() {
     const name = document.getElementById('form-prod-name').value.trim();
     const price = document.getElementById('form-prod-price').value;
 
     if (!name) { showToast('Le nom est requis', 'error'); return; }
     if (!price || parseFloat(price) <= 0) { showToast('Le prix doit être supérieur à 0', 'error'); return; }
+
+    // Image : upload si un nouveau fichier est sélectionné, sinon URL existante
+    let imageUrl = document.getElementById('form-prod-img-url').value || null;
+    const fileInput = document.getElementById('form-prod-img-file');
+    if (fileInput && fileInput.files && fileInput.files[0]) {
+        try {
+            imageUrl = await uploadImage(fileInput.files[0]);
+        } catch (e) {
+            showToast('Image : ' + e.message, 'error');
+            return;
+        }
+    }
 
     const data = {
         name,
@@ -728,7 +779,8 @@ async function saveProduct() {
         category_id: document.getElementById('form-prod-category').value || null,
         track_stock: document.getElementById('form-prod-track-stock').value === 'true',
         stock_quantity: parseInt(document.getElementById('form-prod-stock').value) || 0,
-        is_available: document.getElementById('form-prod-available').value === 'true'
+        is_available: document.getElementById('form-prod-available').value === 'true',
+        image_url: imageUrl
     };
 
     try {
