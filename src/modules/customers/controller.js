@@ -8,10 +8,15 @@ const sse = require('../../sse');
 const { Restaurant, Customer } = require('../../models');
 
 class CustomerController {
-  // Résout le restaurantId depuis query param ou premier restaurant actif
+  // Résout le restaurantId depuis l'id, sinon le slug, sinon le premier actif
   async _resolveRestaurantId(req) {
     const id = req.query.restaurantId || req.body.restaurantId;
     if (id) return id;
+    const slug = req.query.slug || req.body.slug;
+    if (slug) {
+      const bySlug = await Restaurant.findOne({ where: { slug, status: 'active' } });
+      if (bySlug) return bySlug.id;
+    }
     const r = await Restaurant.findOne({ where: { status: 'active' } });
     if (!r) throw new Error('Restaurant non trouvé');
     return r.id;

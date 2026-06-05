@@ -4,13 +4,15 @@ class PublicController {
   // GET /api/public/menu?restaurantId=xxx  ou premier restaurant si absent
   async getMenu(req, res) {
     try {
-      const { restaurantId } = req.query;
+      const { restaurantId, slug } = req.query;
 
-      let where = { is_active: true };
-      if (restaurantId) where.restaurant_id = restaurantId;
-
-      // Si pas de restaurantId, prendre le premier restaurant actif
+      // Cible le restaurant : par id, sinon par slug, sinon le premier actif.
       let targetRestaurantId = restaurantId;
+      if (!targetRestaurantId && slug) {
+        const bySlug = await Restaurant.findOne({ where: { slug, status: 'active' } });
+        if (!bySlug) return res.json({ available: false, menus: [] });
+        targetRestaurantId = bySlug.id;
+      }
       if (!targetRestaurantId) {
         const restaurant = await Restaurant.findOne({ where: { status: 'active' } });
         if (!restaurant) return res.json({ available: false, menus: [] });

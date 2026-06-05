@@ -14,7 +14,8 @@
     "db:migrate:status": "sequelize-cli db:migrate:status",
     "db:migrate:test": "cross-env NODE_ENV=test sequelize-cli db:migrate",
     "create-admin": "node scripts/create-admin.js",
-    "generate-vapid": "node scripts/generate-vapid.js"
+    "generate-vapid": "node scripts/generate-vapid.js",
+    "seed:demo": "node scripts/seed-demo.js"
   },
   "engines": {
     "node": ">=20"

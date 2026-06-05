@@ -33,4 +33,33 @@ describe('GET /api/public/menu', () => {
     expect(res.body.restaurant.settings).toBeUndefined();
     expect(res.body.restaurant.email).toBeUndefined();
   });
+
+  it('cible le bon restaurant via son slug (?slug=)', async () => {
+    // Deux restaurants : on doit obtenir celui demandé par slug, pas le premier.
+    const first = await createRestaurant({ name: 'Premier', slug: 'premier-resto' });
+    await createFullMenu(first.id);
+    const target = await createRestaurant({ name: 'Chez Paul', slug: 'chez-paul' });
+    await createFullMenu(target.id, { productPrice: 3200 });
+
+    const res = await request(app).get('/api/public/menu?slug=chez-paul');
+    expect(res.status).toBe(200);
+    expect(res.body.available).toBe(true);
+    expect(res.body.restaurant.id).toBe(target.id);
+    expect(res.body.restaurant.slug).toBe('chez-paul');
+  });
+
+  it('renvoie available=false pour un slug inconnu', async () => {
+    const resto = await createRestaurant({ name: 'Resto' });
+    await createFullMenu(resto.id);
+    const res = await request(app).get('/api/public/menu?slug=nexiste-pas');
+    expect(res.status).toBe(200);
+    expect(res.body.available).toBe(false);
+  });
+
+  it('expose service_types dans le restaurant public', async () => {
+    const resto = await createRestaurant({ name: 'Resto Modes', settings: { service_types: ['delivery'] } });
+    await createFullMenu(resto.id);
+    const res = await request(app).get(`/api/public/menu?restaurantId=${resto.id}`);
+    expect(res.body.restaurant.service_types).toEqual(['delivery']);
+  });
 });
