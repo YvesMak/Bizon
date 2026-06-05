@@ -36,12 +36,18 @@ const startServer = async () => {
     // Initialisation des modèles
     initModels();
 
-    // ⚠️ Le schéma est désormais géré par les migrations Sequelize.
-    //    En production : `npm run db:migrate` avant de démarrer.
-    //    En développement, on peut garder une synchronisation non destructive.
-    if (process.env.NODE_ENV === 'development') {
-      await sequelize.sync({ alter: false });
-      console.log('✅ Modèles synchronisés (dev)');
+    // ⚠️ Le schéma est géré par les migrations Sequelize (`npm run db:migrate`),
+    //    en dev comme en prod. On NE synchronise PAS automatiquement au démarrage :
+    //    `sequelize.sync({ alter })` tente de modifier les tables existantes et
+    //    échoue dès qu'une donnée viole une contrainte ajoutée (ex. doublon sur une
+    //    colonne passée UNIQUE), ce qui bloquait le boot en développement.
+    //    Échappatoire explicite pour (re)créer un schéma vierge : DB_SYNC=force.
+    if (process.env.DB_SYNC === 'force') {
+      console.warn('⚠️  DB_SYNC=force : recréation destructive du schéma (sync force).');
+      await sequelize.sync({ force: true });
+    } else if (process.env.DB_SYNC === 'true') {
+      await sequelize.sync();
+      console.log('✅ Tables manquantes créées (sync sans altération).');
     }
 
     // Démarrage serveur
