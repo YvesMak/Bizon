@@ -18,6 +18,11 @@ const sequelize = new Sequelize(
     port: process.env.DB_PORT,
     dialect: 'postgres',
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    // SSL pour les bases managées qui l'exigent (Railway, Neon, Supabase, Heroku…).
+    // Activer avec DB_SSL=true ; inutile pour une connexion interne (ex. Render).
+    dialectOptions: process.env.DB_SSL === 'true'
+      ? { ssl: { require: true, rejectUnauthorized: false } }
+      : {},
     pool: {
       max: 5,
       min: 0,
