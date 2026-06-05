@@ -479,6 +479,24 @@
     .status-preparing { background: #eff6ff; color: #1d4ed8; }
     .status-confirmed { background: #fdf4ff; color: #7e22ce; }
     .status-draft { background: var(--bg-subtle); color: var(--text-muted); }
+    .order-history-item { cursor: pointer; }
+    .oh-left { flex: 1; }
+    .oh-chevron { color: var(--text-muted); font-size: 1.4rem; font-weight: 700; margin-left: 0.5rem; flex-shrink: 0; }
+
+    /* ---- Détail de commande ---- */
+    .od-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.875rem; }
+    .od-head h3 { font-size: 1.0625rem; font-weight: 700; margin: 0 0 2px; }
+    .od-date { font-size: 0.8125rem; color: var(--text-muted); }
+    .od-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+    .od-type { background: var(--primary-light); color: var(--primary); font-size: 0.8125rem; font-weight: 700; padding: 4px 12px; border-radius: 100px; }
+    .od-ctx { background: var(--bg-subtle); color: var(--text); font-size: 0.8125rem; font-weight: 500; padding: 4px 12px; border-radius: 100px; }
+    .od-items { border-top: 1px solid var(--border-subtle); padding-top: 0.875rem; margin-bottom: 0.875rem; }
+    .od-item { display: flex; justify-content: space-between; gap: 1rem; padding: 0.5rem 0; font-size: 0.9rem; color: var(--text); }
+    .od-qty { color: var(--primary); font-weight: 700; margin-right: 4px; }
+    .od-totals { border-top: 1px solid var(--border-subtle); padding-top: 0.875rem; }
+    .od-row { display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--text-muted); padding: 0.25rem 0; }
+    .od-total { font-size: 1.0625rem; font-weight: 700; color: var(--text); border-top: 1px solid var(--border-subtle); margin-top: 0.5rem; padding-top: 0.75rem; }
+    .od-total span:last-child { color: var(--primary); }
 
     /* ---- Loyalty ---- */
     .loyalty-card {
@@ -875,6 +893,18 @@
         </div>
         <button class="btn-order" id="btn-checkout">Commander &amp; payer</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Order Detail Sheet -->
+  <div class="cart-sheet" id="order-detail-sheet">
+    <div class="cart-backdrop" onclick="closeOrderDetail()"></div>
+    <div class="cart-panel">
+      <div class="cart-header">
+        <h2>Détail de la commande</h2>
+        <button class="btn-close-cart" onclick="closeOrderDetail()">✕</button>
+      </div>
+      <div class="cart-items" id="od-content"></div>
     </div>
   </div>
 

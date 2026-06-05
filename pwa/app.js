@@ -514,9 +514,10 @@ async function loadOrders() {
         </div>`;
       return;
     }
-    const statusLabels = { confirmed: 'Confirmée', preparing: 'En préparation', ready: 'Prête', paid: 'Payée', cancelled: 'Annulée', draft: 'Brouillon' };
+    state.orders = orders;
+    const statusLabels = { confirmed: 'Confirmée', preparing: 'En préparation', ready: 'Prête', paid: 'Payée', cancelled: 'Annulée', draft: 'En attente' };
     list.innerHTML = orders.map(o => `
-      <div class="order-history-item">
+      <div class="order-history-item" onclick="openOrderDetail('${o.id}')" role="button" tabindex="0">
         <div class="oh-left">
           <h4>${o.order_number || o.id}</h4>
           <span>${new Date(o.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
@@ -525,11 +526,55 @@ async function loadOrders() {
           <div class="oh-amount">${Number(o.total_amount).toLocaleString('fr-FR')} FCFA</div>
           <div class="oh-status status-${o.status}">${statusLabels[o.status] || o.status}</div>
         </div>
+        <span class="oh-chevron">›</span>
       </div>
     `).join('');
   } catch {
     list.innerHTML = '<div style="color:var(--error);text-align:center;padding:2rem">Erreur de chargement</div>';
   }
+}
+
+function openOrderDetail(orderId) {
+  const order = (state.orders || []).find(o => o.id === orderId);
+  if (!order) return;
+  const statusLabels = { confirmed: 'Confirmée', preparing: 'En préparation', ready: 'Prête', paid: 'Payée', cancelled: 'Annulée', draft: 'En attente' };
+  const typeLabels = { dine_in: 'Sur place', takeaway: 'À emporter', delivery: 'Livraison' };
+  const items = order.items || [];
+  const itemsHtml = items.map(i => `
+    <div class="od-item">
+      <span><span class="od-qty">${i.quantity}×</span> ${i.product_name}</span>
+      <span>${Number(i.subtotal).toLocaleString('fr-FR')} FCFA</span>
+    </div>`).join('');
+  const discount = Number(order.discount_amount) || 0;
+  const subtotal = Number(order.subtotal) || items.reduce((s, i) => s + Number(i.subtotal), 0);
+
+  let context = '';
+  if (order.type === 'dine_in' && order.table_number) context = `Table ${order.table_number}`;
+  else if (order.type === 'delivery' && order.delivery_address) context = order.delivery_address;
+
+  document.getElementById('od-content').innerHTML = `
+    <div class="od-head">
+      <div>
+        <h3>${order.order_number || 'Commande'}</h3>
+        <span class="od-date">${new Date(order.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+      </div>
+      <span class="oh-status status-${order.status}">${statusLabels[order.status] || order.status}</span>
+    </div>
+    <div class="od-meta">
+      <span class="od-type">${typeLabels[order.type] || order.type}</span>
+      ${context ? `<span class="od-ctx">${context}</span>` : ''}
+    </div>
+    <div class="od-items">${itemsHtml || '<p style="color:var(--text-muted)">Aucun article</p>'}</div>
+    <div class="od-totals">
+      <div class="od-row"><span>Sous-total</span><span>${subtotal.toLocaleString('fr-FR')} FCFA</span></div>
+      ${discount > 0 ? `<div class="od-row" style="color:var(--success)"><span>Réduction</span><span>-${discount.toLocaleString('fr-FR')} FCFA</span></div>` : ''}
+      <div class="od-row od-total"><span>Total</span><span>${Number(order.total_amount).toLocaleString('fr-FR')} FCFA</span></div>
+    </div>`;
+  document.getElementById('order-detail-sheet').classList.add('open');
+}
+
+function closeOrderDetail() {
+  document.getElementById('order-detail-sheet').classList.remove('open');
 }
 
 // ============================================
