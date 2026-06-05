@@ -1027,4 +1027,84 @@ document.addEventListener('DOMContentLoaded', async () => {
     initOrderStream();
     loadActiveOrder();
   }
+
+  // Installation PWA (service worker + invite d'installation)
+  initPWA();
 });
+
+// ============================================
+// INSTALLATION PWA
+// ============================================
+let deferredInstallPrompt = null;
+
+function isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+}
+function isiOS() {
+  return /iphone|ipad|ipod/i.test(window.navigator.userAgent)
+    && !window.MSStream;
+}
+function installDismissedRecently() {
+  const ts = parseInt(localStorage.getItem('bizon_install_dismissed') || '0', 10);
+  // Ne pas re-proposer avant 7 jours après un rejet.
+  return ts && (Date.now() - ts) < 7 * 24 * 60 * 60 * 1000;
+}
+
+function initPWA() {
+  // 1) Enregistrer le service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.warn('SW non enregistré :', err && err.message);
+    });
+  }
+
+  // Déjà installée → ne rien proposer
+  if (isStandalone()) return;
+
+  const banner = document.getElementById('install-banner');
+  const acceptBtn = document.getElementById('install-accept');
+  const dismissBtn = document.getElementById('install-dismiss');
+
+  // 2) Android/Chrome/Edge : capter l'invite native
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    if (!installDismissedRecently() && banner) banner.hidden = false;
+  });
+
+  window.addEventListener('appinstalled', () => {
+    if (banner) banner.hidden = true;
+    deferredInstallPrompt = null;
+    localStorage.removeItem('bizon_install_dismissed');
+    showToast('Application installée ✅', 'success');
+  });
+
+  if (acceptBtn) acceptBtn.addEventListener('click', async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    if (outcome === 'dismissed') {
+      localStorage.setItem('bizon_install_dismissed', String(Date.now()));
+    }
+    deferredInstallPrompt = null;
+    if (banner) banner.hidden = true;
+  });
+
+  if (dismissBtn) dismissBtn.addEventListener('click', () => {
+    if (banner) banner.hidden = true;
+    localStorage.setItem('bizon_install_dismissed', String(Date.now()));
+  });
+
+  // 3) iOS : pas d'invite native → afficher la feuille d'instructions
+  if (isiOS() && !installDismissedRecently()) {
+    const sheet = document.getElementById('ios-install-sheet');
+    const closeBtn = document.getElementById('ios-close');
+    // Léger délai pour ne pas gêner l'arrivée sur l'app
+    setTimeout(() => { if (sheet) sheet.hidden = false; }, 2500);
+    if (closeBtn) closeBtn.addEventListener('click', () => {
+      if (sheet) sheet.hidden = true;
+      localStorage.setItem('bizon_install_dismissed', String(Date.now()));
+    });
+  }
+}
