@@ -145,11 +145,12 @@ async function loadMenu() {
       return;
     }
 
-    // Pills catégories
+    // Tuiles catégories
     const pillsEl = document.getElementById('category-pills');
     pillsEl.innerHTML = categories.map((cat, i) => `
-      <button class="cat-pill ${i === 0 ? 'active' : ''}" data-cat="${cat.id}" onclick="filterByCategory('${cat.id}', this)">
-        ${cat.name}
+      <button class="cat-tile ${i === 0 ? 'active' : ''}" data-cat="${cat.id}" onclick="filterByCategory('${cat.id}', this)">
+        <span class="cat-tile-img">${cat.image_url ? `<img src="${cat.image_url}" alt="" onerror="this.replaceWith('${categoryEmoji(cat.name)}')">` : categoryEmoji(cat.name)}</span>
+        <span class="cat-tile-name">${cat.name}</span>
       </button>
     `).join('');
 
@@ -173,11 +174,24 @@ async function loadMenu() {
   }
 }
 
+// Emoji de catégorie (selon le nom) — accent visuel quand pas d'image
+function categoryEmoji(name) {
+  const n = (name || '').toLowerCase();
+  const map = [
+    [/(entrée|salade|starter)/, '🥗'], [/(plat|main|riz|poulet|viande|boeuf|burger)/, '🍛'],
+    [/(dessert|gâteau|gateau|patiss|sucr)/, '🍰'], [/(boisson|jus|drink|soda|café|cafe|thé|the)/, '🥤'],
+    [/(pizza)/, '🍕'], [/(poisson|sea|fish)/, '🐟'], [/(grill|brochette|bbq)/, '🍢'],
+    [/(petit|déj|dej|breakfast)/, '🥐'], [/(snack|frite)/, '🍟'], [/(soupe|soup)/, '🍲']
+  ];
+  for (const [re, emo] of map) if (re.test(n)) return emo;
+  return '🍽️';
+}
+
 function filterByCategory(categoryId, clickedEl) {
   state.currentCategory = categoryId;
 
-  // Update active pills
-  document.querySelectorAll('.cat-pill').forEach(p => p.classList.toggle('active', p.dataset.cat === categoryId));
+  // Update active tiles
+  document.querySelectorAll('.cat-tile').forEach(p => p.classList.toggle('active', p.dataset.cat === categoryId));
   document.querySelectorAll('.cat-sidebar-link[data-cat]').forEach(l => l.classList.toggle('active', l.dataset.cat === categoryId));
 
   const products = state.allProducts.filter(p => p._categoryId === categoryId);
