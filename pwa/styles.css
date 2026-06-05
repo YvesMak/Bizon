@@ -15,11 +15,12 @@
   --primary-light: rgba(198, 40, 40, 0.10);
   --primary-rgb: 198, 40, 40;
 
-  /* — Backgrounds — */
-  --bg: #FDF5EB;           /* Fond crème chaud (Figma) */
-  --bg-subtle: #F5EAD8;    /* Zones légèrement plus sombres */
+  /* — Backgrounds (60/30/10 : blanc cassé dominant, crème en accent) — */
+  --bg: #FBFAF9;           /* Fond clair dominant (60) */
+  --bg-subtle: #F5EAD8;    /* Crème = accent (10) : tuiles, hovers, tags */
   --bg-surface: #FFFFFF;   /* Cards et panneaux */
-  --bg-dark: #1C1917;      /* Header sombre (Figma) */
+  --bg-dark: #1C1917;      /* Header sombre */
+  --bg-cream: #FDF5EB;     /* Ancien fond crème, conservé pour accents */
 
   /* — Texte — */
   --text: #1C1917;
