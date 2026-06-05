@@ -10,6 +10,11 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#C62828">
+  <!-- Installation iOS (Safari ne lit pas le manifest pour l'icône d'accueil) -->
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Bizon">
   <style>
     /* ============================================================
        CUSTOMER APP — styles spécifiques (surcharge de styles.css)
@@ -604,6 +609,48 @@
     @media (min-width: 769px) {
       .bottom-nav { display: none !important; }
     }
+
+    /* ---------- Installation PWA ---------- */
+    /* L'attribut [hidden] doit l'emporter sur les display: flex ci-dessous. */
+    .install-banner[hidden], .ios-sheet[hidden] { display: none !important; }
+    .install-banner {
+      position: fixed; left: 12px; right: 12px; bottom: 84px; z-index: 1200;
+      display: flex; align-items: center; gap: 12px;
+      background: #fff; border: 1px solid #ECE6DE; border-radius: 16px;
+      padding: 12px 14px; box-shadow: 0 10px 30px rgba(31,27,22,.16);
+      animation: install-up .25s ease;
+    }
+    @keyframes install-up { from { transform: translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .install-ic { width: 44px; height: 44px; border-radius: 11px; flex: 0 0 auto; }
+    .install-txt { display: flex; flex-direction: column; line-height: 1.25; flex: 1; min-width: 0; }
+    .install-txt strong { font-size: 14px; color: #1F1B16; }
+    .install-txt span { font-size: 12px; color: #8A8178; }
+    .install-btn {
+      background: #C62828; color: #fff; border: none; border-radius: 10px;
+      padding: 9px 16px; font-size: 14px; font-weight: 600; cursor: pointer; flex: 0 0 auto;
+    }
+    .install-btn:hover { background: #A01E1E; }
+    .install-btn-block { width: 100%; margin-top: 14px; padding: 12px; }
+    .install-x {
+      background: none; border: none; color: #8A8178; font-size: 15px;
+      cursor: pointer; padding: 4px; flex: 0 0 auto;
+    }
+    @media (min-width: 769px) { .install-banner { bottom: 20px; left: auto; right: 20px; max-width: 360px; } }
+
+    .ios-sheet {
+      position: fixed; inset: 0; z-index: 1300; display: flex; align-items: flex-end;
+      justify-content: center; background: rgba(31,27,22,.5); padding: 16px;
+    }
+    .ios-sheet-card {
+      background: #fff; border-radius: 20px; padding: 22px; width: 100%; max-width: 420px;
+      text-align: center;
+    }
+    .ios-sheet-card .install-ic { width: 56px; height: 56px; border-radius: 14px; margin: 0 auto 8px; }
+    .ios-sheet-card h3 { font-size: 19px; margin-bottom: 4px; color: #1F1B16; }
+    .ios-sheet-card p { color: #8A8178; font-size: 14px; margin-bottom: 12px; }
+    .ios-sheet-card ol { text-align: left; margin: 0 0 4px 18px; color: #1F1B16; font-size: 14px; }
+    .ios-sheet-card ol li { margin-bottom: 8px; }
+    .ios-share { color: #C62828; font-weight: 700; }
   </style>
 </head>
 <body>
@@ -957,6 +1004,32 @@
 
   <!-- Toast -->
   <div id="toast-container" aria-live="polite"></div>
+
+  <!-- Bandeau d'installation PWA (Android/Chrome/Edge/Desktop) -->
+  <div id="install-banner" class="install-banner" hidden>
+    <img src="/icons/icon-192.png" alt="" class="install-ic">
+    <div class="install-txt">
+      <strong>Installer l'application</strong>
+      <span>Accès rapide depuis votre écran d'accueil</span>
+    </div>
+    <button id="install-accept" class="install-btn">Installer</button>
+    <button id="install-dismiss" class="install-x" aria-label="Fermer">✕</button>
+  </div>
+
+  <!-- Feuille d'instructions iOS (Safari n'expose pas d'invite automatique) -->
+  <div id="ios-install-sheet" class="ios-sheet" hidden>
+    <div class="ios-sheet-card">
+      <img src="/icons/icon-192.png" alt="" class="install-ic">
+      <h3>Installer Bizon</h3>
+      <p>Pour ajouter l'app à votre écran d'accueil :</p>
+      <ol>
+        <li>Touchez le bouton <strong>Partager</strong> <span class="ios-share">􀈂</span> en bas de Safari</li>
+        <li>Choisissez <strong>« Sur l'écran d'accueil »</strong></li>
+        <li>Touchez <strong>Ajouter</strong></li>
+      </ol>
+      <button id="ios-close" class="install-btn install-btn-block">J'ai compris</button>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
