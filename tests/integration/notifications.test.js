@@ -5,6 +5,12 @@ jest.mock('web-push', () => ({
   sendNotification: jest.fn(() => Promise.resolve())
 }));
 
+// Garantir une configuration VAPID même en CI (web-push est mocké : le format importe peu).
+// Doit être défini AVANT le chargement du service (lecture de l'env au require).
+process.env.VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'test-public-key';
+process.env.VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'test-private-key';
+process.env.VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:test@bizon.cm';
+
 const request = require('supertest');
 const webpush = require('web-push');
 const app = require('../../src/app');
