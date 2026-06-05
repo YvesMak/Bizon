@@ -71,14 +71,14 @@ function renderAuthZone() {
     `;
     // Mettre à jour le label du tab profil (mobile)
     const profileLabel = document.getElementById('bnav-profile-label');
-    if (profileLabel) profileLabel.textContent = 'Profil';
+    if (profileLabel) profileLabel.textContent = t('bnav.profile');
   } else {
     zone.innerHTML = `
-      <button class="btn-secondary" onclick="showSection('login')">Connexion</button>
-      <button class="btn-primary" onclick="showSection('register')">S'inscrire</button>
+      <button class="btn-secondary" onclick="showSection('login')">${t('auth.login')}</button>
+      <button class="btn-primary" onclick="showSection('register')">${t('auth.signup')}</button>
     `;
     const profileLabel = document.getElementById('bnav-profile-label');
-    if (profileLabel) profileLabel.textContent = 'Connexion';
+    if (profileLabel) profileLabel.textContent = t('bnav.login');
   }
 }
 
@@ -368,7 +368,7 @@ async function applyVoucher() {
   const code = input.value.trim();
   if (!code) return;
   if (!state.token) {
-    showToast('Connectez-vous pour utiliser un code promo', 'info');
+    showToast(t('toast.loginToVoucher'), 'info');
     closeCart();
     showSection('login');
     return;
@@ -505,7 +505,7 @@ function logout() {
   localStorage.removeItem('bizon_customer_token');
   renderAuthZone();
   showSection('menu');
-  showToast('Vous êtes déconnecté', 'info');
+  showToast(t('toast.loggedOut'), 'info');
 }
 
 async function loadCustomerProfile() {
@@ -540,16 +540,15 @@ async function loadOrders() {
       return;
     }
     state.orders = orders;
-    const statusLabels = { confirmed: 'Confirmée', preparing: 'En préparation', ready: 'Prête', paid: 'Payée', cancelled: 'Annulée', draft: 'En attente' };
     list.innerHTML = orders.map(o => `
       <div class="order-history-item" onclick="openOrderDetail('${o.id}')" role="button" tabindex="0">
         <div class="oh-left">
           <h4>${o.order_number || o.id}</h4>
-          <span>${new Date(o.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+          <span>${new Date(o.createdAt).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long', year: 'numeric' })}</span>
         </div>
         <div class="oh-right">
-          <div class="oh-amount">${Number(o.total_amount).toLocaleString('fr-FR')} FCFA</div>
-          <div class="oh-status status-${o.status}">${statusLabels[o.status] || o.status}</div>
+          <div class="oh-amount">${Number(o.total_amount).toLocaleString(dateLocale())} FCFA</div>
+          <div class="oh-status status-${o.status}">${statusLabel(o.status)}</div>
         </div>
         <span class="oh-chevron">›</span>
       </div>
@@ -562,8 +561,6 @@ async function loadOrders() {
 function openOrderDetail(orderId) {
   const order = (state.orders || []).find(o => o.id === orderId);
   if (!order) return;
-  const statusLabels = { confirmed: 'Confirmée', preparing: 'En préparation', ready: 'Prête', paid: 'Payée', cancelled: 'Annulée', draft: 'En attente' };
-  const typeLabels = { dine_in: 'Sur place', takeaway: 'À emporter', delivery: 'Livraison' };
   const items = order.items || [];
   const itemsHtml = items.map(i => `
     <div class="od-item">
@@ -574,26 +571,26 @@ function openOrderDetail(orderId) {
   const subtotal = Number(order.subtotal) || items.reduce((s, i) => s + Number(i.subtotal), 0);
 
   let context = '';
-  if (order.type === 'dine_in' && order.table_number) context = `Table ${order.table_number}`;
+  if (order.type === 'dine_in' && order.table_number) context = `${t('cart.table.ph')} ${order.table_number}`;
   else if (order.type === 'delivery' && order.delivery_address) context = order.delivery_address;
 
   document.getElementById('od-content').innerHTML = `
     <div class="od-head">
       <div>
-        <h3>${order.order_number || 'Commande'}</h3>
-        <span class="od-date">${new Date(order.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+        <h3>${order.order_number || t('order.detail.title')}</h3>
+        <span class="od-date">${new Date(order.createdAt).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
       </div>
-      <span class="oh-status status-${order.status}">${statusLabels[order.status] || order.status}</span>
+      <span class="oh-status status-${order.status}">${statusLabel(order.status)}</span>
     </div>
     <div class="od-meta">
-      <span class="od-type">${typeLabels[order.type] || order.type}</span>
+      <span class="od-type">${typeLabel(order.type)}</span>
       ${context ? `<span class="od-ctx">${context}</span>` : ''}
     </div>
-    <div class="od-items">${itemsHtml || '<p style="color:var(--text-muted)">Aucun article</p>'}</div>
+    <div class="od-items">${itemsHtml || `<p style="color:var(--text-muted)">${t('cart.title')}</p>`}</div>
     <div class="od-totals">
-      <div class="od-row"><span>Sous-total</span><span>${subtotal.toLocaleString('fr-FR')} FCFA</span></div>
-      ${discount > 0 ? `<div class="od-row" style="color:var(--success)"><span>Réduction</span><span>-${discount.toLocaleString('fr-FR')} FCFA</span></div>` : ''}
-      <div class="od-row od-total"><span>Total</span><span>${Number(order.total_amount).toLocaleString('fr-FR')} FCFA</span></div>
+      <div class="od-row"><span>${t('cart.subtotal')}</span><span>${subtotal.toLocaleString(dateLocale())} FCFA</span></div>
+      ${discount > 0 ? `<div class="od-row" style="color:var(--success)"><span>${t('cart.discount')}</span><span>-${discount.toLocaleString(dateLocale())} FCFA</span></div>` : ''}
+      <div class="od-row od-total"><span>${t('cart.total')}</span><span>${Number(order.total_amount).toLocaleString(dateLocale())} FCFA</span></div>
     </div>`;
   document.getElementById('order-detail-sheet').classList.add('open');
 }
@@ -606,10 +603,16 @@ function closeOrderDetail() {
 // SUIVI TEMPS RÉEL (commande active)
 // ============================================
 
+// Helpers i18n pour les libellés dynamiques
+function dateLocale() { return (window.i18n && i18n.getLang() === 'en') ? 'en-GB' : 'fr-FR'; }
+function statusLabel(s) { return t('status.' + s); }
+function typeLabel(ty) { return t('type.' + ty); }
+
 const ACTIVE_STATUS = {
-  confirmed: { label: 'Confirmée', emoji: '✅', sub: 'Votre commande est confirmée' },
-  preparing: { label: 'En préparation', emoji: '👨‍🍳', sub: 'Votre commande est en cuisine' },
-  ready: { label: 'Prête !', emoji: '🛎️', sub: 'Récupérez votre commande' }
+  confirmed: { emoji: '✅', subKey: 'track.confirmed.sub' },
+  preparing: { emoji: '👨‍🍳', subKey: 'track.preparing.sub' },
+  ready: { emoji: '🛎️', subKey: 'track.ready.sub' },
+  delivering: { emoji: '🛵', subKey: 'track.delivering.sub' }
 };
 
 async function loadActiveOrder() {
@@ -634,10 +637,10 @@ function renderActiveOrder(order) {
   banner.innerHTML = `
     <span class="track-icon">${s.emoji}</span>
     <div class="track-info">
-      <h4>${order.order_number || 'Commande'} · ${s.label}</h4>
-      <p>${s.sub}</p>
+      <h4>${order.order_number || t('order.detail.title')} · ${statusLabel(order.status)}</h4>
+      <p>${t(s.subKey)}</p>
     </div>
-    <button class="track-btn" onclick="showSection('orders')">Suivre</button>`;
+    <button class="track-btn" onclick="showSection('orders')">${t('track.follow')}</button>`;
 }
 
 let orderStream = null;
@@ -647,9 +650,8 @@ function initOrderStream() {
   orderStream = new EventSource(`${API}/customers/me/stream?token=${encodeURIComponent(state.token)}`);
   orderStream.addEventListener('order_status_changed', (e) => {
     let data; try { data = JSON.parse(e.data); } catch { return; }
-    const labels = { confirmed: 'confirmée', preparing: 'en préparation', ready: 'prête', paid: 'payée', cancelled: 'annulée' };
-    const ref = data.orderNumber || 'Votre commande';
-    showToast(`${ref} : ${labels[data.status] || data.status}`, data.status === 'ready' ? 'success' : 'info', 5500);
+    const ref = data.orderNumber || t('order.detail.title');
+    showToast(`${ref} : ${statusLabel(data.status)}`, data.status === 'ready' ? 'success' : 'info', 5500);
     loadActiveOrder();
     if (document.getElementById('page-orders').classList.contains('active')) loadOrders();
   });
@@ -820,7 +822,7 @@ document.getElementById('form-login').addEventListener('submit', async (e) => {
       document.getElementById('login-identifier').value,
       document.getElementById('login-password').value
     );
-    showToast('Connecté !', 'success');
+    showToast(t('toast.loggedIn'), 'success');
     showSection('menu');
   } catch (err) {
     showToast(err.message, 'error');
@@ -841,7 +843,7 @@ document.getElementById('form-register').addEventListener('submit', async (e) =>
       email: document.getElementById('reg-email').value,
       password: document.getElementById('reg-password').value
     });
-    showToast('Compte créé ! Bienvenue 🎉', 'success');
+    showToast(t('toast.accountCreated'), 'success');
     showSection('loyalty');
   } catch (err) {
     showToast(err.message, 'error');
@@ -867,7 +869,7 @@ document.getElementById('form-profile').addEventListener('submit', async (e) => 
     });
     state.customer = updated.customer;
     renderAuthZone();
-    showToast('Profil enregistré', 'success');
+    showToast(t('toast.profileSaved'), 'success');
   } catch (err) {
     showToast(err.message, 'error');
   } finally {
@@ -879,7 +881,7 @@ document.getElementById('btn-checkout').addEventListener('click', async () => {
   if (!state.token) {
     closeCart();
     showSection('login');
-    showToast('Connectez-vous pour commander', 'info');
+    showToast(t('toast.loginToOrder'), 'info');
     return;
   }
   if (!state.cart.length) return;
@@ -892,11 +894,11 @@ document.getElementById('btn-checkout').addEventListener('click', async () => {
   if (state.appliedVoucher) body.voucher_code = state.appliedVoucher.code;
   if (state.orderType === 'dine_in') {
     const table = document.getElementById('order-table').value.trim();
-    if (!table) { showToast('Indiquez le numéro de table', 'error'); return; }
+    if (!table) { showToast(t('toast.needTable'), 'error'); return; }
     body.table_number = table;
   } else if (state.orderType === 'delivery') {
     const address = document.getElementById('order-address').value.trim();
-    if (!address) { showToast('Indiquez l\'adresse de livraison', 'error'); return; }
+    if (!address) { showToast(t('toast.needAddress'), 'error'); return; }
     body.delivery_address = address;
   }
 
@@ -916,7 +918,7 @@ document.getElementById('btn-checkout').addEventListener('click', async () => {
       window.location.href = payment.link;
     } else {
       closeCart();
-      showToast('Commande créée, mais le paiement n\'a pas pu démarrer.', 'error');
+      showToast(t('toast.orderNoPayment'), 'error');
     }
   } catch (err) {
     showToast(err.message, 'error');
@@ -934,9 +936,9 @@ document.getElementById('btn-checkout').addEventListener('click', async () => {
 // ============================================
 
 const ONBOARDING_SLIDES = [
-  { emoji: '🍽️', title: 'Le menu à portée de main', text: 'Parcourez les plats du restaurant et composez votre commande en quelques taps.' },
-  { emoji: '🛵', title: 'Sur place, à emporter ou livré', text: 'Choisissez votre mode de commande et payez en ligne, en toute sécurité.' },
-  { emoji: '🎁', title: 'Gagnez des récompenses', text: 'Cumulez des points à chaque commande et échangez-les contre des bons de réduction.' }
+  { emoji: '🍽️', titleKey: 'onb.s1.title', textKey: 'onb.s1.text' },
+  { emoji: '🛵', titleKey: 'onb.s2.title', textKey: 'onb.s2.text' },
+  { emoji: '🎁', titleKey: 'onb.s3.title', textKey: 'onb.s3.text' }
 ];
 let onbIndex = 0;
 
@@ -946,12 +948,12 @@ function renderOnboarding() {
   emojiEl.textContent = s.emoji;
   // relancer l'animation
   emojiEl.style.animation = 'none'; void emojiEl.offsetWidth; emojiEl.style.animation = '';
-  document.getElementById('onb-title').textContent = s.title;
-  document.getElementById('onb-text').textContent = s.text;
+  document.getElementById('onb-title').textContent = t(s.titleKey);
+  document.getElementById('onb-text').textContent = t(s.textKey);
   document.getElementById('onb-dots').innerHTML = ONBOARDING_SLIDES
     .map((_, i) => `<span class="dot ${i === onbIndex ? 'active' : ''}"></span>`).join('');
   const last = onbIndex === ONBOARDING_SLIDES.length - 1;
-  document.getElementById('onb-next').textContent = last ? 'Commencer' : 'Suivant';
+  document.getElementById('onb-next').textContent = last ? t('onb.start') : t('onb.next');
   document.getElementById('onb-skip').style.visibility = last ? 'hidden' : 'visible';
 }
 
@@ -1010,6 +1012,8 @@ function initPromoCarousel() {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Appliquer les traductions statiques au plus tôt
+  if (window.i18n) i18n.applyI18n(document);
   maybeShowOnboarding();
   updateCartBadge();
   renderAuthZone();
@@ -1038,6 +1042,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (state.token && pushSupported() && Notification.permission === 'granted') {
     enablePush(false);
   }
+});
+
+// Re-rendu des contenus dynamiques au changement de langue
+document.addEventListener('langchange', () => {
+  renderAuthZone();
+  if (document.getElementById('onboarding')?.style.display !== 'none') renderOnboarding();
+  loadActiveOrder();
+  const ordersPage = document.getElementById('page-orders');
+  if (ordersPage && ordersPage.classList.contains('active')) loadOrders();
+  const loyaltyPage = document.getElementById('page-loyalty');
+  if (loyaltyPage && loyaltyPage.classList.contains('active')) renderLoyalty();
+  // Rafraîchir le panier (libellés de type de commande, etc.)
+  if (typeof renderCartPanel === 'function') renderCartPanel();
 });
 
 // ============================================
@@ -1085,7 +1102,7 @@ function initPWA() {
     if (banner) banner.hidden = true;
     deferredInstallPrompt = null;
     localStorage.removeItem('bizon_install_dismissed');
-    showToast('Application installée ✅', 'success');
+    showToast(t('toast.appInstalled'), 'success');
   });
 
   if (acceptBtn) acceptBtn.addEventListener('click', async () => {
