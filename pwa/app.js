@@ -7,6 +7,7 @@ const state = {
   customer: null,
   token: localStorage.getItem('bizon_customer_token') || null,
   restaurantId: null,
+  restaurantSlug: null,
   allProducts: [], // tous les produits chargés
   currentCategory: null,
   menus: [],
@@ -14,6 +15,37 @@ const state = {
   orderType: 'dine_in',
   appliedVoucher: null
 };
+
+// Identifie le restaurant ciblé : ?restaurantId=… , ?r=slug (ou ?slug=),
+// sinon le sous-domaine (chez-paul.bizon.cm), sinon le dernier mémorisé.
+function resolveRestaurantFromUrl() {
+  const params = new URLSearchParams(location.search);
+  const id = params.get('restaurantId') || params.get('restaurant');
+  const slug = params.get('r') || params.get('slug');
+  if (id) {
+    state.restaurantId = id;
+    localStorage.setItem('bizon_restaurant_id', id);
+    localStorage.removeItem('bizon_restaurant_slug');
+    return;
+  }
+  if (slug) {
+    state.restaurantSlug = slug;
+    localStorage.setItem('bizon_restaurant_slug', slug);
+    localStorage.removeItem('bizon_restaurant_id');
+    return;
+  }
+  // Sous-domaine : <slug>.domaine.tld (hors www/app/localhost)
+  const host = location.hostname;
+  const parts = host.split('.');
+  if (parts.length >= 3 && !['www', 'app', 'localhost', '127'].includes(parts[0])) {
+    state.restaurantSlug = parts[0];
+    localStorage.setItem('bizon_restaurant_slug', parts[0]);
+    return;
+  }
+  // Repli : dernier restaurant mémorisé (utile au retour de paiement)
+  state.restaurantId = localStorage.getItem('bizon_restaurant_id') || null;
+  state.restaurantSlug = localStorage.getItem('bizon_restaurant_slug') || null;
+}
 
 // ============================================
 // NAVIGATION
@@ -106,8 +138,9 @@ async function apiCall(endpoint, options = {}, useCustomerToken = true) {
 
 async function loadMenu() {
   try {
-    const restaurantId = state.restaurantId;
-    const url = restaurantId ? `/public/menu?restaurantId=${restaurantId}` : '/public/menu';
+    let url = '/public/menu';
+    if (state.restaurantId) url += `?restaurantId=${encodeURIComponent(state.restaurantId)}`;
+    else if (state.restaurantSlug) url += `?slug=${encodeURIComponent(state.restaurantSlug)}`;
     const data = await apiCall(url, {}, false);
 
     document.getElementById('menu-loading').style.display = 'none';
@@ -120,6 +153,9 @@ async function loadMenu() {
     // Stocker restaurant_id + afficher le nom du restaurant dans le header
     if (data.restaurant) {
       state.restaurantId = data.restaurant.id;
+      if (data.restaurant.slug) state.restaurantSlug = data.restaurant.slug;
+      localStorage.setItem('bizon_restaurant_id', data.restaurant.id);
+      if (data.restaurant.slug) localStorage.setItem('bizon_restaurant_slug', data.restaurant.slug);
       const nameEl = document.querySelector('.logo-name');
       if (nameEl && data.restaurant.name) {
         nameEl.textContent = data.restaurant.name;
@@ -470,6 +506,7 @@ async function login(identifier, password) {
     ? { email: identifier, password }
     : { phone: identifier, password };
   if (state.restaurantId) body.restaurantId = state.restaurantId;
+  else if (state.restaurantSlug) body.slug = state.restaurantSlug;
 
   const data = await apiCall('/customers/login', { method: 'POST', body: JSON.stringify(body) }, false);
 
@@ -486,6 +523,7 @@ async function login(identifier, password) {
 async function register(formData) {
   const body = { ...formData };
   if (state.restaurantId) body.restaurantId = state.restaurantId;
+  else if (state.restaurantSlug) body.slug = state.restaurantSlug;
 
   const data = await apiCall('/customers/register', { method: 'POST', body: JSON.stringify(body) }, false);
   state.token = data.token;
@@ -1014,6 +1052,8 @@ function initPromoCarousel() {
 document.addEventListener('DOMContentLoaded', async () => {
   // Appliquer les traductions statiques au plus tôt
   if (window.i18n) i18n.applyI18n(document);
+  // Identifier le restaurant ciblé (URL / sous-domaine / mémorisé)
+  resolveRestaurantFromUrl();
   maybeShowOnboarding();
   updateCartBadge();
   renderAuthZone();
