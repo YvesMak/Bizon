@@ -479,6 +479,7 @@ async function login(identifier, password) {
   renderAuthZone();
   initOrderStream();
   loadActiveOrder();
+  enablePush(true); // propose l'activation des notifications (geste = connexion)
   return data;
 }
 
@@ -492,11 +493,13 @@ async function register(formData) {
   localStorage.setItem('bizon_customer_token', data.token);
   renderAuthZone();
   initOrderStream();
+  enablePush(true);
   return data;
 }
 
 function logout() {
   closeOrderStream();
+  disablePush();
   state.token = null;
   state.customer = null;
   localStorage.removeItem('bizon_customer_token');
@@ -1030,6 +1033,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Installation PWA (service worker + invite d'installation)
   initPWA();
+
+  // Ré-abonnement push silencieux si déjà autorisé
+  if (state.token && pushSupported() && Notification.permission === 'granted') {
+    enablePush(false);
+  }
 });
 
 // ============================================
@@ -1106,5 +1114,69 @@ function initPWA() {
       if (sheet) sheet.hidden = true;
       localStorage.setItem('bizon_install_dismissed', String(Date.now()));
     });
+  }
+}
+
+// ============================================
+// NOTIFICATIONS PUSH (côté client)
+// ============================================
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+function pushSupported() {
+  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+
+// Tente d'activer les notifications. `prompt=true` demande l'autorisation
+// (à appeler dans le cadre d'un geste utilisateur, ex. connexion).
+async function enablePush(prompt = false) {
+  if (!pushSupported() || !state.token) return;
+  try {
+    // Clé publique VAPID (et savoir si le serveur a la fonctionnalité activée)
+    const vapid = await apiCall('/customers/push/vapid-key', {}, false);
+    if (!vapid || !vapid.enabled || !vapid.publicKey) return;
+
+    let permission = Notification.permission;
+    if (permission === 'default' && prompt) {
+      permission = await Notification.requestPermission();
+    }
+    if (permission !== 'granted') return;
+
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapid.publicKey)
+      });
+    }
+    await apiCall('/customers/me/push/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({ subscription: sub.toJSON() })
+    });
+  } catch (err) {
+    console.warn('Push non activé :', err && err.message);
+  }
+}
+
+async function disablePush() {
+  if (!pushSupported()) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      await apiCall('/customers/me/push/unsubscribe', {
+        method: 'POST', body: JSON.stringify({ endpoint: sub.endpoint })
+      }).catch(() => {});
+      await sub.unsubscribe().catch(() => {});
+    }
+  } catch (err) {
+    console.warn('Désabonnement push :', err && err.message);
   }
 }

@@ -1,5 +1,6 @@
 const OrderService = require('./service');
 const sse = require('../../sse');
+const NotificationService = require('../notifications/service');
 
 class OrderController {
   async getAll(req, res) {
@@ -55,6 +56,10 @@ class OrderController {
       sse.emitToCustomer(order.customer_id, 'order_status_changed', {
         orderId: order.id, orderNumber: order.order_number, status: order.status
       });
+      // Notification push (même app fermée)
+      NotificationService.notifyOrderStatus(order.customer_id, {
+        orderNumber: order.order_number, status: order.status
+      }).catch(() => {});
 
       res.json({
         message: 'Statut mis à jour',
@@ -108,6 +113,9 @@ class OrderController {
       sse.emitToCustomer(order.customer_id, 'order_status_changed', {
         orderId: order.id, orderNumber: order.order_number, status: order.status
       });
+      NotificationService.notifyOrderStatus(order.customer_id, {
+        orderNumber: order.order_number, status: order.status
+      }).catch(() => {});
 
       res.json({
         message: 'Commande annulée',

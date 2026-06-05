@@ -4,7 +4,7 @@
  *  - assets statiques (GET) → cache d'abord, mise à jour en arrière-plan.
  *  - API (/api/...)         → réseau uniquement (jamais mis en cache).
  */
-const VERSION = 'bizon-v1';
+const VERSION = 'bizon-v2';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 
@@ -83,4 +83,34 @@ self.addEventListener('fetch', (event) => {
 // Permet à la page de forcer l'activation d'un SW mis à jour.
 self.addEventListener('message', (event) => {
   if (event.data === 'SKIP_WAITING') self.skipWaiting();
+});
+
+// ---------- Notifications push ----------
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try { payload = event.data ? event.data.json() : {}; } catch { payload = {}; }
+  const title = payload.title || 'Bizon';
+  const options = {
+    body: payload.body || '',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    tag: payload.tag,
+    renotify: !!payload.tag,
+    data: payload.data || {},
+    vibrate: [80, 40, 80]
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const client of list) {
+        if ('focus' in client) { client.focus(); return; }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url);
+    })
+  );
 });

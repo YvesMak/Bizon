@@ -3,6 +3,7 @@ const OrderService = require('../orders/service');
 const PaymentService = require('../payments/service');
 const LoyaltyService = require('../loyalty/service');
 const VoucherService = require('../vouchers/service');
+const NotificationService = require('../notifications/service');
 const sse = require('../../sse');
 const { Restaurant, Customer } = require('../../models');
 
@@ -156,6 +157,32 @@ class CustomerController {
         discount_type: voucher.discount_type,
         discount
       });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  // ----- Notifications push -----
+
+  // Public : clé publique VAPID pour s'abonner côté navigateur.
+  async getVapidKey(req, res) {
+    res.json({ publicKey: NotificationService.getPublicKey(), enabled: NotificationService.isConfigured() });
+  }
+
+  async subscribePush(req, res) {
+    try {
+      await NotificationService.subscribe(req.customerId, req.restaurantId, req.body.subscription || req.body);
+      res.status(201).json({ message: 'Notifications activées' });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  async unsubscribePush(req, res) {
+    try {
+      const endpoint = (req.body && req.body.endpoint) || (req.body.subscription && req.body.subscription.endpoint);
+      await NotificationService.unsubscribe(endpoint);
+      res.json({ message: 'Notifications désactivées' });
     } catch (error) {
       res.status(400).json({ error: error.message });
     }

@@ -1,6 +1,7 @@
 const PaymentService = require('./service');
 const sse = require('../../sse');
 const flutterwave = require('./providers/flutterwave');
+const NotificationService = require('../notifications/service');
 const { Payment } = require('../../models');
 
 class PaymentController {
@@ -117,6 +118,9 @@ class PaymentController {
               orderNumber: settled.order.order_number,
               status: newStatus
             });
+            NotificationService.notifyOrderStatus(settled.order.customer_id, {
+              orderNumber: settled.order.order_number, status: newStatus
+            }).catch(() => {});
           }
         }
       }
