@@ -51,6 +51,10 @@ class OrderController {
         tableNumber: order.table_number,
         customerName: order.customer_name
       });
+      // …et au client propriétaire de la commande (suivi temps réel)
+      sse.emitToCustomer(order.customer_id, 'order_status_changed', {
+        orderId: order.id, orderNumber: order.order_number, status: order.status
+      });
 
       res.json({
         message: 'Statut mis à jour',
@@ -100,6 +104,9 @@ class OrderController {
         status: order.status,
         tableNumber: order.table_number,
         customerName: order.customer_name
+      });
+      sse.emitToCustomer(order.customer_id, 'order_status_changed', {
+        orderId: order.id, orderNumber: order.order_number, status: order.status
       });
 
       res.json({

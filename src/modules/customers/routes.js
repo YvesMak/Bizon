@@ -3,9 +3,9 @@ const router = express.Router();
 const CustomerController = require('./controller');
 const jwt = require('jsonwebtoken');
 
-// Middleware auth client
+// Middleware auth client (token via header OU query param pour SSE)
 const customerAuth = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
+  const token = req.headers.authorization?.split(' ')[1] || req.query.token;
   if (!token) return res.status(401).json({ error: 'Non authentifié' });
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -31,5 +31,6 @@ router.get('/me/loyalty', customerAuth, CustomerController.getLoyalty.bind(Custo
 router.post('/validate-voucher', customerAuth, CustomerController.validateVoucher.bind(CustomerController));
 router.get('/me/rewards', customerAuth, CustomerController.getRewards.bind(CustomerController));
 router.post('/me/redeem', customerAuth, CustomerController.redeemReward.bind(CustomerController));
+router.get('/me/stream', customerAuth, CustomerController.stream.bind(CustomerController));
 
 module.exports = router;

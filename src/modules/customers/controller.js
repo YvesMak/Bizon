@@ -3,6 +3,7 @@ const OrderService = require('../orders/service');
 const PaymentService = require('../payments/service');
 const LoyaltyService = require('../loyalty/service');
 const VoucherService = require('../vouchers/service');
+const sse = require('../../sse');
 const { Restaurant, Customer } = require('../../models');
 
 class CustomerController {
@@ -83,6 +84,27 @@ class CustomerController {
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
+  }
+
+  // GET /api/customers/me/stream — flux SSE temps réel des commandes du client
+  stream(req, res) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    const customerId = req.customerId;
+    sse.addCustomerClient(customerId, res);
+
+    const keepAlive = setInterval(() => {
+      try { res.write(': ping\n\n'); } catch { clearInterval(keepAlive); }
+    }, 25000);
+
+    req.on('close', () => {
+      clearInterval(keepAlive);
+      sse.removeCustomerClient(customerId, res);
+    });
   }
 
   // GET /api/customers/me/loyalty — solde + historique des points
