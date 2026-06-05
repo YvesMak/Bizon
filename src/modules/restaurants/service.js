@@ -217,6 +217,92 @@ class RestaurantService {
     await user.destroy();
     return true;
   }
+
+  // ----- Self-service propriétaire : multi-restaurants -----
+
+  /**
+   * Restaurants appartenant au propriétaire (ceux dont il est owner_id,
+   * plus son restaurant courant pour les comptes hérités sans owner_id).
+   */
+  async getOwnedRestaurants(user) {
+    return Restaurant.findAll({
+      where: {
+        [Op.or]: [{ owner_id: user.id }, { id: user.restaurant_id }]
+      },
+      include: [{ model: Subscription, as: 'subscription', attributes: ['plan', 'status', 'end_date'] }],
+      order: [['created_at', 'ASC']]
+    });
+  }
+
+  async countOwnedRestaurants(user) {
+    return Restaurant.count({
+      where: { [Op.or]: [{ owner_id: user.id }, { id: user.restaurant_id }] }
+    });
+  }
+
+  /**
+   * Un propriétaire crée lui-même un restaurant supplémentaire,
+   * dans la limite de son quota `max_restaurants`.
+   */
+  async createOwnedRestaurant(user, data) {
+    if (user.role !== 'owner') {
+      throw new Error('Seul un propriétaire peut créer un restaurant');
+    }
+    const { name, address, phone, email, service_types } = data;
+    if (!name) throw new Error('Le nom du restaurant est requis');
+
+    const owned = await this.countOwnedRestaurants(user);
+    if (owned >= user.max_restaurants) {
+      throw new Error(`Quota atteint : vous êtes limité à ${user.max_restaurants} restaurant(s). Contactez l'administrateur.`);
+    }
+
+    const SERVICE_TYPES = ['dine_in', 'takeaway', 'delivery'];
+    const cleaned = Array.isArray(service_types)
+      ? [...new Set(service_types)].filter((t) => SERVICE_TYPES.includes(t))
+      : [];
+    const slug = `${`${name}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'resto'}-${Date.now().toString(36)}`;
+
+    const transaction = await sequelize.transaction();
+    try {
+      const restaurant = await Restaurant.create({
+        name, slug, address, phone, email,
+        owner_id: user.id,
+        settings: { service_types: cleaned.length ? cleaned : SERVICE_TYPES }
+      }, { transaction });
+
+      const trialEnd = new Date();
+      trialEnd.setDate(trialEnd.getDate() + 14);
+      await Subscription.create({
+        restaurant_id: restaurant.id,
+        plan: 'trial', status: 'active',
+        start_date: new Date(), end_date: trialEnd,
+        max_users: 5, max_products: 100
+      }, { transaction });
+
+      await transaction.commit();
+      return restaurant.toJSON();
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  }
+
+  /**
+   * Bascule le restaurant « actif » du propriétaire et renvoie un nouveau token.
+   */
+  async switchRestaurant(user, targetId) {
+    const restaurant = await Restaurant.findOne({
+      where: { id: targetId, [Op.or]: [{ owner_id: user.id }, { id: user.restaurant_id }] }
+    });
+    if (!restaurant) throw new Error('Restaurant introuvable ou non autorisé');
+    if (restaurant.status !== 'active') throw new Error('Ce restaurant est suspendu');
+
+    await User.update({ restaurant_id: targetId }, { where: { id: user.id } });
+
+    const authService = require('../auth/service');
+    const token = authService.generateToken(user.id, targetId, user.role);
+    return { token, restaurant: restaurant.toJSON() };
+  }
 }
 
 module.exports = new RestaurantService();

@@ -17,9 +17,19 @@ class PublicController {
         targetRestaurantId = restaurant.id;
       }
 
-      const restaurant = await Restaurant.findByPk(targetRestaurantId, {
-        attributes: ['id', 'name', 'slug', 'address', 'phone']
+      const restaurantRow = await Restaurant.findByPk(targetRestaurantId, {
+        attributes: ['id', 'name', 'slug', 'address', 'phone', 'settings']
       });
+      const restaurant = restaurantRow ? {
+        id: restaurantRow.id,
+        name: restaurantRow.name,
+        slug: restaurantRow.slug,
+        address: restaurantRow.address,
+        phone: restaurantRow.phone,
+        service_types: Array.isArray(restaurantRow.settings?.service_types) && restaurantRow.settings.service_types.length
+          ? restaurantRow.settings.service_types
+          : ['dine_in', 'takeaway', 'delivery']
+      } : null;
 
       const menus = await Menu.findAll({
         where: { restaurant_id: targetRestaurantId, is_active: true },

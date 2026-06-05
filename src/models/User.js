@@ -47,6 +47,11 @@ const User = sequelize.define('User', {
   status: {
     type: DataTypes.ENUM('active', 'inactive'),
     defaultValue: 'active'
+  },
+  max_restaurants: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 1
   }
 }, {
   tableName: 'users',

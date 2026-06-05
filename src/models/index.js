@@ -11,6 +11,7 @@ const Invoice = require('./Invoice');
 const Subscription = require('./Subscription');
 const LoyaltyTransaction = require('./LoyaltyTransaction');
 const Voucher = require('./Voucher');
+const PlatformAdmin = require('./PlatformAdmin');
 
 // Définition des relations
 const initModels = () => {
@@ -28,6 +29,10 @@ const initModels = () => {
   // User relations
   User.belongsTo(Restaurant, { foreignKey: 'restaurant_id', as: 'restaurant' });
   User.hasMany(Order, { foreignKey: 'user_id', as: 'orders' });
+
+  // Propriété des restaurants : un owner peut posséder plusieurs restaurants.
+  Restaurant.belongsTo(User, { foreignKey: 'owner_id', as: 'owner' });
+  User.hasMany(Restaurant, { foreignKey: 'owner_id', as: 'ownedRestaurants' });
 
   // Customer relations
   Customer.belongsTo(Restaurant, { foreignKey: 'restaurant_id', as: 'restaurant' });
@@ -101,5 +106,6 @@ module.exports = {
   Subscription,
   LoyaltyTransaction,
   Voucher,
+  PlatformAdmin,
   initModels
 };
