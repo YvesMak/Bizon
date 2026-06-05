@@ -19,6 +19,31 @@
     /* Fond dominant clair (60) — le crème devient un accent (tuiles, hovers). */
     body, .main-content { background: #FBFAF9; }
 
+    /* ---- Onboarding (1ère visite) ---- */
+    .onboarding { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; background: #fff; }
+    .onb-hero {
+      flex: 1; position: relative;
+      background: linear-gradient(160deg, #B71C1C 0%, var(--primary) 55%, #EF5350 100%);
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .onb-hero::before { content: ''; position: absolute; top: -60px; right: -60px; width: 220px; height: 220px; background: rgba(255,255,255,0.08); border-radius: 50%; }
+    .onb-hero::after { content: ''; position: absolute; bottom: -40px; left: -40px; width: 160px; height: 160px; background: rgba(255,255,255,0.06); border-radius: 50%; }
+    .onb-emoji { font-size: 6.5rem; filter: drop-shadow(0 10px 24px rgba(0,0,0,0.22)); animation: onbPop 0.45s var(--ease-bounce); z-index: 1; }
+    .onb-card {
+      background: #fff; border-radius: 28px 28px 0 0; margin-top: -28px; z-index: 1;
+      padding: 2rem 1.75rem calc(2rem + env(safe-area-inset-bottom));
+      box-shadow: 0 -10px 40px rgba(0,0,0,0.10);
+    }
+    .onb-dots { display: flex; gap: 7px; margin-bottom: 1.5rem; }
+    .onb-dots .dot { width: 7px; height: 7px; border-radius: 100px; background: var(--border); transition: all 0.25s; }
+    .onb-dots .dot.active { width: 22px; background: var(--primary); }
+    .onb-title { font-size: 1.625rem; font-weight: 800; color: var(--text); margin-bottom: 0.5rem; line-height: 1.2; }
+    .onb-text { color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.75rem; }
+    .onb-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .onb-skip { background: none; border: none; color: var(--text-muted); font-family: inherit; font-size: 0.9375rem; font-weight: 600; cursor: pointer; }
+    .onb-skip:hover { color: var(--text); }
+    @keyframes onbPop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
     /* ---- Layout principal ---- */
     .app-layout { display: flex; min-height: calc(100dvh - 64px); }
     .sidebar-cats {
@@ -86,14 +111,26 @@
       font-family: inherit; font-size: 0.9375rem; color: var(--text);
     }
 
-    /* ---- Bannière promo / fidélité ---- */
+    /* ---- Carrousel de bannières ---- */
+    .promo-carousel-wrap { margin-bottom: 1.75rem; }
+    .promo-carousel {
+      display: flex; gap: 12px; overflow-x: auto;
+      scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none;
+    }
+    .promo-carousel::-webkit-scrollbar { display: none; }
     .promo-banner {
+      flex: 0 0 100%; scroll-snap-align: center;
       display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-      background: linear-gradient(135deg, #B71C1C 0%, var(--primary) 60%, #EF5350 100%);
-      border-radius: 20px; padding: 1.25rem 1.4rem; margin-bottom: 1.75rem;
+      border-radius: 20px; padding: 1.25rem 1.4rem;
       color: #fff; overflow: hidden; position: relative;
       box-shadow: 0 8px 24px rgba(198,40,40,0.25);
     }
+    .banner-1 { background: linear-gradient(135deg, #B71C1C 0%, var(--primary) 60%, #EF5350 100%); }
+    .banner-2 { background: linear-gradient(135deg, #7F1D1D 0%, #B71C1C 55%, var(--primary) 100%); }
+    .banner-3 { background: linear-gradient(135deg, var(--primary) 0%, #EF5350 70%, #F48FB1 100%); }
+    .promo-dots { display: flex; gap: 6px; justify-content: center; margin-top: 0.75rem; }
+    .promo-dots .dot { width: 6px; height: 6px; border-radius: 100px; background: var(--border); transition: all 0.2s; cursor: pointer; }
+    .promo-dots .dot.active { width: 18px; background: var(--primary); }
     .promo-text { z-index: 1; }
     .promo-text h3 { font-size: 1.0625rem; font-weight: 700; margin: 0 0 4px; }
     .promo-text p { font-size: 0.8125rem; opacity: 0.92; margin: 0 0 0.875rem; max-width: 220px; line-height: 1.4; }
@@ -527,6 +564,22 @@
   </style>
 </head>
 <body>
+  <!-- Onboarding (1ère visite) -->
+  <div id="onboarding" class="onboarding" style="display:none">
+    <div class="onb-hero">
+      <div class="onb-emoji" id="onb-emoji">🍽️</div>
+    </div>
+    <div class="onb-card">
+      <div class="onb-dots" id="onb-dots"></div>
+      <h1 class="onb-title" id="onb-title"></h1>
+      <p class="onb-text" id="onb-text"></p>
+      <div class="onb-actions">
+        <button class="onb-skip" id="onb-skip" onclick="finishOnboarding()">Passer</button>
+        <button class="btn-primary-full onb-next" id="onb-next" onclick="nextOnboarding()" style="margin:0;max-width:180px">Suivant</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Header -->
   <header class="header">
     <div class="header-content">
@@ -586,14 +639,35 @@
             <input type="text" id="menu-search-input" placeholder="Rechercher un plat…" oninput="searchProducts(this.value)" autocomplete="off">
           </div>
 
-          <!-- Bannière promo / fidélité -->
-          <div class="promo-banner" id="promo-banner">
-            <div class="promo-text">
-              <h3>Programme fidélité 🎁</h3>
-              <p>Gagnez des points à chaque commande, échangez-les contre des bons.</p>
-              <button class="promo-btn" onclick="requireAuth(() => showSection('loyalty'))">Mes avantages</button>
+          <!-- Carrousel de bannières -->
+          <div class="promo-carousel-wrap" id="promo-banner">
+            <div class="promo-carousel" id="promo-carousel">
+              <div class="promo-banner banner-1">
+                <div class="promo-text">
+                  <h3>Programme fidélité 🎁</h3>
+                  <p>Gagnez des points à chaque commande, échangez-les contre des bons.</p>
+                  <button class="promo-btn" onclick="requireAuth(() => showSection('loyalty'))">Mes avantages</button>
+                </div>
+                <div class="promo-emoji">🍽️</div>
+              </div>
+              <div class="promo-banner banner-2">
+                <div class="promo-text">
+                  <h3>Comme vous voulez 🛵</h3>
+                  <p>Sur place, à emporter ou en livraison — vous choisissez au panier.</p>
+                  <button class="promo-btn" onclick="showSection('menu')">Voir le menu</button>
+                </div>
+                <div class="promo-emoji">🛵</div>
+              </div>
+              <div class="promo-banner banner-3">
+                <div class="promo-text">
+                  <h3>Un code promo ? 🏷️</h3>
+                  <p>Saisissez votre code au panier et profitez de votre réduction.</p>
+                  <button class="promo-btn" onclick="openCart()">Ouvrir le panier</button>
+                </div>
+                <div class="promo-emoji">🏷️</div>
+              </div>
             </div>
-            <div class="promo-emoji">🍽️</div>
+            <div class="promo-dots" id="promo-dots"></div>
           </div>
 
           <!-- Catégories + produits -->

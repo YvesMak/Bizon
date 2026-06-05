@@ -794,7 +794,88 @@ document.getElementById('btn-checkout').addEventListener('click', async () => {
 // INIT
 // ============================================
 
+// ============================================
+// ONBOARDING (1ère visite)
+// ============================================
+
+const ONBOARDING_SLIDES = [
+  { emoji: '🍽️', title: 'Le menu à portée de main', text: 'Parcourez les plats du restaurant et composez votre commande en quelques taps.' },
+  { emoji: '🛵', title: 'Sur place, à emporter ou livré', text: 'Choisissez votre mode de commande et payez en ligne, en toute sécurité.' },
+  { emoji: '🎁', title: 'Gagnez des récompenses', text: 'Cumulez des points à chaque commande et échangez-les contre des bons de réduction.' }
+];
+let onbIndex = 0;
+
+function renderOnboarding() {
+  const s = ONBOARDING_SLIDES[onbIndex];
+  const emojiEl = document.getElementById('onb-emoji');
+  emojiEl.textContent = s.emoji;
+  // relancer l'animation
+  emojiEl.style.animation = 'none'; void emojiEl.offsetWidth; emojiEl.style.animation = '';
+  document.getElementById('onb-title').textContent = s.title;
+  document.getElementById('onb-text').textContent = s.text;
+  document.getElementById('onb-dots').innerHTML = ONBOARDING_SLIDES
+    .map((_, i) => `<span class="dot ${i === onbIndex ? 'active' : ''}"></span>`).join('');
+  const last = onbIndex === ONBOARDING_SLIDES.length - 1;
+  document.getElementById('onb-next').textContent = last ? 'Commencer' : 'Suivant';
+  document.getElementById('onb-skip').style.visibility = last ? 'hidden' : 'visible';
+}
+
+function nextOnboarding() {
+  if (onbIndex < ONBOARDING_SLIDES.length - 1) { onbIndex++; renderOnboarding(); }
+  else finishOnboarding();
+}
+
+function finishOnboarding() {
+  localStorage.setItem('bizon_onboarded', '1');
+  const el = document.getElementById('onboarding');
+  el.style.transition = 'opacity 0.3s'; el.style.opacity = '0';
+  setTimeout(() => { el.style.display = 'none'; }, 300);
+}
+
+function maybeShowOnboarding() {
+  if (localStorage.getItem('bizon_onboarded')) return;
+  onbIndex = 0;
+  renderOnboarding();
+  document.getElementById('onboarding').style.display = 'flex';
+}
+
+// ============================================
+// CARROUSEL DE BANNIÈRES
+// ============================================
+
+function initPromoCarousel() {
+  const carousel = document.getElementById('promo-carousel');
+  const dotsEl = document.getElementById('promo-dots');
+  if (!carousel || !dotsEl) return;
+  const slides = carousel.children.length;
+
+  dotsEl.innerHTML = Array.from({ length: slides }, (_, i) =>
+    `<span class="dot ${i === 0 ? 'active' : ''}" onclick="scrollPromo(${i})"></span>`).join('');
+
+  const update = () => {
+    const idx = Math.round(carousel.scrollLeft / carousel.clientWidth);
+    [...dotsEl.children].forEach((d, i) => d.classList.toggle('active', i === idx));
+  };
+  carousel.addEventListener('scroll', () => requestAnimationFrame(update));
+
+  window.scrollPromo = (i) => carousel.scrollTo({ left: i * carousel.clientWidth, behavior: 'smooth' });
+
+  // Auto-défilement (uniquement quand la page menu est visible)
+  setInterval(() => {
+    const onMenu = document.getElementById('page-menu')?.classList.contains('active');
+    const visible = document.getElementById('promo-banner')?.style.display !== 'none';
+    if (!onMenu || !visible || carousel.clientWidth === 0) return;
+    const next = (Math.round(carousel.scrollLeft / carousel.clientWidth) + 1) % slides;
+    carousel.scrollTo({ left: next * carousel.clientWidth, behavior: 'smooth' });
+  }, 5000);
+}
+
+// ============================================
+// INIT
+// ============================================
+
 document.addEventListener('DOMContentLoaded', async () => {
+  maybeShowOnboarding();
   updateCartBadge();
   renderAuthZone();
 
@@ -805,4 +886,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Charger le menu public
   await loadMenu();
+
+  // Carrousel de bannières
+  initPromoCarousel();
 });
