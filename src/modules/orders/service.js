@@ -530,6 +530,7 @@ class OrderService {
       return {
         id: order.id,
         restaurant_id: restaurantId,
+        customer_id: order.customer_id,
         order_number: order.order_number,
         status: newStatus,
         type: order.type,
@@ -642,6 +643,7 @@ class OrderService {
       return {
         id: order.id,
         restaurant_id: restaurantId,
+        customer_id: order.customer_id,
         order_number: order.order_number,
         status: 'cancelled',
         type: order.type,

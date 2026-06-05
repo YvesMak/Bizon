@@ -41,6 +41,7 @@ function showSection(name) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
   // Actions spécifiques
+  if (name === 'menu') loadActiveOrder();
   if (name === 'orders') loadOrders();
   if (name === 'loyalty') renderLoyalty();
   if (name === 'profile') fillProfileForm();
@@ -454,6 +455,8 @@ async function login(identifier, password) {
   state.customer = data.customer;
   localStorage.setItem('bizon_customer_token', data.token);
   renderAuthZone();
+  initOrderStream();
+  loadActiveOrder();
   return data;
 }
 
@@ -466,10 +469,12 @@ async function register(formData) {
   state.customer = data.customer;
   localStorage.setItem('bizon_customer_token', data.token);
   renderAuthZone();
+  initOrderStream();
   return data;
 }
 
 function logout() {
+  closeOrderStream();
   state.token = null;
   state.customer = null;
   localStorage.removeItem('bizon_customer_token');
@@ -525,6 +530,66 @@ async function loadOrders() {
   } catch {
     list.innerHTML = '<div style="color:var(--error);text-align:center;padding:2rem">Erreur de chargement</div>';
   }
+}
+
+// ============================================
+// SUIVI TEMPS RÉEL (commande active)
+// ============================================
+
+const ACTIVE_STATUS = {
+  confirmed: { label: 'Confirmée', emoji: '✅', sub: 'Votre commande est confirmée' },
+  preparing: { label: 'En préparation', emoji: '👨‍🍳', sub: 'Votre commande est en cuisine' },
+  ready: { label: 'Prête !', emoji: '🛎️', sub: 'Récupérez votre commande' }
+};
+
+async function loadActiveOrder() {
+  const banner = document.getElementById('active-order-banner');
+  if (!banner) return;
+  if (!state.token) { banner.style.display = 'none'; return; }
+  try {
+    const orders = await apiCall('/customers/me/orders');
+    const active = orders.find(o => ACTIVE_STATUS[o.status]);
+    renderActiveOrder(active);
+  } catch {
+    banner.style.display = 'none';
+  }
+}
+
+function renderActiveOrder(order) {
+  const banner = document.getElementById('active-order-banner');
+  if (!banner) return;
+  if (!order) { banner.style.display = 'none'; return; }
+  const s = ACTIVE_STATUS[order.status];
+  banner.style.display = 'flex';
+  banner.innerHTML = `
+    <span class="track-icon">${s.emoji}</span>
+    <div class="track-info">
+      <h4>${order.order_number || 'Commande'} · ${s.label}</h4>
+      <p>${s.sub}</p>
+    </div>
+    <button class="track-btn" onclick="showSection('orders')">Suivre</button>`;
+}
+
+let orderStream = null;
+
+function initOrderStream() {
+  if (!state.token || orderStream) return;
+  orderStream = new EventSource(`${API}/customers/me/stream?token=${encodeURIComponent(state.token)}`);
+  orderStream.addEventListener('order_status_changed', (e) => {
+    let data; try { data = JSON.parse(e.data); } catch { return; }
+    const labels = { confirmed: 'confirmée', preparing: 'en préparation', ready: 'prête', paid: 'payée', cancelled: 'annulée' };
+    const ref = data.orderNumber || 'Votre commande';
+    showToast(`${ref} : ${labels[data.status] || data.status}`, data.status === 'ready' ? 'success' : 'info', 5500);
+    loadActiveOrder();
+    if (document.getElementById('page-orders').classList.contains('active')) loadOrders();
+  });
+  orderStream.onerror = () => { /* EventSource se reconnecte automatiquement */ };
+}
+
+function closeOrderStream() {
+  if (orderStream) { orderStream.close(); orderStream = null; }
+  const banner = document.getElementById('active-order-banner');
+  if (banner) banner.style.display = 'none';
 }
 
 // ============================================
@@ -889,4 +954,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Carrousel de bannières
   initPromoCarousel();
+
+  // Suivi temps réel des commandes (si connecté)
+  if (state.token) {
+    initOrderStream();
+    loadActiveOrder();
+  }
 });

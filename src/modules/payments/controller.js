@@ -104,12 +104,20 @@ class PaymentController {
           transactionId: data.id || event['transaction_id'],
           txRef: data.tx_ref
         });
-        // Notifier les écrans staff (commande → paid)
+        // Notifier les écrans staff + le client (commande payée → confirmée)
         if (settled?.order_id) {
+          const newStatus = settled.order ? settled.order.status : 'paid';
           sse.emit(settled.restaurant_id, 'order_status_changed', {
             orderId: settled.order_id,
-            status: 'paid'
+            status: newStatus
           });
+          if (settled.order?.customer_id) {
+            sse.emitToCustomer(settled.order.customer_id, 'order_status_changed', {
+              orderId: settled.order_id,
+              orderNumber: settled.order.order_number,
+              status: newStatus
+            });
+          }
         }
       }
     } catch (err) {

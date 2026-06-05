@@ -97,6 +97,30 @@
     .cat-tile.active .cat-tile-img { background: var(--primary-light); border-color: var(--primary); }
     .cat-tile.active .cat-tile-name { color: var(--primary); }
 
+    /* ---- Bandeau de suivi de commande active ---- */
+    .track-banner {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--bg-dark); color: #fff;
+      border-radius: 16px; padding: 0.875rem 1rem; margin-bottom: 1.25rem;
+      box-shadow: 0 6px 20px rgba(28,25,23,0.18);
+    }
+    .track-icon { font-size: 1.6rem; flex-shrink: 0; position: relative; }
+    .track-icon::after {
+      content: ''; position: absolute; top: 0; right: -2px; width: 8px; height: 8px;
+      background: #4ade80; border-radius: 50%; border: 2px solid var(--bg-dark);
+      animation: trackPulse 1.6s infinite;
+    }
+    @keyframes trackPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+    .track-info { flex: 1; min-width: 0; }
+    .track-info h4 { font-size: 0.875rem; font-weight: 700; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .track-info p { font-size: 0.78rem; opacity: 0.75; margin: 2px 0 0; }
+    .track-btn {
+      background: var(--primary); color: #fff; border: none; border-radius: 100px;
+      padding: 0.5rem 1.1rem; font-family: inherit; font-weight: 700; font-size: 0.8rem;
+      cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: background 0.15s;
+    }
+    .track-btn:hover { background: var(--primary-hover); }
+
     /* ---- Recherche ---- */
     .menu-search {
       display: flex; align-items: center; gap: 10px;
@@ -632,6 +656,9 @@
         </div>
         <!-- Menu content -->
         <div id="menu-content" style="display:none">
+          <!-- Suivi commande active -->
+          <div class="track-banner" id="active-order-banner" style="display:none"></div>
+
           <!-- Recherche -->
           <div class="menu-search">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
