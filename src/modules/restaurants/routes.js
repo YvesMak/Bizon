@@ -8,6 +8,11 @@ const tenantIsolation = require('../../middlewares/tenantIsolation');
 // Appliquer l'authentification et l'isolation multi-tenant à toutes les routes
 router.use(auth, tenantIsolation);
 
+// Self-service propriétaire : ses restaurants (multi-restaurant)
+router.get('/mine', roleCheck(['owner']), RestaurantController.getMyRestaurants);
+router.post('/mine', roleCheck(['owner']), RestaurantController.createMyRestaurant);
+router.post('/switch/:id', roleCheck(['owner']), RestaurantController.switchRestaurant);
+
 // Informations restaurant
 router.get('/', RestaurantController.getRestaurant);
 router.put('/', roleCheck(['owner', 'manager']), RestaurantController.updateRestaurant);

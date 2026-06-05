@@ -1,4 +1,4 @@
-const { Order, OrderItem, Product, Customer, Payment } = require('../../models');
+const { Order, OrderItem, Product, Customer, Payment, Restaurant } = require('../../models');
 const { sequelize } = require('../../config/database');
 const { Op } = require('sequelize');
 const ProductService = require('../products/service');
@@ -371,6 +371,18 @@ class OrderService {
       if (!['dine_in', 'takeaway', 'delivery'].includes(type)) {
         throw new Error('Type de commande invalide');
       }
+
+      // Le restaurant peut restreindre les modes de service proposés.
+      const restaurant = await Restaurant.findByPk(restaurantId, { transaction });
+      if (!restaurant) throw new Error('Restaurant non trouvé');
+      const allowedTypes = Array.isArray(restaurant.settings?.service_types) && restaurant.settings.service_types.length
+        ? restaurant.settings.service_types
+        : ['dine_in', 'takeaway', 'delivery'];
+      if (!allowedTypes.includes(type)) {
+        const labels = { dine_in: 'sur place', takeaway: 'à emporter', delivery: 'livraison' };
+        throw new Error(`Ce restaurant ne propose pas le mode « ${labels[type] || type} »`);
+      }
+
       if (!items || items.length === 0) {
         throw new Error('La commande doit contenir au moins un produit');
       }

@@ -1,8 +1,9 @@
 // Fabriques de données de test : créent des entités valides minimales.
 const {
-  Restaurant, User, Customer, Menu, Category, Product, Voucher
+  Restaurant, User, Customer, Menu, Category, Product, Voucher, PlatformAdmin
 } = require('../../src/models');
 const authService = require('../../src/modules/auth/service');
+const adminService = require('../../src/modules/admin/service');
 
 let counter = 0;
 const uniq = (prefix) => `${prefix}-${Date.now()}-${counter++}`;
@@ -98,11 +99,26 @@ async function createVoucher(restaurantId, overrides = {}) {
   });
 }
 
+// Crée un super-administrateur plateforme + son token.
+async function createPlatformAdmin(overrides = {}) {
+  const email = overrides.email || `${uniq('admin')}@bizon.cm`;
+  const password = overrides.password || 'adminpass123';
+  const admin = await PlatformAdmin.create({
+    email,
+    password,
+    name: overrides.name || 'Super Admin',
+    status: overrides.status || 'active'
+  });
+  const token = adminService.generateToken(admin.id);
+  return { admin, token, email, password };
+}
+
 module.exports = {
   createRestaurant,
   createUser,
   createCustomer,
   createFullMenu,
   registerOwner,
-  createVoucher
+  createVoucher,
+  createPlatformAdmin
 };

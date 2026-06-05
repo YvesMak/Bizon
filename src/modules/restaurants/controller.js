@@ -93,6 +93,35 @@ class RestaurantController {
       res.status(400).json({ error: error.message });
     }
   }
+
+  // ----- Self-service propriétaire : multi-restaurants -----
+
+  async getMyRestaurants(req, res) {
+    try {
+      const restaurants = await RestaurantService.getOwnedRestaurants(req.user);
+      res.json({ restaurants, current_restaurant_id: req.restaurantId });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async createMyRestaurant(req, res) {
+    try {
+      const restaurant = await RestaurantService.createOwnedRestaurant(req.user, req.body);
+      res.status(201).json({ message: 'Restaurant créé', restaurant });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  async switchRestaurant(req, res) {
+    try {
+      const result = await RestaurantService.switchRestaurant(req.user, req.params.id);
+      res.json({ message: 'Restaurant actif changé', ...result });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
 }
 
 module.exports = new RestaurantController();

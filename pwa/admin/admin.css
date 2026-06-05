@@ -1,0 +1,141 @@
+:root {
+  --red: #C62828;
+  --red-dark: #A01E1E;
+  --cream: #FDF5EB;
+  --cream-2: #F5EAD8;
+  --bg: #FBFAF9;
+  --ink: #1F1B16;
+  --muted: #8A8178;
+  --line: #ECE6DE;
+  --green: #2E7D32;
+  --amber: #B7791F;
+  --radius: 14px;
+  --shadow: 0 6px 20px rgba(31,27,22,.08);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg); color: var(--ink); line-height: 1.45;
+}
+.hidden { display: none !important; }
+.muted { color: var(--muted); }
+
+/* ---------- LOGIN ---------- */
+.login-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(120% 120% at 50% 0%, var(--cream) 0%, var(--bg) 60%);
+  padding: 20px;
+}
+.login-card {
+  width: 100%; max-width: 380px; background: #fff; border-radius: 20px;
+  padding: 32px 28px; box-shadow: var(--shadow); border: 1px solid var(--line);
+}
+.login-brand { text-align: center; margin-bottom: 22px; }
+.login-logo, .topbar-logo {
+  display: inline-grid; place-items: center; background: var(--red); color: #fff;
+  font-weight: 800; border-radius: 14px;
+}
+.login-logo { width: 56px; height: 56px; font-size: 28px; margin-bottom: 10px; }
+.login-brand h1 { font-size: 26px; }
+.login-brand p { color: var(--muted); font-size: 14px; }
+form label { display: block; font-size: 13px; font-weight: 600; margin: 14px 0 6px; }
+input, select {
+  width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: 10px;
+  font-size: 15px; background: #fff; color: var(--ink);
+}
+input:focus, select:focus { outline: none; border-color: var(--red); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: none; border-radius: 10px; padding: 11px 16px; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: .15s;
+}
+.btn-primary { background: var(--red); color: #fff; }
+.btn-primary:hover { background: var(--red-dark); }
+.btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+.btn-ghost:hover { background: var(--cream); }
+.btn-block { width: 100%; margin-top: 20px; }
+.btn-sm { padding: 7px 11px; font-size: 13px; }
+.error-msg { color: var(--red); font-size: 13px; margin-top: 10px; min-height: 18px; }
+
+/* ---------- TOPBAR ---------- */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 22px; background: #fff; border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; z-index: 10;
+}
+.topbar-brand { font-weight: 700; font-size: 17px; display: flex; align-items: center; gap: 8px; }
+.topbar-logo { width: 30px; height: 30px; font-size: 16px; border-radius: 9px; }
+.topbar-right { display: flex; align-items: center; gap: 14px; }
+.admin-name { font-size: 14px; color: var(--muted); }
+.container { max-width: 1040px; margin: 0 auto; padding: 22px; }
+
+/* ---------- STATS ---------- */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px; }
+.stat-card {
+  background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 18px; box-shadow: var(--shadow);
+}
+.stat-card .v { font-size: 30px; font-weight: 800; }
+.stat-card .k { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.stat-card.accent { background: var(--cream); border-color: var(--cream-2); }
+
+/* ---------- TABS ---------- */
+.tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--line); margin-bottom: 18px; }
+.tab {
+  background: none; border: none; padding: 10px 4px; margin-right: 14px; font-size: 15px;
+  font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent;
+}
+.tab.active { color: var(--red); border-bottom-color: var(--red); }
+.panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.panel-head h2 { font-size: 20px; }
+
+/* ---------- CARDS ---------- */
+.cards { display: grid; gap: 12px; }
+.card {
+  background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 18px; box-shadow: var(--shadow);
+}
+.card-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.card h3 { font-size: 16px; }
+.card .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip {
+  font-size: 12px; padding: 4px 10px; border-radius: 999px;
+  background: var(--cream); color: var(--ink); border: 1px solid var(--cream-2);
+}
+.badge { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+.badge.active { background: #E7F4E8; color: var(--green); }
+.badge.suspended { background: #FDECEC; color: var(--red); }
+.badge.closed { background: #EEE; color: var(--muted); }
+.resto-mini { font-size: 13px; color: var(--muted); }
+.card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* ---------- MODAL ---------- */
+.modal {
+  position: fixed; inset: 0; background: rgba(31,27,22,.45); display: flex;
+  align-items: center; justify-content: center; padding: 20px; z-index: 50;
+}
+.modal-card {
+  background: #fff; border-radius: 18px; padding: 24px; width: 100%; max-width: 440px;
+  max-height: 90vh; overflow-y: auto;
+}
+.modal-card h3 { font-size: 20px; margin-bottom: 6px; }
+.modal-card hr { border: none; border-top: 1px solid var(--line); margin: 16px 0 4px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.checks { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
+.chk { display: flex; align-items: center; gap: 6px; font-weight: 500; font-size: 14px; margin: 0; }
+.chk input { width: auto; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+/* ---------- TOAST ---------- */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--ink); color: #fff; padding: 12px 20px; border-radius: 999px;
+  font-size: 14px; z-index: 100; box-shadow: var(--shadow);
+}
+.toast.err { background: var(--red); }
+
+@media (max-width: 560px) {
+  .grid2 { grid-template-columns: 1fr; }
+  .container { padding: 16px; }
+}

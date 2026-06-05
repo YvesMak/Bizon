@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#C62828">
+  <title>Bizon · Administration</title>
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <!-- ÉCRAN DE CONNEXION -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="login-logo">B</div>
+        <h1>Bizon</h1>
+        <p>Administration de la plateforme</p>
+      </div>
+      <form id="login-form">
+        <label>Email</label>
+        <input type="email" id="login-email" required autocomplete="username" placeholder="admin@bizon.cm">
+        <label>Mot de passe</label>
+        <input type="password" id="login-password" required autocomplete="current-password" placeholder="••••••••">
+        <button type="submit" class="btn btn-primary btn-block">Se connecter</button>
+        <p id="login-error" class="error-msg"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- APPLICATION -->
+  <div id="app" class="app hidden">
+    <header class="topbar">
+      <div class="topbar-brand"><span class="topbar-logo">B</span> Bizon · <span class="muted">Admin</span></div>
+      <div class="topbar-right">
+        <span id="admin-name" class="admin-name"></span>
+        <button class="btn btn-ghost" onclick="logout()">Déconnexion</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <!-- STATISTIQUES -->
+      <section class="stats-grid" id="stats-grid"></section>
+
+      <!-- ONGLETS -->
+      <nav class="tabs">
+        <button class="tab active" data-tab="owners" onclick="switchTab('owners')">Propriétaires</button>
+        <button class="tab" data-tab="restaurants" onclick="switchTab('restaurants')">Restaurants</button>
+      </nav>
+
+      <!-- PROPRIÉTAIRES -->
+      <section id="tab-owners" class="tab-panel">
+        <div class="panel-head">
+          <h2>Propriétaires</h2>
+          <button class="btn btn-primary" onclick="openOwnerModal()">+ Nouveau propriétaire</button>
+        </div>
+        <div id="owners-list" class="cards"></div>
+      </section>
+
+      <!-- RESTAURANTS -->
+      <section id="tab-restaurants" class="tab-panel hidden">
+        <div class="panel-head">
+          <h2>Restaurants</h2>
+          <button class="btn btn-primary" onclick="openRestaurantModal()">+ Nouveau restaurant</button>
+        </div>
+        <div id="restaurants-list" class="cards"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODALE PROPRIÉTAIRE -->
+  <div id="owner-modal" class="modal hidden">
+    <div class="modal-card">
+      <h3>Nouveau propriétaire</h3>
+      <form id="owner-form">
+        <div class="grid2">
+          <div><label>Prénom</label><input id="o-first" type="text" placeholder="Paul"></div>
+          <div><label>Nom</label><input id="o-last" type="text" placeholder="Mbarga"></div>
+        </div>
+        <label>Email *</label><input id="o-email" type="email" required placeholder="proprio@resto.cm">
+        <label>Mot de passe *</label><input id="o-password" type="text" required placeholder="6 caractères min.">
+        <label>Téléphone</label><input id="o-phone" type="tel" placeholder="+237 6...">
+        <hr>
+        <label>Nom du premier restaurant *</label><input id="o-resto" type="text" required placeholder="Chez Paul">
+        <label>Quota de restaurants</label>
+        <input id="o-quota" type="number" min="1" value="1">
+        <label>Modes de service proposés</label>
+        <div class="checks" id="o-service-types">
+          <label class="chk"><input type="checkbox" value="dine_in" checked> Sur place</label>
+          <label class="chk"><input type="checkbox" value="takeaway" checked> À emporter</label>
+          <label class="chk"><input type="checkbox" value="delivery" checked> Livraison</label>
+        </div>
+        <p class="error-msg" id="owner-error"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" onclick="closeModal('owner-modal')">Annuler</button>
+          <button type="submit" class="btn btn-primary">Créer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODALE RESTAURANT -->
+  <div id="restaurant-modal" class="modal hidden">
+    <div class="modal-card">
+      <h3>Nouveau restaurant</h3>
+      <form id="restaurant-form">
+        <label>Propriétaire *</label>
+        <select id="r-owner" required></select>
+        <label>Nom *</label><input id="r-name" type="text" required placeholder="Le Bistrot">
+        <label>Adresse</label><input id="r-address" type="text" placeholder="Akwa, Douala">
+        <label>Téléphone</label><input id="r-phone" type="tel" placeholder="+237 6...">
+        <label>Modes de service proposés</label>
+        <div class="checks" id="r-service-types">
+          <label class="chk"><input type="checkbox" value="dine_in" checked> Sur place</label>
+          <label class="chk"><input type="checkbox" value="takeaway" checked> À emporter</label>
+          <label class="chk"><input type="checkbox" value="delivery" checked> Livraison</label>
+        </div>
+        <p class="error-msg" id="restaurant-error"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" onclick="closeModal('restaurant-modal')">Annuler</button>
+          <button type="submit" class="btn btn-primary">Créer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="admin.js"></script>
+</body>
+</html>

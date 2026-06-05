@@ -125,6 +125,11 @@ async function loadMenu() {
         nameEl.textContent = data.restaurant.name;
         document.title = `${data.restaurant.name} — Menu & Fidélité`;
       }
+      // Modes de service proposés par ce restaurant
+      state.serviceTypes = Array.isArray(data.restaurant.service_types) && data.restaurant.service_types.length
+        ? data.restaurant.service_types
+        : ['dine_in', 'takeaway', 'delivery'];
+      applyServiceTypes();
     }
 
     state.menus = data.menus;
@@ -422,6 +427,23 @@ function changeQty(index, delta) {
   saveCart();
   updateCartBadge();
   renderCartPanel();
+}
+
+// N'affiche que les modes de commande proposés par le restaurant,
+// et sélectionne automatiquement le premier disponible.
+function applyServiceTypes() {
+  const allowed = state.serviceTypes || ['dine_in', 'takeaway', 'delivery'];
+  const buttons = document.querySelectorAll('.otype');
+  let firstBtn = null;
+  buttons.forEach((b) => {
+    const ok = allowed.includes(b.dataset.type);
+    b.style.display = ok ? '' : 'none';
+    if (ok && !firstBtn) firstBtn = b;
+  });
+  // Si le mode actuellement sélectionné n'est plus autorisé, basculer sur le premier dispo.
+  if (firstBtn && !allowed.includes(state.orderType)) {
+    selectOrderType(firstBtn.dataset.type, firstBtn);
+  }
 }
 
 function selectOrderType(type, btn) {

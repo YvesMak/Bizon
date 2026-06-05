@@ -20,6 +20,7 @@ const customerRoutes = require('./modules/customers/routes');
 const voucherRoutes = require('./modules/vouchers/routes');
 const analyticsRoutes = require('./modules/analytics/routes');
 const uploadRoutes = require('./modules/uploads/routes');
+const adminRoutes = require('./modules/admin/routes');
 const paymentWebhookRoutes = require('./modules/payments/webhook.routes');
 
 const { errorTranslationMiddleware } = require('./utils/errorTranslator');
@@ -67,6 +68,7 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/vouchers', voucherRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/uploads', uploadRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Route de santé
 app.get('/health', (req, res) => {

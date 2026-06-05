@@ -36,6 +36,11 @@ const Restaurant = sequelize.define('Restaurant', {
     type: DataTypes.ENUM('active', 'suspended', 'closed'),
     defaultValue: 'active'
   },
+  owner_id: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: { model: 'users', key: 'id' }
+  },
   settings: {
     type: DataTypes.JSONB,
     defaultValue: {}
