@@ -12,6 +12,7 @@ const Subscription = require('./Subscription');
 const LoyaltyTransaction = require('./LoyaltyTransaction');
 const Voucher = require('./Voucher');
 const PlatformAdmin = require('./PlatformAdmin');
+const PushSubscription = require('./PushSubscription');
 
 // Définition des relations
 const initModels = () => {
@@ -87,6 +88,11 @@ const initModels = () => {
   Voucher.belongsTo(Customer, { foreignKey: 'customer_id', as: 'customer' });
   Customer.hasMany(Voucher, { foreignKey: 'customer_id', as: 'vouchers' });
 
+  // Abonnements push
+  PushSubscription.belongsTo(Customer, { foreignKey: 'customer_id', as: 'customer' });
+  PushSubscription.belongsTo(Restaurant, { foreignKey: 'restaurant_id', as: 'restaurant' });
+  Customer.hasMany(PushSubscription, { foreignKey: 'customer_id', as: 'pushSubscriptions' });
+
   if (process.env.NODE_ENV !== 'test') {
     console.log('✅ Relations des modèles initialisées');
   }
@@ -107,5 +113,6 @@ module.exports = {
   LoyaltyTransaction,
   Voucher,
   PlatformAdmin,
+  PushSubscription,
   initModels
 };

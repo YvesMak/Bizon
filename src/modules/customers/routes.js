@@ -21,6 +21,7 @@ const customerAuth = (req, res, next) => {
 // Routes publiques
 router.post('/register', CustomerController.register.bind(CustomerController));
 router.post('/login', CustomerController.login.bind(CustomerController));
+router.get('/push/vapid-key', CustomerController.getVapidKey.bind(CustomerController));
 
 // Routes protégées
 router.get('/me', customerAuth, CustomerController.getProfile.bind(CustomerController));
@@ -32,5 +33,7 @@ router.post('/validate-voucher', customerAuth, CustomerController.validateVouche
 router.get('/me/rewards', customerAuth, CustomerController.getRewards.bind(CustomerController));
 router.post('/me/redeem', customerAuth, CustomerController.redeemReward.bind(CustomerController));
 router.get('/me/stream', customerAuth, CustomerController.stream.bind(CustomerController));
+router.post('/me/push/subscribe', customerAuth, CustomerController.subscribePush.bind(CustomerController));
+router.post('/me/push/unsubscribe', customerAuth, CustomerController.unsubscribePush.bind(CustomerController));
 
 module.exports = router;
