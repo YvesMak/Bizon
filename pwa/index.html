@@ -610,6 +610,17 @@
       .bottom-nav { display: none !important; }
     }
 
+    /* ---------- Sélecteur de langue ---------- */
+    .btn-lang {
+      background: transparent; border: 1px solid rgba(255,255,255,.35);
+      color: #fff; border-radius: 999px; padding: 5px 11px; font-size: 12px;
+      font-weight: 700; cursor: pointer; letter-spacing: .03em; transition: .15s;
+    }
+    .btn-lang:hover { background: rgba(255,255,255,.15); }
+    @media (max-width: 768px) {
+      .btn-lang { color: var(--text); border-color: var(--border, #ECE6DE); }
+    }
+
     /* ---------- Installation PWA ---------- */
     /* L'attribut [hidden] doit l'emporter sur les display: flex ci-dessous. */
     .install-banner[hidden], .ios-sheet[hidden] { display: none !important; }
@@ -664,8 +675,8 @@
       <h1 class="onb-title" id="onb-title"></h1>
       <p class="onb-text" id="onb-text"></p>
       <div class="onb-actions">
-        <button class="onb-skip" id="onb-skip" onclick="finishOnboarding()">Passer</button>
-        <button class="btn-primary-full onb-next" id="onb-next" onclick="nextOnboarding()" style="margin:0;max-width:180px">Suivant</button>
+        <button class="onb-skip" id="onb-skip" onclick="finishOnboarding()" data-i18n="onb.skip">Passer</button>
+        <button class="btn-primary-full onb-next" id="onb-next" onclick="nextOnboarding()" style="margin:0;max-width:180px" data-i18n="onb.next">Suivant</button>
       </div>
     </div>
   </div>
@@ -678,19 +689,20 @@
         <span class="logo-name">Bizon</span>
       </div>
       <nav class="main-nav" aria-label="Navigation principale">
-        <a class="nav-link active" id="nav-menu" onclick="showSection('menu')" href="#">MENU</a>
-        <a class="nav-link" id="nav-orders" onclick="requireAuth(() => showSection('orders'))" href="#">COMMANDES</a>
-        <a class="nav-link" id="nav-loyalty" onclick="requireAuth(() => showSection('loyalty'))" href="#">AVANTAGES</a>
+        <a class="nav-link active" id="nav-menu" onclick="showSection('menu')" href="#" data-i18n="nav.menu">MENU</a>
+        <a class="nav-link" id="nav-orders" onclick="requireAuth(() => showSection('orders'))" href="#" data-i18n="nav.orders">COMMANDES</a>
+        <a class="nav-link" id="nav-loyalty" onclick="requireAuth(() => showSection('loyalty'))" href="#" data-i18n="nav.loyalty">AVANTAGES</a>
       </nav>
       <div class="header-actions">
+        <button class="btn-lang" id="btn-lang" onclick="i18n.toggleLang()" aria-label="Language" data-i18n="lang.switch">EN</button>
         <div id="header-auth-zone"><!-- injecté par JS --></div>
-        <button class="btn-cart" id="btn-cart-open" aria-label="Voir le panier">
+        <button class="btn-cart" id="btn-cart-open" data-i18n-aria="aria.cart" aria-label="Voir le panier">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
             <line x1="3" y1="6" x2="21" y2="6"/>
             <path d="M16 10a4 4 0 01-8 0"/>
           </svg>
-          <span>Panier</span>
+          <span data-i18n="nav.cart">Panier</span>
           <span class="cart-count" id="cart-count">0</span>
         </button>
       </div>
@@ -712,12 +724,12 @@
         <!-- Unavailable state -->
         <div class="menu-unavailable" id="menu-unavailable" style="display:none">
           <div class="unavail-icon">🍽️</div>
-          <h2>Menu bientôt disponible</h2>
-          <p>Notre équipe prépare quelque chose de délicieux pour vous. Revenez bientôt !</p>
+          <h2 data-i18n="menu.unavailable.title">Menu bientôt disponible</h2>
+          <p data-i18n="menu.unavailable.text">Notre équipe prépare quelque chose de délicieux pour vous. Revenez bientôt !</p>
         </div>
         <!-- Loading -->
         <div id="menu-loading" class="loading" style="min-height:40vh">
-          <span>Chargement du menu…</span>
+          <span data-i18n="menu.loading">Chargement du menu…</span>
         </div>
         <!-- Menu content -->
         <div id="menu-content" style="display:none">
@@ -729,7 +741,7 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
-            <input type="text" id="menu-search-input" placeholder="Rechercher un plat…" oninput="searchProducts(this.value)" autocomplete="off">
+            <input type="text" id="menu-search-input" data-i18n-placeholder="menu.search" placeholder="Rechercher un plat…" oninput="searchProducts(this.value)" autocomplete="off">
           </div>
 
           <!-- Carrousel de bannières -->
@@ -737,25 +749,25 @@
             <div class="promo-carousel" id="promo-carousel">
               <div class="promo-banner banner-1">
                 <div class="promo-text">
-                  <h3>Programme fidélité 🎁</h3>
-                  <p>Gagnez des points à chaque commande, échangez-les contre des bons.</p>
-                  <button class="promo-btn" onclick="requireAuth(() => showSection('loyalty'))">Mes avantages</button>
+                  <h3 data-i18n="promo.loyalty.title">Programme fidélité 🎁</h3>
+                  <p data-i18n="promo.loyalty.text">Gagnez des points à chaque commande, échangez-les contre des bons.</p>
+                  <button class="promo-btn" onclick="requireAuth(() => showSection('loyalty'))" data-i18n="promo.loyalty.btn">Mes avantages</button>
                 </div>
                 <div class="promo-emoji">🍽️</div>
               </div>
               <div class="promo-banner banner-2">
                 <div class="promo-text">
-                  <h3>Comme vous voulez 🛵</h3>
-                  <p>Sur place, à emporter ou en livraison — vous choisissez au panier.</p>
-                  <button class="promo-btn" onclick="showSection('menu')">Voir le menu</button>
+                  <h3 data-i18n="promo.modes.title">Comme vous voulez 🛵</h3>
+                  <p data-i18n="promo.modes.text">Sur place, à emporter ou en livraison — vous choisissez au panier.</p>
+                  <button class="promo-btn" onclick="showSection('menu')" data-i18n="promo.modes.btn">Voir le menu</button>
                 </div>
                 <div class="promo-emoji">🛵</div>
               </div>
               <div class="promo-banner banner-3">
                 <div class="promo-text">
-                  <h3>Un code promo ? 🏷️</h3>
-                  <p>Saisissez votre code au panier et profitez de votre réduction.</p>
-                  <button class="promo-btn" onclick="openCart()">Ouvrir le panier</button>
+                  <h3 data-i18n="promo.code.title">Un code promo ? 🏷️</h3>
+                  <p data-i18n="promo.code.text">Saisissez votre code au panier et profitez de votre réduction.</p>
+                  <button class="promo-btn" onclick="openCart()" data-i18n="promo.code.btn">Ouvrir le panier</button>
                 </div>
                 <div class="promo-emoji">🏷️</div>
               </div>
@@ -777,21 +789,21 @@
       <div id="page-login" class="page">
         <div class="form-page-wrap">
           <div class="form-wrap">
-            <h1>Bon retour !</h1>
-            <p class="form-sub">Connectez-vous à votre compte client</p>
+            <h1 data-i18n="login.title">Bon retour !</h1>
+            <p class="form-sub" data-i18n="login.sub">Connectez-vous à votre compte client</p>
             <form id="form-login">
               <div class="form-group">
-                <label>Email ou téléphone</label>
-                <input type="text" id="login-identifier" placeholder="email ou +237 6XX XXX XXX" required autocomplete="username">
+                <label data-i18n="login.identifier">Email ou téléphone</label>
+                <input type="text" id="login-identifier" data-i18n-placeholder="login.identifier.ph" placeholder="email ou +237 6XX XXX XXX" required autocomplete="username">
               </div>
               <div class="form-group">
-                <label>Mot de passe</label>
+                <label data-i18n="login.password">Mot de passe</label>
                 <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
               </div>
-              <button type="submit" class="btn-primary-full" id="btn-login">Se connecter</button>
+              <button type="submit" class="btn-primary-full" id="btn-login" data-i18n="login.submit">Se connecter</button>
             </form>
             <div class="form-footer-link">
-              Pas encore de compte ? <a href="#" onclick="event.preventDefault();showSection('register')">Créer un compte</a>
+              <span data-i18n="login.noAccount">Pas encore de compte ?</span> <a href="#" onclick="event.preventDefault();showSection('register')" data-i18n="login.create">Créer un compte</a>
             </div>
           </div>
         </div>
@@ -801,29 +813,29 @@
       <div id="page-register" class="page">
         <div class="form-page-wrap">
           <div class="form-wrap">
-            <h1>Créer un compte</h1>
-            <p class="form-sub">Rejoignez le programme fidélité Bizon</p>
+            <h1 data-i18n="register.title">Créer un compte</h1>
+            <p class="form-sub" data-i18n="register.sub">Rejoignez le programme fidélité Bizon</p>
             <form id="form-register">
               <div class="form-row">
-                <div class="form-group"><label>Prénom</label><input type="text" id="reg-firstname" placeholder="Jean" required autocomplete="given-name"></div>
-                <div class="form-group"><label>Nom</label><input type="text" id="reg-lastname" placeholder="Dupont" required autocomplete="family-name"></div>
+                <div class="form-group"><label data-i18n="register.firstname">Prénom</label><input type="text" id="reg-firstname" placeholder="Jean" required autocomplete="given-name"></div>
+                <div class="form-group"><label data-i18n="register.lastname">Nom</label><input type="text" id="reg-lastname" placeholder="Dupont" required autocomplete="family-name"></div>
               </div>
               <div class="form-group">
-                <label>Téléphone <span style="color:var(--primary)">*</span></label>
+                <label><span data-i18n="register.phone">Téléphone</span> <span style="color:var(--primary)">*</span></label>
                 <input type="tel" id="reg-phone" placeholder="+237 6XX XXX XXX" required autocomplete="tel">
               </div>
               <div class="form-group">
-                <label>Email <span style="color:var(--text-muted);font-weight:400">(optionnel)</span></label>
+                <label><span data-i18n="register.email">Email</span> <span style="color:var(--text-muted);font-weight:400" data-i18n="register.emailOpt">(optionnel)</span></label>
                 <input type="email" id="reg-email" placeholder="votre@email.com" autocomplete="email">
               </div>
               <div class="form-group">
-                <label>Mot de passe</label>
-                <input type="password" id="reg-password" placeholder="Minimum 6 caractères" required autocomplete="new-password">
+                <label data-i18n="register.password">Mot de passe</label>
+                <input type="password" id="reg-password" data-i18n-placeholder="register.password.ph" placeholder="Minimum 6 caractères" required autocomplete="new-password">
               </div>
-              <button type="submit" class="btn-primary-full" id="btn-register">Créer mon compte</button>
+              <button type="submit" class="btn-primary-full" id="btn-register" data-i18n="register.submit">Créer mon compte</button>
             </form>
             <div class="form-footer-link">
-              Déjà inscrit ? <a href="#" onclick="event.preventDefault();showSection('login')">Se connecter</a>
+              <span data-i18n="register.already">Déjà inscrit ?</span> <a href="#" onclick="event.preventDefault();showSection('login')" data-i18n="login.submit">Se connecter</a>
             </div>
           </div>
         </div>
@@ -833,23 +845,23 @@
       <div id="page-profile" class="page">
         <div class="form-page-wrap">
           <div class="form-wrap">
-            <h1>Mon profil</h1>
-            <p class="form-sub">Gérez vos informations et adresse de livraison</p>
+            <h1 data-i18n="profile.title">Mon profil</h1>
+            <p class="form-sub" data-i18n="profile.sub">Gérez vos informations et adresse de livraison</p>
             <form id="form-profile">
               <div class="form-row">
-                <div class="form-group"><label>Prénom</label><input type="text" id="prof-firstname" autocomplete="given-name"></div>
-                <div class="form-group"><label>Nom</label><input type="text" id="prof-lastname" autocomplete="family-name"></div>
+                <div class="form-group"><label data-i18n="register.firstname">Prénom</label><input type="text" id="prof-firstname" autocomplete="given-name"></div>
+                <div class="form-group"><label data-i18n="register.lastname">Nom</label><input type="text" id="prof-lastname" autocomplete="family-name"></div>
               </div>
-              <div class="form-group"><label>Téléphone</label><input type="tel" id="prof-phone" autocomplete="tel"></div>
-              <div class="form-group"><label>Email</label><input type="email" id="prof-email" autocomplete="email"></div>
+              <div class="form-group"><label data-i18n="register.phone">Téléphone</label><input type="tel" id="prof-phone" autocomplete="tel"></div>
+              <div class="form-group"><label data-i18n="register.email">Email</label><input type="email" id="prof-email" autocomplete="email"></div>
               <div class="form-group">
-                <label>Adresse de livraison</label>
-                <input type="text" id="prof-address" placeholder="Votre adresse complète" autocomplete="street-address">
+                <label data-i18n="profile.address">Adresse de livraison</label>
+                <input type="text" id="prof-address" data-i18n-placeholder="profile.address.ph" placeholder="Votre adresse complète" autocomplete="street-address">
               </div>
-              <button type="submit" class="btn-primary-full" id="btn-save-profile">Enregistrer les modifications</button>
+              <button type="submit" class="btn-primary-full" id="btn-save-profile" data-i18n="profile.save">Enregistrer les modifications</button>
             </form>
             <div style="text-align:center;margin-top:1.5rem">
-              <button onclick="logout()" style="background:none;border:none;color:var(--error);font-size:0.875rem;cursor:pointer;font-family:inherit;font-weight:500">
+              <button onclick="logout()" style="background:none;border:none;color:var(--error);font-size:0.875rem;cursor:pointer;font-family:inherit;font-weight:500" data-i18n="profile.logout">
                 Déconnexion
               </button>
             </div>
@@ -859,37 +871,37 @@
 
       <!-- Page: Mes commandes -->
       <div id="page-orders" class="page">
-        <h1 class="page-heading">Mes commandes</h1>
+        <h1 class="page-heading" data-i18n="orders.title">Mes commandes</h1>
         <div id="orders-list">
-          <div class="loading"><span>Chargement…</span></div>
+          <div class="loading"><span data-i18n="common.loading">Chargement…</span></div>
         </div>
       </div>
 
       <!-- Page: Fidélité & Avantages -->
       <div id="page-loyalty" class="page">
-        <h1 class="page-heading">Mes avantages</h1>
+        <h1 class="page-heading" data-i18n="loyalty.title">Mes avantages</h1>
         <div class="loyalty-card">
-          <div class="loyalty-points-label">Points fidélité</div>
+          <div class="loyalty-points-label" data-i18n="loyalty.pointsLabel">Points fidélité</div>
           <div class="loyalty-points-value" id="loyalty-pts">0</div>
-          <div class="loyalty-points-sub">points accumulés</div>
+          <div class="loyalty-points-sub" data-i18n="loyalty.pointsSub">points accumulés</div>
           <div class="loyalty-card-name" id="loyalty-name"></div>
         </div>
         <!-- Récompenses à échanger -->
-        <h2 style="font-size:1.0625rem;font-weight:700;margin-bottom:1rem;color:var(--text)">Échanger mes points</h2>
+        <h2 style="font-size:1.0625rem;font-weight:700;margin-bottom:1rem;color:var(--text)" data-i18n="loyalty.redeem">Échanger mes points</h2>
         <div id="rewards-available">
-          <div class="loading"><span>Chargement…</span></div>
+          <div class="loading"><span data-i18n="common.loading">Chargement…</span></div>
         </div>
 
         <!-- Mes bons -->
         <div id="my-vouchers-wrap" style="display:none">
-          <h2 style="font-size:1.0625rem;font-weight:700;margin:1.75rem 0 1rem;color:var(--text)">Mes bons</h2>
+          <h2 style="font-size:1.0625rem;font-weight:700;margin:1.75rem 0 1rem;color:var(--text)" data-i18n="loyalty.vouchers">Mes bons</h2>
           <div id="my-vouchers"></div>
         </div>
 
         <!-- Historique -->
-        <h2 style="font-size:1.0625rem;font-weight:700;margin:1.75rem 0 1rem;color:var(--text)">Historique des points</h2>
+        <h2 style="font-size:1.0625rem;font-weight:700;margin:1.75rem 0 1rem;color:var(--text)" data-i18n="loyalty.history">Historique des points</h2>
         <div id="loyalty-history">
-          <div class="loading"><span>Chargement…</span></div>
+          <div class="loading"><span data-i18n="common.loading">Chargement…</span></div>
         </div>
         <p style="color:var(--text-muted);font-size:0.8125rem;margin-top:1.5rem;line-height:1.6">
           1 point gagné par tranche de 100 FCFA dépensés &nbsp;·&nbsp; Les points sont crédités après validation du paiement.
@@ -904,41 +916,41 @@
     <div class="cart-backdrop" onclick="closeCart()"></div>
     <div class="cart-panel">
       <div class="cart-header">
-        <h2>Panier</h2>
+        <h2 data-i18n="cart.title">Panier</h2>
         <button class="btn-close-cart" onclick="closeCart()">✕</button>
       </div>
       <div class="cart-items" id="cart-items-list"></div>
       <div class="cart-footer">
         <!-- Code promo -->
         <div class="voucher-row">
-          <input type="text" id="voucher-code-input" placeholder="Code promo" autocapitalize="characters" autocomplete="off">
-          <button class="btn-apply-voucher" id="btn-apply-voucher" onclick="applyVoucher()">Appliquer</button>
+          <input type="text" id="voucher-code-input" data-i18n-placeholder="cart.voucher.ph" placeholder="Code promo" autocapitalize="characters" autocomplete="off">
+          <button class="btn-apply-voucher" id="btn-apply-voucher" onclick="applyVoucher()" data-i18n="cart.voucher.apply">Appliquer</button>
         </div>
         <div class="voucher-applied" id="voucher-applied" style="display:none"></div>
 
         <!-- Type de commande -->
         <div class="order-type-select" id="order-type-select">
-          <button type="button" class="otype active" data-type="dine_in" onclick="selectOrderType('dine_in', this)">Sur place</button>
-          <button type="button" class="otype" data-type="takeaway" onclick="selectOrderType('takeaway', this)">À emporter</button>
-          <button type="button" class="otype" data-type="delivery" onclick="selectOrderType('delivery', this)">Livraison</button>
+          <button type="button" class="otype active" data-type="dine_in" onclick="selectOrderType('dine_in', this)" data-i18n="type.dine_in">Sur place</button>
+          <button type="button" class="otype" data-type="takeaway" onclick="selectOrderType('takeaway', this)" data-i18n="type.takeaway">À emporter</button>
+          <button type="button" class="otype" data-type="delivery" onclick="selectOrderType('delivery', this)" data-i18n="type.delivery">Livraison</button>
         </div>
         <div class="order-type-field">
-          <input type="text" id="order-table" placeholder="Numéro de table" inputmode="numeric">
-          <input type="text" id="order-address" placeholder="Adresse de livraison" style="display:none">
+          <input type="text" id="order-table" data-i18n-placeholder="cart.table.ph" placeholder="Numéro de table" inputmode="numeric">
+          <input type="text" id="order-address" data-i18n-placeholder="cart.address.ph" placeholder="Adresse de livraison" style="display:none">
         </div>
         <div class="cart-total-row cart-line-muted">
-          <span class="cart-total-label">Sous-total</span>
+          <span class="cart-total-label" data-i18n="cart.subtotal">Sous-total</span>
           <span id="cart-subtotal-amount">0 FCFA</span>
         </div>
         <div class="cart-total-row" id="cart-discount-row" style="display:none">
-          <span class="cart-total-label" style="color:var(--success)">Réduction</span>
+          <span class="cart-total-label" style="color:var(--success)" data-i18n="cart.discount">Réduction</span>
           <span style="font-weight:600;color:var(--success)" id="cart-discount-amount">0 FCFA</span>
         </div>
         <div class="cart-total-row cart-total-final">
-          <span class="cart-total-label">Total</span>
+          <span class="cart-total-label" data-i18n="cart.total">Total</span>
           <span class="cart-total-amount" id="cart-total-amount">0 FCFA</span>
         </div>
-        <button class="btn-order" id="btn-checkout">Commander &amp; payer</button>
+        <button class="btn-order" id="btn-checkout" data-i18n="cart.checkout">Commander &amp; payer</button>
       </div>
     </div>
   </div>
@@ -948,7 +960,7 @@
     <div class="cart-backdrop" onclick="closeOrderDetail()"></div>
     <div class="cart-panel">
       <div class="cart-header">
-        <h2>Détail de la commande</h2>
+        <h2 data-i18n="order.detail.title">Détail de la commande</h2>
         <button class="btn-close-cart" onclick="closeOrderDetail()">✕</button>
       </div>
       <div class="cart-items" id="od-content"></div>
@@ -974,7 +986,7 @@
           <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
         </svg>
       </span>
-      <span class="bnav-label">Menu</span>
+      <span class="bnav-label" data-i18n="bnav.menu">Menu</span>
     </button>
     <button class="bnav-item" id="bnav-orders" onclick="requireAuth(() => showSection('orders'))">
       <span class="bnav-icon-wrap">
@@ -982,7 +994,7 @@
           <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
         </svg>
       </span>
-      <span class="bnav-label">Commandes</span>
+      <span class="bnav-label" data-i18n="bnav.orders">Commandes</span>
     </button>
     <button class="bnav-item" id="bnav-loyalty" onclick="requireAuth(() => showSection('loyalty'))">
       <span class="bnav-icon-wrap">
@@ -990,7 +1002,7 @@
           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
         </svg>
       </span>
-      <span class="bnav-label">Avantages</span>
+      <span class="bnav-label" data-i18n="bnav.loyalty">Avantages</span>
     </button>
     <button class="bnav-item" id="bnav-profile" onclick="state.customer ? showSection('profile') : showSection('login')">
       <span class="bnav-icon-wrap">
@@ -1009,28 +1021,29 @@
   <div id="install-banner" class="install-banner" hidden>
     <img src="/icons/icon-192.png" alt="" class="install-ic">
     <div class="install-txt">
-      <strong>Installer l'application</strong>
-      <span>Accès rapide depuis votre écran d'accueil</span>
+      <strong data-i18n="install.title">Installer l'application</strong>
+      <span data-i18n="install.sub">Accès rapide depuis votre écran d'accueil</span>
     </div>
-    <button id="install-accept" class="install-btn">Installer</button>
-    <button id="install-dismiss" class="install-x" aria-label="Fermer">✕</button>
+    <button id="install-accept" class="install-btn" data-i18n="install.btn">Installer</button>
+    <button id="install-dismiss" class="install-x" data-i18n-aria="install.close" aria-label="Fermer">✕</button>
   </div>
 
   <!-- Feuille d'instructions iOS (Safari n'expose pas d'invite automatique) -->
   <div id="ios-install-sheet" class="ios-sheet" hidden>
     <div class="ios-sheet-card">
       <img src="/icons/icon-192.png" alt="" class="install-ic">
-      <h3>Installer Bizon</h3>
-      <p>Pour ajouter l'app à votre écran d'accueil :</p>
+      <h3 data-i18n="ios.title">Installer Bizon</h3>
+      <p data-i18n="ios.intro">Pour ajouter l'app à votre écran d'accueil :</p>
       <ol>
-        <li>Touchez le bouton <strong>Partager</strong> <span class="ios-share">􀈂</span> en bas de Safari</li>
-        <li>Choisissez <strong>« Sur l'écran d'accueil »</strong></li>
-        <li>Touchez <strong>Ajouter</strong></li>
+        <li><span data-i18n="ios.step1">Touchez le bouton</span> <strong data-i18n="share">Partager</strong> <span class="ios-share">􀈂</span> <span data-i18n="ios.step1b">en bas de Safari</span></li>
+        <li><span data-i18n="ios.step2">Choisissez</span> <strong data-i18n="ios.step2b">« Sur l'écran d'accueil »</strong></li>
+        <li><span data-i18n="ios.step3">Touchez</span> <strong data-i18n="ios.step3b">Ajouter</strong></li>
       </ol>
-      <button id="ios-close" class="install-btn install-btn-block">J'ai compris</button>
+      <button id="ios-close" class="install-btn install-btn-block" data-i18n="ios.ok">J'ai compris</button>
     </div>
   </div>
 
+  <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

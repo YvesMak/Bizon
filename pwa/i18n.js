@@ -1,0 +1,308 @@
+/* i18n minimal pour l'app client Bizon (FR par défaut / EN).
+ * - t(key, vars) : traduit une clé, avec interpolation {var}.
+ * - applyI18n(root) : applique les traductions aux éléments [data-i18n*].
+ * - setLang(lang) / getLang() : langue courante (persistée).
+ */
+(function () {
+  const TRANSLATIONS = {
+    fr: {
+      // Navigation / header
+      'nav.menu': 'MENU',
+      'nav.orders': 'COMMANDES',
+      'nav.loyalty': 'AVANTAGES',
+      'nav.cart': 'Panier',
+      'bnav.menu': 'Menu',
+      'bnav.orders': 'Commandes',
+      'bnav.loyalty': 'Avantages',
+      'bnav.profile': 'Profil',
+      'bnav.login': 'Connexion',
+      'auth.login': 'Connexion',
+      'auth.signup': "S'inscrire",
+      'aria.cart': 'Voir le panier',
+      'aria.openCart': 'Ouvrir le panier',
+      // Onboarding
+      'onb.skip': 'Passer',
+      'onb.next': 'Suivant',
+      'onb.start': 'Commencer',
+      'onb.s1.title': 'Le menu à portée de main',
+      'onb.s1.text': 'Parcourez les plats du restaurant et composez votre commande en quelques taps.',
+      'onb.s2.title': 'Sur place, à emporter ou livré',
+      'onb.s2.text': 'Choisissez votre mode de commande et payez en ligne, en toute sécurité.',
+      'onb.s3.title': 'Gagnez des récompenses',
+      'onb.s3.text': 'Cumulez des points à chaque commande et échangez-les contre des bons de réduction.',
+      // Menu
+      'menu.unavailable.title': 'Menu bientôt disponible',
+      'menu.unavailable.text': 'Notre équipe prépare quelque chose de délicieux pour vous. Revenez bientôt !',
+      'menu.loading': 'Chargement du menu…',
+      'menu.search': 'Rechercher un plat…',
+      'promo.loyalty.title': 'Programme fidélité 🎁',
+      'promo.loyalty.text': 'Gagnez des points à chaque commande, échangez-les contre des bons.',
+      'promo.loyalty.btn': 'Mes avantages',
+      'promo.modes.title': 'Comme vous voulez 🛵',
+      'promo.modes.text': 'Sur place, à emporter ou en livraison — vous choisissez au panier.',
+      'promo.modes.btn': 'Voir le menu',
+      'promo.code.title': 'Un code promo ? 🏷️',
+      'promo.code.text': 'Saisissez votre code au panier et profitez de votre réduction.',
+      'promo.code.btn': 'Ouvrir le panier',
+      // Auth
+      'login.title': 'Bon retour !',
+      'login.sub': 'Connectez-vous à votre compte client',
+      'login.identifier': 'Email ou téléphone',
+      'login.identifier.ph': 'email ou +237 6XX XXX XXX',
+      'login.password': 'Mot de passe',
+      'login.submit': 'Se connecter',
+      'login.noAccount': 'Pas encore de compte ?',
+      'login.create': 'Créer un compte',
+      'register.title': 'Créer un compte',
+      'register.sub': 'Rejoignez le programme fidélité Bizon',
+      'register.firstname': 'Prénom',
+      'register.lastname': 'Nom',
+      'register.phone': 'Téléphone',
+      'register.email': 'Email',
+      'register.emailOpt': '(optionnel)',
+      'register.password': 'Mot de passe',
+      'register.password.ph': 'Minimum 6 caractères',
+      'register.submit': 'Créer mon compte',
+      'register.already': 'Déjà inscrit ?',
+      // Profil
+      'profile.title': 'Mon profil',
+      'profile.sub': 'Gérez vos informations et adresse de livraison',
+      'profile.address': 'Adresse de livraison',
+      'profile.address.ph': 'Votre adresse complète',
+      'profile.save': 'Enregistrer les modifications',
+      'profile.logout': 'Déconnexion',
+      // Commandes / fidélité
+      'orders.title': 'Mes commandes',
+      'loyalty.title': 'Mes avantages',
+      'loyalty.pointsLabel': 'Points fidélité',
+      'loyalty.pointsSub': 'points accumulés',
+      'loyalty.redeem': 'Échanger mes points',
+      'loyalty.vouchers': 'Mes bons',
+      'loyalty.history': 'Historique des points',
+      'common.loading': 'Chargement…',
+      // Panier
+      'cart.title': 'Panier',
+      'cart.voucher.ph': 'Code promo',
+      'cart.voucher.apply': 'Appliquer',
+      'cart.subtotal': 'Sous-total',
+      'cart.discount': 'Réduction',
+      'cart.total': 'Total',
+      'cart.checkout': 'Commander & payer',
+      'cart.table.ph': 'Numéro de table',
+      'cart.address.ph': 'Adresse de livraison',
+      'order.detail.title': 'Détail de la commande',
+      // Types de commande
+      'type.dine_in': 'Sur place',
+      'type.takeaway': 'À emporter',
+      'type.delivery': 'Livraison',
+      // Statuts
+      'status.draft': 'En attente',
+      'status.confirmed': 'Confirmée',
+      'status.preparing': 'En préparation',
+      'status.ready': 'Prête',
+      'status.delivering': 'En livraison',
+      'status.paid': 'Payée',
+      'status.completed': 'Terminée',
+      'status.cancelled': 'Annulée',
+      // Suivi (bandeau)
+      'track.confirmed.sub': 'Votre commande est confirmée',
+      'track.preparing.sub': 'Votre commande est en préparation',
+      'track.ready.sub': 'Récupérez votre commande',
+      'track.delivering.sub': 'Votre commande est en route',
+      'track.follow': 'Suivre',
+      // Installation PWA
+      'install.title': "Installer l'application",
+      'install.sub': "Accès rapide depuis votre écran d'accueil",
+      'install.btn': 'Installer',
+      'install.close': 'Fermer',
+      'ios.title': 'Installer Bizon',
+      'ios.intro': "Pour ajouter l'app à votre écran d'accueil :",
+      'ios.step1': 'Touchez le bouton',
+      'ios.step1b': 'en bas de Safari',
+      'ios.step2': 'Choisissez',
+      'ios.step2b': "« Sur l'écran d'accueil »",
+      'ios.step3': 'Touchez',
+      'ios.step3b': 'Ajouter',
+      'ios.ok': "J'ai compris",
+      'share': 'Partager',
+      // Toasts
+      'toast.loginToVoucher': 'Connectez-vous pour utiliser un code promo',
+      'toast.loggedOut': 'Vous êtes déconnecté',
+      'toast.loggedIn': 'Connecté !',
+      'toast.accountCreated': 'Compte créé ! Bienvenue 🎉',
+      'toast.profileSaved': 'Profil enregistré',
+      'toast.loginToOrder': 'Connectez-vous pour commander',
+      'toast.needTable': 'Indiquez le numéro de table',
+      'toast.needAddress': "Indiquez l'adresse de livraison",
+      'toast.orderNoPayment': "Commande créée, mais le paiement n'a pas pu démarrer.",
+      'toast.appInstalled': 'Application installée ✅',
+      'toast.pushOn': 'Notifications activées 🔔',
+      'lang.switch': 'EN'
+    },
+    en: {
+      'nav.menu': 'MENU',
+      'nav.orders': 'ORDERS',
+      'nav.loyalty': 'REWARDS',
+      'nav.cart': 'Cart',
+      'bnav.menu': 'Menu',
+      'bnav.orders': 'Orders',
+      'bnav.loyalty': 'Rewards',
+      'bnav.profile': 'Profile',
+      'bnav.login': 'Sign in',
+      'auth.login': 'Sign in',
+      'auth.signup': 'Sign up',
+      'aria.cart': 'View cart',
+      'aria.openCart': 'Open cart',
+      'onb.skip': 'Skip',
+      'onb.next': 'Next',
+      'onb.start': 'Get started',
+      'onb.s1.title': 'The menu at your fingertips',
+      'onb.s1.text': 'Browse the restaurant dishes and build your order in a few taps.',
+      'onb.s2.title': 'Dine-in, takeaway or delivery',
+      'onb.s2.text': 'Choose your order type and pay online, securely.',
+      'onb.s3.title': 'Earn rewards',
+      'onb.s3.text': 'Collect points on every order and redeem them for discount vouchers.',
+      'menu.unavailable.title': 'Menu coming soon',
+      'menu.unavailable.text': 'Our team is preparing something delicious for you. Check back soon!',
+      'menu.loading': 'Loading menu…',
+      'menu.search': 'Search for a dish…',
+      'promo.loyalty.title': 'Loyalty program 🎁',
+      'promo.loyalty.text': 'Earn points on every order and redeem them for vouchers.',
+      'promo.loyalty.btn': 'My rewards',
+      'promo.modes.title': 'However you like 🛵',
+      'promo.modes.text': 'Dine-in, takeaway or delivery — you choose at checkout.',
+      'promo.modes.btn': 'View menu',
+      'promo.code.title': 'Got a promo code? 🏷️',
+      'promo.code.text': 'Enter your code at checkout and enjoy your discount.',
+      'promo.code.btn': 'Open cart',
+      'login.title': 'Welcome back!',
+      'login.sub': 'Sign in to your customer account',
+      'login.identifier': 'Email or phone',
+      'login.identifier.ph': 'email or +237 6XX XXX XXX',
+      'login.password': 'Password',
+      'login.submit': 'Sign in',
+      'login.noAccount': "Don't have an account?",
+      'login.create': 'Create an account',
+      'register.title': 'Create an account',
+      'register.sub': 'Join the Bizon loyalty program',
+      'register.firstname': 'First name',
+      'register.lastname': 'Last name',
+      'register.phone': 'Phone',
+      'register.email': 'Email',
+      'register.emailOpt': '(optional)',
+      'register.password': 'Password',
+      'register.password.ph': 'At least 6 characters',
+      'register.submit': 'Create my account',
+      'register.already': 'Already registered?',
+      'profile.title': 'My profile',
+      'profile.sub': 'Manage your information and delivery address',
+      'profile.address': 'Delivery address',
+      'profile.address.ph': 'Your full address',
+      'profile.save': 'Save changes',
+      'profile.logout': 'Sign out',
+      'orders.title': 'My orders',
+      'loyalty.title': 'My rewards',
+      'loyalty.pointsLabel': 'Loyalty points',
+      'loyalty.pointsSub': 'points earned',
+      'loyalty.redeem': 'Redeem my points',
+      'loyalty.vouchers': 'My vouchers',
+      'loyalty.history': 'Points history',
+      'common.loading': 'Loading…',
+      'cart.title': 'Cart',
+      'cart.voucher.ph': 'Promo code',
+      'cart.voucher.apply': 'Apply',
+      'cart.subtotal': 'Subtotal',
+      'cart.discount': 'Discount',
+      'cart.total': 'Total',
+      'cart.checkout': 'Order & pay',
+      'cart.table.ph': 'Table number',
+      'cart.address.ph': 'Delivery address',
+      'order.detail.title': 'Order details',
+      'type.dine_in': 'Dine-in',
+      'type.takeaway': 'Takeaway',
+      'type.delivery': 'Delivery',
+      'status.draft': 'Pending',
+      'status.confirmed': 'Confirmed',
+      'status.preparing': 'Preparing',
+      'status.ready': 'Ready',
+      'status.delivering': 'Out for delivery',
+      'status.paid': 'Paid',
+      'status.completed': 'Completed',
+      'status.cancelled': 'Cancelled',
+      'track.confirmed.sub': 'Your order is confirmed',
+      'track.preparing.sub': 'Your order is being prepared',
+      'track.ready.sub': 'Pick up your order',
+      'track.delivering.sub': 'Your order is on the way',
+      'track.follow': 'Track',
+      'install.title': 'Install the app',
+      'install.sub': 'Quick access from your home screen',
+      'install.btn': 'Install',
+      'install.close': 'Close',
+      'ios.title': 'Install Bizon',
+      'ios.intro': 'To add the app to your home screen:',
+      'ios.step1': 'Tap the',
+      'ios.step1b': 'button at the bottom of Safari',
+      'ios.step2': 'Choose',
+      'ios.step2b': '"Add to Home Screen"',
+      'ios.step3': 'Tap',
+      'ios.step3b': 'Add',
+      'ios.ok': 'Got it',
+      'share': 'Share',
+      'toast.loginToVoucher': 'Sign in to use a promo code',
+      'toast.loggedOut': 'You have been signed out',
+      'toast.loggedIn': 'Signed in!',
+      'toast.accountCreated': 'Account created! Welcome 🎉',
+      'toast.profileSaved': 'Profile saved',
+      'toast.loginToOrder': 'Sign in to order',
+      'toast.needTable': 'Enter the table number',
+      'toast.needAddress': 'Enter the delivery address',
+      'toast.orderNoPayment': "Order created, but payment couldn't start.",
+      'toast.appInstalled': 'App installed ✅',
+      'toast.pushOn': 'Notifications enabled 🔔',
+      'lang.switch': 'FR'
+    }
+  };
+
+  const STORAGE_KEY = 'bizon_lang';
+  function getLang() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved && TRANSLATIONS[saved]) return saved;
+    const nav = (navigator.language || 'fr').slice(0, 2);
+    return TRANSLATIONS[nav] ? nav : 'fr';
+  }
+
+  let current = getLang();
+
+  function t(key, vars) {
+    const dict = TRANSLATIONS[current] || TRANSLATIONS.fr;
+    let str = (dict[key] != null) ? dict[key] : (TRANSLATIONS.fr[key] != null ? TRANSLATIONS.fr[key] : key);
+    if (vars) {
+      Object.keys(vars).forEach((k) => { str = str.replace(new RegExp(`\\{${k}\\}`, 'g'), vars[k]); });
+    }
+    return str;
+  }
+
+  function applyI18n(root) {
+    const scope = root || document;
+    scope.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.getAttribute('data-i18n')); });
+    scope.querySelectorAll('[data-i18n-placeholder]').forEach((el) => { el.setAttribute('placeholder', t(el.getAttribute('data-i18n-placeholder'))); });
+    scope.querySelectorAll('[data-i18n-aria]').forEach((el) => { el.setAttribute('aria-label', t(el.getAttribute('data-i18n-aria'))); });
+    document.documentElement.lang = current;
+  }
+
+  function setLang(lang) {
+    if (!TRANSLATIONS[lang]) return;
+    current = lang;
+    localStorage.setItem(STORAGE_KEY, lang);
+    applyI18n(document);
+    // Permet à l'app de re-rendre les contenus dynamiques.
+    document.dispatchEvent(new CustomEvent('langchange', { detail: { lang } }));
+  }
+
+  function toggleLang() {
+    setLang(current === 'fr' ? 'en' : 'fr');
+  }
+
+  window.i18n = { t, applyI18n, setLang, getLang: () => current, toggleLang, available: Object.keys(TRANSLATIONS) };
+  window.t = t;
+})();
