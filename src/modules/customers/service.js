@@ -1,5 +1,9 @@
 const jwt = require('jsonwebtoken');
+const { Op } = require('sequelize');
 const { Customer, Order, OrderItem } = require('../../models');
+
+// Statuts comptant dans la file d'attente « cuisine ».
+const QUEUE_STATUSES = ['confirmed', 'preparing'];
 
 class CustomerService {
   generateToken(customerId, restaurantId) {
@@ -85,7 +89,28 @@ class CustomerService {
       order: [['createdAt', 'DESC']],
       limit: 20
     });
-    return orders;
+
+    // File d'attente cuisine du restaurant (toutes commandes en préparation),
+    // ordonnée par ancienneté → on en déduit la position de chaque commande.
+    const queue = await Order.findAll({
+      where: { restaurant_id: restaurantId, status: { [Op.in]: QUEUE_STATUSES } },
+      attributes: ['id'],
+      order: [['createdAt', 'ASC']],
+      raw: true
+    });
+    const queueIds = queue.map((q) => q.id);
+    const queueTotal = queueIds.length;
+
+    return orders.map((o) => {
+      const json = o.toJSON();
+      const idx = queueIds.indexOf(o.id);
+      if (idx !== -1) {
+        json.queue_ahead = idx;            // commandes devant celle-ci
+        json.queue_position = idx + 1;     // rang (1 = prochaine servie)
+        json.queue_total = queueTotal;     // total en préparation
+      }
+      return json;
+    });
   }
 }
 

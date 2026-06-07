@@ -110,6 +110,8 @@
       'track.ready.sub': 'Récupérez votre commande',
       'track.delivering.sub': 'Votre commande est en route',
       'track.follow': 'Suivre',
+      'queue.next': 'Vous êtes le prochain 🎉',
+      'queue.ahead': '{n} commande(s) avant vous',
       // Installation PWA
       'install.title': "Installer l'application",
       'install.sub': "Accès rapide depuis votre écran d'accueil",
@@ -234,6 +236,8 @@
       'track.ready.sub': 'Pick up your order',
       'track.delivering.sub': 'Your order is on the way',
       'track.follow': 'Track',
+      'queue.next': "You're next 🎉",
+      'queue.ahead': '{n} order(s) ahead of you',
       'install.title': 'Install the app',
       'install.sub': 'Quick access from your home screen',
       'install.btn': 'Install',
