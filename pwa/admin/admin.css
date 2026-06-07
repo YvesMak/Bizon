@@ -108,6 +108,15 @@ input:focus, select:focus { outline: none; border-color: var(--red); }
 .badge.suspended { background: #FDECEC; color: var(--red); }
 .badge.closed { background: #EEE; color: var(--muted); }
 .resto-mini { font-size: 13px; color: var(--muted); }
+.link-box {
+  display: flex; align-items: center; gap: 8px; margin-top: 10px;
+  background: var(--cream); border: 1px solid var(--cream-2); border-radius: 10px;
+  padding: 8px 10px; flex-wrap: wrap;
+}
+.link-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.link-url { flex: 1; min-width: 140px; font-size: 13px; color: var(--red); text-decoration: none; word-break: break-all; }
+.link-url:hover { text-decoration: underline; }
+.card code { background: var(--cream); padding: 1px 6px; border-radius: 6px; font-size: 12px; }
 .card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 
 /* ---------- MODAL ---------- */

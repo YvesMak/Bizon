@@ -41,6 +41,11 @@ const Restaurant = sequelize.define('Restaurant', {
     allowNull: true,
     references: { model: 'users', key: 'id' }
   },
+  custom_domain: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    unique: true
+  },
   settings: {
     type: DataTypes.JSONB,
     defaultValue: {}

@@ -16,35 +16,41 @@ const state = {
   appliedVoucher: null
 };
 
-// Identifie le restaurant ciblé : ?restaurantId=… , ?r=slug (ou ?slug=),
-// sinon le sous-domaine (chez-paul.bizon.cm), sinon le dernier mémorisé.
+// Clé de mémorisation par hôte (évite qu'un lien ?r=A « contamine » un autre
+// domaine/sous-domaine où le restaurant doit être résolu par le Host).
+function restoStorageKey() { return `bizon_resto:${location.host}`; }
+
+function rememberRestaurant(obj) {
+  try { localStorage.setItem(restoStorageKey(), JSON.stringify(obj)); } catch { /* ignore */ }
+}
+
+// Identifie le restaurant ciblé :
+//   1) ?restaurantId / ?restaurant
+//   2) ?r=slug / ?slug
+//   3) restaurant mémorisé pour CET hôte (retour de paiement, etc.)
+//   4) rien → le backend résout via le Host (domaine perso / sous-domaine).
 function resolveRestaurantFromUrl() {
   const params = new URLSearchParams(location.search);
   const id = params.get('restaurantId') || params.get('restaurant');
   const slug = params.get('r') || params.get('slug');
   if (id) {
     state.restaurantId = id;
-    localStorage.setItem('bizon_restaurant_id', id);
-    localStorage.removeItem('bizon_restaurant_slug');
+    rememberRestaurant({ id });
     return;
   }
   if (slug) {
     state.restaurantSlug = slug;
-    localStorage.setItem('bizon_restaurant_slug', slug);
-    localStorage.removeItem('bizon_restaurant_id');
+    rememberRestaurant({ slug });
     return;
   }
-  // Sous-domaine : <slug>.domaine.tld (hors www/app/localhost)
-  const host = location.hostname;
-  const parts = host.split('.');
-  if (parts.length >= 3 && !['www', 'app', 'localhost', '127'].includes(parts[0])) {
-    state.restaurantSlug = parts[0];
-    localStorage.setItem('bizon_restaurant_slug', parts[0]);
-    return;
-  }
-  // Repli : dernier restaurant mémorisé (utile au retour de paiement)
-  state.restaurantId = localStorage.getItem('bizon_restaurant_id') || null;
-  state.restaurantSlug = localStorage.getItem('bizon_restaurant_slug') || null;
+  try {
+    const saved = JSON.parse(localStorage.getItem(restoStorageKey()) || 'null');
+    if (saved) {
+      state.restaurantId = saved.id || null;
+      state.restaurantSlug = saved.slug || null;
+    }
+  } catch { /* ignore */ }
+  // Sinon : on laisse le backend résoudre le restaurant via le Host header.
 }
 
 // ============================================
@@ -154,8 +160,8 @@ async function loadMenu() {
     if (data.restaurant) {
       state.restaurantId = data.restaurant.id;
       if (data.restaurant.slug) state.restaurantSlug = data.restaurant.slug;
-      localStorage.setItem('bizon_restaurant_id', data.restaurant.id);
-      if (data.restaurant.slug) localStorage.setItem('bizon_restaurant_slug', data.restaurant.slug);
+      // Mémorise le restaurant résolu pour cet hôte (retour de paiement, etc.)
+      rememberRestaurant({ id: data.restaurant.id, slug: data.restaurant.slug });
       const nameEl = document.querySelector('.logo-name');
       if (nameEl && data.restaurant.name) {
         nameEl.textContent = data.restaurant.name;

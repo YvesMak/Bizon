@@ -103,6 +103,29 @@ describe('Back-office plateforme (super-admin)', () => {
       expect(r3.body.error).toMatch(/[Qq]uota/);
     });
 
+    it('enregistre et normalise un domaine personnalisé', async () => {
+      const { token } = await createPlatformAdmin();
+      const owner = await registerOwner();
+      const res = await request(app)
+        .patch(`/api/admin/restaurants/${owner.restaurant.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ custom_domain: 'https://www.Commande.Chez-Paul.cm/menu' });
+      expect(res.status).toBe(200);
+      expect(res.body.custom_domain).toBe('commande.chez-paul.cm');
+    });
+
+    it('refuse un domaine déjà utilisé par un autre restaurant', async () => {
+      const { token } = await createPlatformAdmin();
+      const a = await registerOwner();
+      const b = await registerOwner();
+      await request(app).patch(`/api/admin/restaurants/${a.restaurant.id}`)
+        .set('Authorization', `Bearer ${token}`).send({ custom_domain: 'resto.cm' });
+      const res = await request(app).patch(`/api/admin/restaurants/${b.restaurant.id}`)
+        .set('Authorization', `Bearer ${token}`).send({ custom_domain: 'resto.cm' });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/déjà utilisé/);
+    });
+
     it('suspend un restaurant et modifie ses modes de service', async () => {
       const { token } = await createPlatformAdmin();
       const owner = await registerOwner();
