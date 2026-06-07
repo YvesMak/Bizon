@@ -1,0 +1,89 @@
+# Blueprint Render — déploiement « 1 clic » de Bizon
+# (base PostgreSQL + service web + variables pré-câblées)
+#
+# Utilisation :
+#   1. Render → New + → Blueprint → connecter le repo YvesMak/Bizon (branche main).
+#   2. Render détecte ce fichier, crée la base + le service et te demande
+#      UNIQUEMENT les secrets marqués « sync: false » (clés Flutterwave/VAPID, URL).
+#   3. Après le 1er déploiement, ouvre le Shell du service et lance :
+#        npm run generate-vapid     # → colle les 2 clés dans VAPID_* puis redeploy
+#        npm run create-admin admin@bizon.cm '<mot de passe fort>' "Admin Bizon"
+#        npm run seed:demo          # crée le restaurant démo + comptes
+#   4. Renseigne APP_BASE_URL avec l'URL publique du service (https://….onrender.com).
+#
+# Note : la connexion à la base se fait en interne (Render) → DB_SSL=false.
+#        Sur Railway/Neon/Supabase, mettre DB_SSL=true.
+
+databases:
+  - name: bizon-db
+    databaseName: bizon
+    user: bizon
+    plan: free
+    region: frankfurt
+
+services:
+  - type: web
+    name: bizon
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: main
+    buildCommand: npm ci && npm run db:migrate
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+
+      # --- Base de données (injectée automatiquement depuis bizon-db) ---
+      - key: DB_HOST
+        fromDatabase: { name: bizon-db, property: host }
+      - key: DB_PORT
+        fromDatabase: { name: bizon-db, property: port }
+      - key: DB_NAME
+        fromDatabase: { name: bizon-db, property: database }
+      - key: DB_USER
+        fromDatabase: { name: bizon-db, property: user }
+      - key: DB_PASSWORD
+        fromDatabase: { name: bizon-db, property: password }
+      - key: DB_SSL
+        value: "false"
+
+      # --- Authentification ---
+      - key: JWT_SECRET
+        generateValue: true        # généré automatiquement par Render
+      - key: JWT_EXPIRES_IN
+        value: 7d
+
+      # --- URL publique (à renseigner après le 1er déploiement) ---
+      - key: APP_BASE_URL
+        sync: false
+
+      # --- Paiement Flutterwave (clés TEST — saisies dans le dashboard Render) ---
+      - key: FLW_PUBLIC_KEY
+        sync: false
+      - key: FLW_SECRET_KEY
+        sync: false
+      - key: FLW_ENCRYPTION_KEY
+        sync: false
+      - key: FLW_BASE_URL
+        value: https://api.flutterwave.com/v3
+      - key: FLW_WEBHOOK_HASH
+        sync: false                # vide en test ; à remplir en production
+
+      # --- Notifications push (générées via `npm run generate-vapid`) ---
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        value: mailto:contact@bizon.cm
+
+      # --- Nettoyage des commandes non payées ---
+      - key: ORDER_DRAFT_TTL_MINUTES
+        value: "30"
+      - key: CLEANUP_INTERVAL_MINUTES
+        value: "10"
