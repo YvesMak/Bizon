@@ -353,6 +353,9 @@ function updateCartBadge() {
 
 function openCart() {
   renderCartPanel();
+  // Pré-remplir le numéro Mobile Money depuis le profil client
+  const momoEl = document.getElementById('order-momo');
+  if (momoEl && !momoEl.value && state.customer?.phone) momoEl.value = state.customer.phone;
   document.getElementById('cart-sheet').classList.add('open');
 }
 
@@ -973,19 +976,30 @@ document.getElementById('btn-checkout').addEventListener('click', async () => {
     body.delivery_address = address;
   }
 
+  // Numéro Mobile Money (validation du paiement par USSD)
+  const momoEl = document.getElementById('order-momo');
+  const momo = momoEl ? momoEl.value.trim() : '';
+  if (!momo) { showToast(t('toast.needMomo'), 'error'); return; }
+  body.payment_phone = momo;
+
   const btn = document.getElementById('btn-checkout');
   btn.disabled = true;
-  btn.textContent = 'Redirection vers le paiement…';
+  btn.textContent = t('pay.processing');
   try {
     const { payment } = await apiCall('/customers/orders', {
       method: 'POST', body: JSON.stringify(body)
     });
-    // Vider le panier puis rediriger vers la page de paiement Flutterwave
     state.cart = [];
     resetVoucher();
     saveCart();
     updateCartBadge();
-    if (payment?.link) {
+
+    if (payment?.provider === 'campay') {
+      // Mobile Money : le client valide sur son téléphone, on suit le statut.
+      closeCart();
+      startCampayWait(payment.payment_id, payment.ussd_code);
+    } else if (payment?.link) {
+      // Flutterwave : redirection vers la page hébergée.
       window.location.href = payment.link;
     } else {
       closeCart();
@@ -993,10 +1007,61 @@ document.getElementById('btn-checkout').addEventListener('click', async () => {
     }
   } catch (err) {
     showToast(err.message, 'error');
+  } finally {
     btn.disabled = false;
-    btn.textContent = 'Commander & payer';
+    btn.textContent = t('cart.checkout');
   }
 });
+
+// ============================================
+// PAIEMENT MOBILE MONEY (Campay / USSD) — attente + suivi
+// ============================================
+let campayPollTimer = null;
+
+function startCampayWait(paymentId, ussdCode) {
+  const overlay = document.getElementById('momo-wait');
+  if (!overlay) return;
+  const codeEl = document.getElementById('momo-ussd');
+  if (codeEl) codeEl.textContent = ussdCode ? `${t('pay.ussdHint')} ${ussdCode}` : t('pay.checkPhone');
+  document.getElementById('momo-status').textContent = t('pay.waiting');
+  overlay.hidden = false;
+
+  const deadline = Date.now() + 150000; // 2,5 min
+  const poll = async () => {
+    if (Date.now() > deadline) { stopCampayWait(); finishMomo('timeout'); return; }
+    try {
+      const r = await apiCall(`/customers/payments/${paymentId}/status`);
+      if (r.status === 'completed') { stopCampayWait(); finishMomo('completed'); }
+      else if (r.status === 'failed') { stopCampayWait(); finishMomo('failed'); }
+    } catch { /* on réessaiera au prochain tick */ }
+  };
+  campayPollTimer = setInterval(poll, 4000);
+  poll();
+}
+
+function stopCampayWait() {
+  if (campayPollTimer) { clearInterval(campayPollTimer); campayPollTimer = null; }
+}
+
+function cancelMomoWait() {
+  stopCampayWait();
+  const overlay = document.getElementById('momo-wait');
+  if (overlay) overlay.hidden = true;
+}
+
+function finishMomo(outcome) {
+  const overlay = document.getElementById('momo-wait');
+  if (overlay) overlay.hidden = true;
+  if (outcome === 'completed') {
+    showToast(t('pay.success'), 'success', 5000);
+    loadActiveOrder();
+    showSection('orders');
+  } else if (outcome === 'failed') {
+    showToast(t('pay.failed'), 'error', 6000);
+  } else {
+    showToast(t('pay.timeout'), 'error', 6000);
+  }
+}
 
 // ============================================
 // INIT

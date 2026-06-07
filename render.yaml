@@ -64,7 +64,19 @@ services:
       - key: APP_BASE_URL
         sync: false
 
-      # --- Paiement Flutterwave (clés TEST — saisies dans le dashboard Render) ---
+      # --- Provider de paiement actif : 'campay' ou 'flutterwave' ---
+      - key: PAYMENT_PROVIDER
+        value: campay
+      # --- Campay (Mobile Money MTN/Orange) ---
+      - key: CAMPAY_USERNAME
+        sync: false
+      - key: CAMPAY_PASSWORD
+        sync: false
+      - key: CAMPAY_BASE_URL
+        value: https://demo.campay.net   # production : https://www.campay.net
+      - key: CAMPAY_WEBHOOK_KEY
+        sync: false
+      # --- Flutterwave (alternative — laisser vide si tu utilises Campay) ---
       - key: FLW_PUBLIC_KEY
         sync: false
       - key: FLW_SECRET_KEY
