@@ -653,17 +653,42 @@ const ACTIVE_STATUS = {
   delivering: { emoji: '🛵', subKey: 'track.delivering.sub' }
 };
 
+let queuePollTimer = null;
+
 async function loadActiveOrder() {
   const banner = document.getElementById('active-order-banner');
   if (!banner) return;
-  if (!state.token) { banner.style.display = 'none'; return; }
+  if (!state.token) { banner.style.display = 'none'; stopQueuePoll(); return; }
   try {
     const orders = await apiCall('/customers/me/orders');
     const active = orders.find(o => ACTIVE_STATUS[o.status]);
     renderActiveOrder(active);
+    // Rafraîchir la position dans la file tant qu'une commande est en préparation
+    // (les autres commandes avancent sans déclencher notre flux SSE).
+    if (active && (active.status === 'confirmed' || active.status === 'preparing')) {
+      startQueuePoll();
+    } else {
+      stopQueuePoll();
+    }
   } catch {
     banner.style.display = 'none';
+    stopQueuePoll();
   }
+}
+
+function startQueuePoll() {
+  if (queuePollTimer) return;
+  queuePollTimer = setInterval(() => { loadActiveOrder(); }, 30000);
+}
+function stopQueuePoll() {
+  if (queuePollTimer) { clearInterval(queuePollTimer); queuePollTimer = null; }
+}
+
+// Texte de position dans la file d'attente cuisine.
+function queueText(order) {
+  if (order.queue_position == null) return '';
+  if (order.queue_ahead === 0) return t('queue.next');
+  return t('queue.ahead', { n: order.queue_ahead });
 }
 
 function renderActiveOrder(order) {
@@ -671,12 +696,13 @@ function renderActiveOrder(order) {
   if (!banner) return;
   if (!order) { banner.style.display = 'none'; return; }
   const s = ACTIVE_STATUS[order.status];
+  const q = (order.status === 'confirmed' || order.status === 'preparing') ? queueText(order) : '';
   banner.style.display = 'flex';
   banner.innerHTML = `
     <span class="track-icon">${s.emoji}</span>
     <div class="track-info">
       <h4>${order.order_number || t('order.detail.title')} · ${statusLabel(order.status)}</h4>
-      <p>${t(s.subKey)}</p>
+      <p>${q || t(s.subKey)}</p>
     </div>
     <button class="track-btn" onclick="showSection('orders')">${t('track.follow')}</button>`;
 }
@@ -698,6 +724,7 @@ function initOrderStream() {
 
 function closeOrderStream() {
   if (orderStream) { orderStream.close(); orderStream = null; }
+  stopQueuePoll();
   const banner = document.getElementById('active-order-banner');
   if (banner) banner.style.display = 'none';
 }
