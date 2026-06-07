@@ -28,8 +28,10 @@ services:
     plan: free
     region: frankfurt
     branch: main
-    buildCommand: npm ci && npm run db:migrate
-    startCommand: npm start
+    buildCommand: npm ci
+    # Les migrations tournent au démarrage (la base est joignable au runtime,
+    # contrairement à la phase de build). Idempotent.
+    startCommand: npm run db:migrate && npm start
     healthCheckPath: /health
     autoDeploy: true
     envVars:
