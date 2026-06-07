@@ -20,6 +20,16 @@ function slugify(name) {
     .replace(/(^-|-$)/g, '') || 'resto';
 }
 
+// Nettoie un domaine saisi : retire protocole, chemin, port, espaces, www. → null si vide.
+function normalizeDomain(input) {
+  if (input == null) return null;
+  let d = `${input}`.trim().toLowerCase();
+  if (!d) return null;
+  d = d.replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/:.*$/, '');
+  if (d.startsWith('www.')) d = d.slice(4);
+  return d || null;
+}
+
 class AdminService {
   generateToken(adminId) {
     return jwt.sign(
@@ -238,6 +248,20 @@ class AdminService {
     if (data.service_types !== undefined) {
       if (!serviceTypes) throw new Error('Au moins un mode de service valide est requis');
       patch.settings = { ...(restaurant.settings || {}), service_types: serviceTypes };
+    }
+
+    if (data.custom_domain !== undefined) {
+      const domain = normalizeDomain(data.custom_domain);
+      if (domain) {
+        if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) {
+          throw new Error('Domaine personnalisé invalide (ex. commande.mon-resto.cm)');
+        }
+        const clash = await Restaurant.findOne({ where: { custom_domain: domain } });
+        if (clash && clash.id !== restaurantId) {
+          throw new Error('Ce domaine est déjà utilisé par un autre restaurant');
+        }
+      }
+      patch.custom_domain = domain; // null efface
     }
 
     await restaurant.update(patch);

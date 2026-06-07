@@ -187,10 +187,15 @@ async function toggleOwner(ownerId, status) {
 /* ---------- Restaurants ---------- */
 async function loadRestaurants() {
   state.restaurants = await api('/restaurants');
+  const origin = location.origin;
   const html = state.restaurants.map((r) => {
     const types = (r.settings && r.settings.service_types) || ['dine_in', 'takeaway', 'delivery'];
     const chips = types.map((t) => `<span class="chip">${TYPE_LABELS[t] || t}</span>`).join('');
     const owner = r.owner ? `${esc(r.owner.first_name)} ${esc(r.owner.last_name)}` : '<span class="muted">Sans propriétaire</span>';
+    const clientLink = r.custom_domain ? `https://${esc(r.custom_domain)}` : `${origin}/?r=${esc(r.slug)}`;
+    const domainRow = r.custom_domain
+      ? `<span class="chip">🌐 ${esc(r.custom_domain)}</span>`
+      : '<span class="muted" style="font-size:12px">Aucun domaine personnalisé</span>';
     return `
       <div class="card">
         <div class="card-row">
@@ -200,9 +205,18 @@ async function loadRestaurants() {
           </div>
           <span class="badge ${r.status}">${r.status === 'active' ? 'Actif' : (r.status === 'suspended' ? 'Suspendu' : 'Fermé')}</span>
         </div>
+
+        <div class="link-box">
+          <span class="link-label">Lien client</span>
+          <a class="link-url" href="${clientLink}" target="_blank" rel="noopener">${esc(clientLink)}</a>
+          <button class="btn btn-ghost btn-sm" onclick="copyLink('${clientLink.replace(/'/g, "\\'")}')">Copier</button>
+        </div>
+        <div class="sub" style="margin-top:8px">Slug : <code>${esc(r.slug)}</code> &nbsp;·&nbsp; ${domainRow}</div>
+
         <div class="chips">${chips}</div>
         <div class="card-actions">
           <button class="btn btn-ghost btn-sm" onclick="editServiceTypes('${r.id}')">Modes de service</button>
+          <button class="btn btn-ghost btn-sm" onclick="editDomain('${r.id}')">Domaine personnalisé</button>
           <button class="btn btn-ghost btn-sm" onclick="toggleRestaurant('${r.id}', '${r.status}')">${r.status === 'active' ? 'Suspendre' : 'Réactiver'}</button>
         </div>
       </div>`;
@@ -265,6 +279,34 @@ async function toggleRestaurant(restaurantId, status) {
   try {
     await api(`/restaurants/${restaurantId}`, { method: 'PATCH', body: JSON.stringify({ status: next }) });
     toast('Statut mis à jour');
+    loadRestaurants();
+  } catch (e) { toast(e.message, true); }
+}
+
+function copyLink(url) {
+  navigator.clipboard.writeText(url)
+    .then(() => toast('Lien copié'))
+    .catch(() => toast('Copie impossible', true));
+}
+
+async function editDomain(restaurantId) {
+  const r = state.restaurants.find((x) => x.id === restaurantId);
+  const host = location.host;
+  const input = prompt(
+    'Domaine personnalisé du restaurant (laisser vide pour retirer).\n\n'
+    + 'Ex. : commande.mon-resto.cm\n\n'
+    + 'Le restaurateur doit créer un enregistrement DNS :\n'
+    + `  CNAME  →  ${host}\n`
+    + '(puis ajouter ce domaine dans Render → Settings → Custom Domains)',
+    (r && r.custom_domain) || ''
+  );
+  if (input == null) return; // annulé
+  try {
+    await api(`/restaurants/${restaurantId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ custom_domain: input.trim() })
+    });
+    toast(input.trim() ? 'Domaine enregistré' : 'Domaine retiré');
     loadRestaurants();
   } catch (e) { toast(e.message, true); }
 }
