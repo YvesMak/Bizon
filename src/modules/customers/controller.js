@@ -77,8 +77,9 @@ class CustomerController {
       );
 
       const customer = await Customer.findByPk(req.customerId);
-      const payment = await PaymentService.initiateFlutterwave(req.restaurantId, {
+      const payment = await PaymentService.initiatePayment(req.restaurantId, {
         order_id: order.id,
+        phone: req.body.payment_phone || req.body.phone || customer.phone,
         customer: {
           email: customer.email,
           phone: customer.phone,
@@ -162,6 +163,16 @@ class CustomerController {
         discount_type: voucher.discount_type,
         discount
       });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  // ----- Statut de paiement (Mobile Money / Campay) -----
+  async getPaymentStatus(req, res) {
+    try {
+      const result = await PaymentService.checkCampayStatus(req.restaurantId, req.params.paymentId);
+      res.json({ status: result.status });
     } catch (error) {
       res.status(400).json({ error: error.message });
     }

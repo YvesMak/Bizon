@@ -6,7 +6,14 @@ const logger = require('../../utils/logger');
 const { createError } = require('../../utils/errorMessages');
 const flutterwave = require('./providers/flutterwave');
 const flwConfig = require('../../config/flutterwave');
+const campay = require('./providers/campay');
+const campayConfig = require('../../config/campay');
 const { sequelize } = require('../../config/database');
+
+// Provider de paiement actif (env PAYMENT_PROVIDER : 'campay' | 'flutterwave').
+function activeProvider() {
+  return (process.env.PAYMENT_PROVIDER || 'flutterwave').toLowerCase();
+}
 
 class PaymentService {
   /**
@@ -337,42 +344,49 @@ class PaymentService {
       throw new Error('Devise incorrecte');
     }
 
-    // 5. Règlement atomique : paiement + facture + commande
+    // 5. Règlement atomique (factorisé, partagé avec Campay)
+    await this._finalizeSettlement(payment, String(transactionId), 'FLW_PAYMENT_SETTLED');
+    return payment;
+  }
+
+  /**
+   * =================================================================
+   * RÈGLEMENT ATOMIQUE PARTAGÉ (tous providers)
+   * =================================================================
+   * Marque le paiement complété, génère la facture, fait avancer la commande
+   * (self-service draft → confirmed + décrément stock ; sinon → paid) et
+   * crédite la fidélité. À appeler uniquement après vérification serveur OK.
+   */
+  async _finalizeSettlement(payment, providerTxId, logEvent = 'PAYMENT_SETTLED') {
     const transaction = await sequelize.transaction();
     try {
       await payment.update({
         status: 'completed',
-        transaction_code: String(transactionId),
+        transaction_code: String(providerTxId),
         verified_at: new Date()
       }, { transaction });
 
       await InvoiceService.generate(payment.restaurant_id, payment.order_id, transaction);
 
-      const order = payment.order;
+      const order = payment.order || await Order.findByPk(payment.order_id, { transaction });
       if (order) {
-        // Commande client en self-service (pas de staff) payée d'avance :
-        // le paiement vaut confirmation → on engage le stock et on l'envoie en
-        // cuisine ('confirmed'). Le paiement est attesté par le Payment completed.
         if (!order.user_id && order.status === 'draft') {
           const items = await OrderItem.findAll({ where: { order_id: order.id }, transaction });
           await OrderService.decrementStockForOrder({ items }, transaction);
           await order.update({ status: 'confirmed' }, { transaction });
         } else if (order.status !== 'paid') {
-          // Commande staff (paiement en fin de parcours) → terminale 'paid'.
           await order.update({ status: 'paid' }, { transaction });
         }
-
-        // 🎁 Fidélité : créditer les points (si la commande est liée à un client)
         await LoyaltyService.creditForOrder(payment.restaurant_id, order, transaction);
       }
 
       await transaction.commit();
 
-      await logger.critical('FLW_PAYMENT_SETTLED', {
+      await logger.critical(logEvent, {
         restaurant_id: payment.restaurant_id,
         payment_id: payment.id,
         order_id: payment.order_id,
-        transaction_id: transactionId
+        transaction_id: providerTxId
       });
 
       return payment;
@@ -380,6 +394,117 @@ class PaymentService {
       await transaction.rollback();
       throw error;
     }
+  }
+
+  /**
+   * =================================================================
+   * CAMPAY — INITIATION (Mobile Money / USSD)
+   * =================================================================
+   * Déclenche une demande de paiement MoMo : le client valide via USSD.
+   * Retourne le paiement `pending` ; le statut se suit via checkCampayStatus.
+   */
+  async initiateCampayCollect(restaurantId, data) {
+    const { order_id, phone, customer = {} } = data;
+    if (!phone) throw new Error('Numéro Mobile Money requis');
+
+    const order = await Order.findOne({ where: { id: order_id, restaurant_id: restaurantId } });
+    if (!order) throw new Error('Commande non trouvée');
+    if (order.status === 'cancelled') throw new Error('Impossible de payer une commande annulée');
+
+    // 🔒 Anti double-paiement
+    const existing = await Payment.findOne({
+      where: { order_id, restaurant_id: restaurantId, status: ['completed', 'pending'] }
+    });
+    if (existing) {
+      if (existing.status === 'completed') throw new Error('Cette commande a déjà été payée');
+      return {
+        payment_id: existing.id,
+        reference: existing.reference,
+        status: 'pending',
+        provider: 'campay',
+        reused: true
+      };
+    }
+
+    const externalRef = `BIZON-${order.order_number}-${Date.now()}`;
+    let collectRes;
+    try {
+      collectRes = await campay.collect({
+        amount: order.total_amount,
+        phone,
+        description: `Commande ${order.order_number}`,
+        externalReference: externalRef
+      });
+    } catch (error) {
+      throw new Error(`Échec de l'initiation Mobile Money : ${error.message}`);
+    }
+
+    const payment = await Payment.create({
+      restaurant_id: restaurantId,
+      order_id,
+      amount: order.total_amount,
+      method: 'mobile_money',
+      status: 'pending',
+      provider: 'campay',
+      reference: collectRes.reference, // référence transaction Campay
+      phone_number: campay._normalizePhone(phone),
+      metadata: { external_reference: externalRef, operator: collectRes.operator, ussd_code: collectRes.ussd_code }
+    });
+
+    await logger.critical('CAMPAY_PAYMENT_INITIATED', {
+      restaurant_id: restaurantId, payment_id: payment.id, order_id, reference: collectRes.reference
+    });
+
+    return {
+      payment_id: payment.id,
+      reference: collectRes.reference,
+      status: 'pending',
+      provider: 'campay',
+      ussd_code: collectRes.ussd_code || null,
+      operator: collectRes.operator || null,
+      amount: order.total_amount,
+      currency: campayConfig.currency
+    };
+  }
+
+  /**
+   * CAMPAY — Suivi de statut (vérification serveur, idempotent).
+   * Règle le paiement si SUCCESSFUL, le marque échoué si FAILED.
+   */
+  async checkCampayStatus(restaurantId, paymentId) {
+    const payment = await Payment.findOne({
+      where: { id: paymentId, restaurant_id: restaurantId },
+      include: [{ model: Order, as: 'order' }]
+    });
+    if (!payment) throw new Error('Paiement non trouvé');
+    if (payment.status === 'completed') return { status: 'completed', payment };
+    if (payment.status === 'failed') return { status: 'failed', payment };
+
+    const data = await campay.verifyTransaction(payment.reference);
+
+    if (data.status === 'successful') {
+      if (Number(data.amount) < Number(payment.amount)) {
+        throw new Error('Montant payé insuffisant');
+      }
+      await this._finalizeSettlement(payment, payment.reference, 'CAMPAY_PAYMENT_SETTLED');
+      return { status: 'completed', payment };
+    }
+    if (data.status === 'failed') {
+      await payment.update({ status: 'failed' });
+      return { status: 'failed', payment };
+    }
+    return { status: 'pending', payment };
+  }
+
+  /**
+   * Initiation provider-agnostique : route vers Campay (collect) ou Flutterwave
+   * (lien hébergé) selon PAYMENT_PROVIDER.
+   */
+  async initiatePayment(restaurantId, data) {
+    if (activeProvider() === 'campay') {
+      return this.initiateCampayCollect(restaurantId, data);
+    }
+    return this.initiateFlutterwave(restaurantId, data);
   }
 
   /**
