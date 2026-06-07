@@ -29,9 +29,9 @@ services:
     region: frankfurt
     branch: main
     buildCommand: npm ci
-    # Les migrations tournent au démarrage (la base est joignable au runtime,
-    # contrairement à la phase de build). Idempotent.
-    startCommand: npm run db:migrate && npm start
+    # Au démarrage : migrations → bootstrap (admin/démo, piloté par env, sans
+    # shell) → serveur. Tout est idempotent et la base est joignable au runtime.
+    startCommand: npm run db:migrate && node scripts/bootstrap.js && npm start
     healthCheckPath: /health
     autoDeploy: true
     envVars:
@@ -89,3 +89,13 @@ services:
         value: "30"
       - key: CLEANUP_INTERVAL_MINUTES
         value: "10"
+
+      # --- Bootstrap au démarrage (sans shell) — voir scripts/bootstrap.js ---
+      # Renseigne ces 3 valeurs pour créer l'admin + la démo, puis redéploie.
+      # Tu peux les vider ensuite (opération idempotente).
+      - key: BOOTSTRAP_ADMIN_EMAIL
+        sync: false
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        sync: false
+      - key: SEED_DEMO
+        sync: false
