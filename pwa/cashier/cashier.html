@@ -23,6 +23,7 @@
             <nav class="main-nav">
                 <a href="#orders" class="nav-link active" data-page="orders" onclick="navigateTo('orders')">COMMANDES</a>
                 <a href="#invoices" class="nav-link" data-page="invoices" onclick="navigateTo('invoices')">FACTURES</a>
+                <a href="#report" class="nav-link" data-page="report" onclick="navigateTo('report')">RAPPORT</a>
             </nav>
             <div class="header-actions">
                 <span class="user-name" id="user-name"></span>
@@ -92,30 +93,21 @@
                             <span class="method-icon">📱</span>
                             <span>Mobile Money</span>
                         </button>
-                        <button class="method-btn" data-method="card" onclick="selectMethod('card')">
-                            <span class="method-icon">💳</span>
-                            <span>Carte</span>
-                        </button>
                     </div>
 
-                    <!-- Champs Mobile Money -->
+                    <!-- Champ Mobile Money (Campay) -->
                     <div class="mobile-money-fields" id="mobile-money-fields" style="display: none;">
                         <div class="form-group">
-                            <label>Numéro de téléphone</label>
-                            <input type="tel" id="phone-number" placeholder="Ex: 77 123 45 67">
+                            <label>Numéro Mobile Money du client (MTN/Orange)</label>
+                            <input type="tel" id="phone-number" placeholder="Ex: 6XX XX XX XX">
                         </div>
-                        <div class="form-group">
-                            <label>Opérateur</label>
-                            <select id="provider">
-                                <option value="orange_money">Orange Money</option>
-                                <option value="wave">Wave</option>
-                                <option value="free_money">Free Money</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Code de transaction</label>
-                            <input type="text" id="transaction-code" placeholder="Ex: TXN123456">
-                        </div>
+                        <p class="hint">Une demande de paiement sera envoyée sur le téléphone du client (validation par code USSD).</p>
+                    </div>
+
+                    <!-- Attente validation Campay -->
+                    <div class="momo-wait-inline" id="cashier-momo-wait" style="display:none">
+                        <div class="momo-spinner-sm"></div>
+                        <p id="cashier-momo-status">En attente de la validation du client…</p>
                     </div>
 
                     <button class="btn-primary btn-block btn-large" id="btn-submit-payment">
@@ -171,6 +163,17 @@
 
             <div class="invoices-list" id="invoices-list">
                 <div class="loading">Chargement des factures...</div>
+            </div>
+        </div>
+
+        <!-- Page: Rapport de caisse (Z) -->
+        <div id="page-report" class="page">
+            <div class="page-header">
+                <h1>Rapport de caisse</h1>
+                <input type="date" id="report-date" onchange="loadReport()">
+            </div>
+            <div id="report-content">
+                <div class="loading">Chargement du rapport...</div>
             </div>
         </div>
     </div>

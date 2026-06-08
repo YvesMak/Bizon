@@ -192,6 +192,7 @@ function navigateTo(page) {
 
     if (page === 'orders') loadOrders();
     if (page === 'invoices') loadInvoices();
+    if (page === 'report') loadReport();
 }
 
 function backToOrders() {
@@ -346,7 +347,7 @@ async function startPayment(orderId) {
         // Reset form
         selectMethod('cash');
         document.getElementById('phone-number').value = '';
-        document.getElementById('transaction-code').value = '';
+        stopCashierCampayWait();
 
         showPage('payment');
 
@@ -365,69 +366,125 @@ function selectMethod(method) {
 
     const mobileFields = document.getElementById('mobile-money-fields');
     mobileFields.style.display = method === 'mobile_money' ? 'block' : 'none';
+    const wait = document.getElementById('cashier-momo-wait');
+    if (wait && method !== 'mobile_money') wait.style.display = 'none';
 }
+
+let cashierPollTimer = null;
 
 async function submitPayment() {
     const order = cashierState.currentOrder;
     if (!order) return;
-
     const method = cashierState.selectedMethod;
-    const paymentData = {
-        order_id: order.id,
-        amount: parseFloat(order.total_amount),
-        method: method
-    };
+    const submitBtn = document.getElementById('btn-submit-payment');
 
+    // --- Mobile Money via Campay (push USSD sur le téléphone du client) ---
     if (method === 'mobile_money') {
         const phone = document.getElementById('phone-number').value.trim();
-        const provider = document.getElementById('provider').value;
-        const txCode = document.getElementById('transaction-code').value.trim();
+        if (!phone) { showToast('Saisissez le numéro Mobile Money du client', 'error'); return; }
 
-        if (!phone) {
-            showToast('Veuillez saisir le numéro de téléphone', 'error');
-            return;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Envoi de la demande…';
+        try {
+            const res = await apiCall('/payments/campay/initiate', {
+                method: 'POST',
+                body: JSON.stringify({ order_id: order.id, phone })
+            });
+            if (!res || !res.payment_id) throw new Error('Échec de l\'initiation');
+            startCashierCampayWait(res.payment_id);
+        } catch (error) {
+            showToast(error.message, 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Valider le paiement';
         }
-
-        paymentData.phone_number = phone;
-        paymentData.provider = provider;
-
-        // Si code fourni directement, on le passe
-        if (txCode) {
-            paymentData.transaction_code = txCode;
-        }
+        return;
     }
 
-    const submitBtn = document.getElementById('btn-submit-payment');
+    // --- Espèces ---
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Traitement en cours...';
-
+    submitBtn.textContent = 'Traitement…';
     try {
-        const result = await createPayment(paymentData);
-
-        if (!result || !result.payment) {
-            throw new Error('Erreur lors de la création du paiement');
-        }
-
-        const payment = result.payment;
-
-        if (payment.status === 'pending') {
-            // Mobile Money en attente : aller à la page de vérification
-            cashierState.currentPayment = payment;
-            showVerifyPage(payment, order);
-            showToast('Paiement en attente de vérification', 'info');
-        } else {
-            // Cash ou Carte : paiement complété
-            showToast('Paiement enregistré avec succès', 'success');
-            setTimeout(() => {
-                backToOrders();
-            }, 1500);
-        }
-
+        const result = await createPayment({ order_id: order.id, amount: parseFloat(order.total_amount), method: 'cash' });
+        if (!result || !result.payment) throw new Error('Erreur lors du paiement');
+        showToast('Paiement espèces enregistré ✅', 'success');
+        setTimeout(backToOrders, 1200);
     } catch (error) {
         showToast(error.message, 'error');
     } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Valider le paiement';
+    }
+}
+
+function startCashierCampayWait(paymentId) {
+    const wait = document.getElementById('cashier-momo-wait');
+    const statusEl = document.getElementById('cashier-momo-status');
+    if (wait) wait.style.display = 'flex';
+    if (statusEl) statusEl.textContent = 'En attente de la validation du client…';
+
+    const deadline = Date.now() + 150000; // 2,5 min
+    const poll = async () => {
+        if (Date.now() > deadline) { stopCashierCampayWait(); finishCashierMomo('timeout'); return; }
+        try {
+            const r = await apiCall(`/payments/${paymentId}/campay-status`);
+            if (r && r.status === 'completed') { stopCashierCampayWait(); finishCashierMomo('completed'); }
+            else if (r && r.status === 'failed') { stopCashierCampayWait(); finishCashierMomo('failed'); }
+        } catch (e) { /* on réessaie au prochain tick */ }
+    };
+    cashierPollTimer = setInterval(poll, 4000);
+    poll();
+}
+
+function stopCashierCampayWait() {
+    if (cashierPollTimer) { clearInterval(cashierPollTimer); cashierPollTimer = null; }
+    const wait = document.getElementById('cashier-momo-wait');
+    if (wait) wait.style.display = 'none';
+    const submitBtn = document.getElementById('btn-submit-payment');
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Valider le paiement'; }
+}
+
+function finishCashierMomo(outcome) {
+    if (outcome === 'completed') {
+        showToast('Paiement Mobile Money confirmé ✅', 'success');
+        setTimeout(backToOrders, 1200);
+    } else if (outcome === 'failed') {
+        showToast('Paiement échoué ou refusé', 'error');
+    } else {
+        showToast('Délai dépassé. Réessayez ou encaissez en espèces.', 'error');
+    }
+}
+
+// ============================================
+// RAPPORT DE CAISSE (Z)
+// ============================================
+const METHOD_LABELS = { cash: '💵 Espèces', mobile_money: '📱 Mobile Money', card: '💳 Carte' };
+
+async function loadReport() {
+    const container = document.getElementById('report-content');
+    const dateInput = document.getElementById('report-date');
+    if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
+    container.innerHTML = '<div class="loading">Chargement du rapport...</div>';
+    try {
+        const date = dateInput ? dateInput.value : '';
+        const data = await apiCall(`/payments/report${date ? `?date=${date}` : ''}`);
+        if (!data) return;
+        const rows = (data.by_method || []).map(r => `
+            <div class="report-row">
+                <span>${METHOD_LABELS[r.method] || r.method}</span>
+                <span>${r.count} paiement(s)</span>
+                <span class="report-amount">${formatAmount(r.total)}</span>
+            </div>`).join('') || '<p style="color:var(--text-light)">Aucun encaissement ce jour.</p>';
+        container.innerHTML = `
+            <div class="report-card">
+                <div class="report-total">
+                    <span>Total encaissé</span>
+                    <span class="report-grand">${formatAmount(data.total)}</span>
+                </div>
+                <div class="report-count">${data.count} paiement(s) le ${data.date}</div>
+                <div class="report-breakdown">${rows}</div>
+            </div>`;
+    } catch (e) {
+        container.innerHTML = '<p style="color:var(--error)">Erreur de chargement</p>';
     }
 }
 

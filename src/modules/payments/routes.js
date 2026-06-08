@@ -8,6 +8,14 @@ router.use(auth, tenantIsolation);
 
 // Flutterwave : initiation + suivi de statut
 router.post('/initiate', PaymentController.initiate);
+
+// Campay (encaissement caissier) : initiation + suivi + règlement
+router.post('/campay/initiate', PaymentController.initiateCampay);
+router.get('/:id/campay-status', PaymentController.campayStatus);
+
+// Rapport de caisse (Z) du jour
+router.get('/report', PaymentController.report);
+
 router.get('/:id/status', PaymentController.status);
 
 // Création et vérification de paiement (cash / manuel)

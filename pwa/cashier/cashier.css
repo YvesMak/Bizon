@@ -534,3 +534,42 @@
 
   .filters { overflow-x: auto; flex-wrap: nowrap; }
 }
+
+/* ============================================
+   MOBILE MONEY (Campay) — attente caissier
+   ============================================ */
+.hint { color: var(--text-muted, #888); font-size: 0.85rem; margin-top: 0.5rem; }
+.momo-wait-inline {
+    display: none; align-items: center; gap: 12px;
+    background: var(--bg-subtle, #faf7f2); border-radius: 12px;
+    padding: 14px 16px; margin: 14px 0;
+}
+.momo-spinner-sm {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    border: 3px solid var(--border, #eee); border-top-color: var(--primary, #C62828);
+    animation: cspin 0.9s linear infinite;
+}
+@keyframes cspin { to { transform: rotate(360deg); } }
+.momo-wait-inline p { margin: 0; color: var(--text, #333); font-size: 0.95rem; }
+
+/* ============================================
+   RAPPORT DE CAISSE (Z)
+   ============================================ */
+.report-card {
+    background: var(--bg-surface, #fff); border: 1.5px solid var(--border, #eee);
+    border-radius: 16px; padding: 1.5rem; max-width: 520px;
+}
+.report-total {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding-bottom: 1rem; border-bottom: 1px solid var(--border, #eee);
+}
+.report-total span:first-child { font-weight: 600; color: var(--text-muted, #888); }
+.report-grand { font-size: 1.8rem; font-weight: 800; color: var(--primary, #C62828); }
+.report-count { color: var(--text-muted, #888); font-size: 0.85rem; margin: 0.5rem 0 1rem; }
+.report-breakdown { display: flex; flex-direction: column; gap: 0.5rem; }
+.report-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 0.75rem 1rem; background: var(--bg-subtle, #faf7f2); border-radius: 10px;
+}
+.report-amount { font-weight: 700; color: var(--text, #1f1b16); }
+#report-date { padding: 8px 12px; border: 1px solid var(--border, #ddd); border-radius: 8px; font-family: inherit; }

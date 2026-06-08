@@ -73,6 +73,36 @@ class PaymentController {
     }
   }
 
+  // POST /api/payments/campay/initiate — encaissement Campay par le caissier
+  async initiateCampay(req, res) {
+    try {
+      const result = await PaymentService.initiateCampayCollect(req.restaurantId, req.body);
+      res.status(201).json({ message: 'Demande de paiement envoyée', ...result });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  // GET /api/payments/:id/campay-status — suivi (et règlement) d'un paiement Campay
+  async campayStatus(req, res) {
+    try {
+      const result = await PaymentService.checkCampayStatus(req.restaurantId, req.params.id);
+      res.json({ status: result.status });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  // GET /api/payments/report?date=YYYY-MM-DD — rapport de caisse (Z) du jour
+  async report(req, res) {
+    try {
+      const result = await PaymentService.cashReport(req.restaurantId, req.query.date);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
   // GET /api/payments/:id/status — statut d'un paiement (polling de secours)
   async status(req, res) {
     try {
