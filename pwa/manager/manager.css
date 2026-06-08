@@ -6,6 +6,11 @@
    LAYOUT
    ============================================ */
 .manager-container {
+  /* .container (styles.css) est en display:flex pour un layout sidebar+contenu.
+     Le back-office n'a pas de sidebar : sans override, chaque page devient un
+     flex-item qui se réduit à la largeur de son contenu (cartes « téléphone »
+     sur desktop). On force le bloc pour que les pages remplissent les 1200px. */
+  display: block;
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
