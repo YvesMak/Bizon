@@ -1,4 +1,4 @@
-const { Product, Category } = require('../../models');
+const { Product, Category, OptionGroup, ProductOption } = require('../../models');
 const { Op } = require('sequelize');
 
 class ProductService {
@@ -178,6 +178,57 @@ class ProductService {
    */
   async decrementStock(restaurantId, productId, quantity) {
     return this.updateStock(restaurantId, productId, quantity, 'subtract');
+  }
+
+  // ----- Options / variantes -----
+
+  async listOptionGroups(restaurantId, productId) {
+    const product = await Product.findOne({ where: { id: productId, restaurant_id: restaurantId } });
+    if (!product) throw new Error('Produit non trouvé');
+    return OptionGroup.findAll({
+      where: { product_id: productId, restaurant_id: restaurantId },
+      include: [{ model: ProductOption, as: 'options' }],
+      order: [['display_order', 'ASC'], [{ model: ProductOption, as: 'options' }, 'display_order', 'ASC']]
+    });
+  }
+
+  async createOptionGroup(restaurantId, productId, data) {
+    const product = await Product.findOne({ where: { id: productId, restaurant_id: restaurantId } });
+    if (!product) throw new Error('Produit non trouvé');
+    if (!data.name || !data.name.trim()) throw new Error('Le nom du groupe est requis');
+    const type = data.type === 'multiple' ? 'multiple' : 'single';
+    const count = await OptionGroup.count({ where: { product_id: productId } });
+    return OptionGroup.create({
+      restaurant_id: restaurantId, product_id: productId,
+      name: data.name.trim(), type, required: Boolean(data.required),
+      display_order: count
+    });
+  }
+
+  async deleteOptionGroup(restaurantId, groupId) {
+    const group = await OptionGroup.findOne({ where: { id: groupId, restaurant_id: restaurantId } });
+    if (!group) throw new Error('Groupe non trouvé');
+    await group.destroy();
+    return true;
+  }
+
+  async createOption(restaurantId, groupId, data) {
+    const group = await OptionGroup.findOne({ where: { id: groupId, restaurant_id: restaurantId } });
+    if (!group) throw new Error('Groupe non trouvé');
+    if (!data.name || !data.name.trim()) throw new Error('Le nom de l\'option est requis');
+    const count = await ProductOption.count({ where: { group_id: groupId } });
+    return ProductOption.create({
+      restaurant_id: restaurantId, group_id: groupId,
+      name: data.name.trim(), price_delta: Number(data.price_delta) || 0,
+      display_order: count
+    });
+  }
+
+  async deleteOption(restaurantId, optionId) {
+    const option = await ProductOption.findOne({ where: { id: optionId, restaurant_id: restaurantId } });
+    if (!option) throw new Error('Option non trouvée');
+    await option.destroy();
+    return true;
   }
 }
 

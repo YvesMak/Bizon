@@ -639,6 +639,7 @@ async function loadProducts() {
                         </span>
                         <span class="actions-col">
                             <button class="btn-secondary btn-xs" onclick="showProductForm('${product.id}')">Modifier</button>
+                            <button class="btn-secondary btn-xs" onclick="manageOptions('${product.id}', '${escapeHtml(product.name)}')">Options</button>
                             ${product.track_stock ? `<button class="btn-secondary btn-xs" onclick="showStockForm('${product.id}')">Stock</button>` : ''}
                             <button class="btn-danger btn-xs" onclick="confirmDeleteProduct('${product.id}')">Suppr.</button>
                         </span>
@@ -1438,5 +1439,95 @@ async function saveDeliverySettings() {
         });
         if (!r) return;
         showToast('Réglages livraison enregistrés', 'success');
+    } catch (e) { showToast(e.message, 'error'); }
+}
+
+// ============================================
+// OPTIONS / VARIANTES PRODUIT
+// ============================================
+async function manageOptions(productId, productName) {
+    try {
+        const groups = await apiCall(`/products/${productId}/option-groups`);
+        renderOptionsModal(productId, productName, groups || []);
+    } catch (e) { showToast(e.message, 'error'); }
+}
+
+function renderOptionsModal(productId, productName, groups) {
+    const groupsHtml = groups.length ? groups.map(g => `
+        <div class="opt-mgr-group">
+            <div class="opt-mgr-group-head">
+                <strong>${escapeHtml(g.name)}</strong>
+                <span class="opt-mgr-tag">${g.type === 'single' ? 'Choix unique' : 'Choix multiple'}${g.required ? ' · obligatoire' : ''}</span>
+                <button class="btn-danger btn-xs" onclick="deleteOptionGroupMgr('${productId}','${productName.replace(/'/g, "")}','${g.id}')">Suppr.</button>
+            </div>
+            <div class="opt-mgr-items">
+                ${(g.options || []).map(o => `
+                    <div class="opt-mgr-item">
+                        <span>${escapeHtml(o.name)}${Number(o.price_delta) ? ` (+${Number(o.price_delta).toLocaleString('fr-FR')} FCFA)` : ''}</span>
+                        <button class="btn-danger btn-xs" onclick="deleteOptionItem('${productId}','${productName.replace(/'/g, "")}','${o.id}')">×</button>
+                    </div>`).join('') || '<span style="color:var(--text-light);font-size:.85rem">Aucune option</span>'}
+            </div>
+            <div class="opt-mgr-addrow">
+                <input type="text" id="opt-name-${g.id}" placeholder="Nom (ex. Grande)">
+                <input type="number" id="opt-delta-${g.id}" placeholder="+ prix" step="50" style="width:90px">
+                <button class="btn-secondary btn-xs" onclick="addOptionItem('${productId}','${productName.replace(/'/g, "")}','${g.id}')">+ Option</button>
+            </div>
+        </div>`).join('') : '<p style="color:var(--text-light)">Aucun groupe d\'options.</p>';
+
+    showFormModal(`Options — ${productName}`, `
+        <div class="opt-mgr">
+            ${groupsHtml}
+            <div class="opt-mgr-newgroup">
+                <h4>Nouveau groupe</h4>
+                <input type="text" id="newgrp-name" placeholder="Nom du groupe (ex. Taille)">
+                <select id="newgrp-type">
+                    <option value="single">Choix unique</option>
+                    <option value="multiple">Choix multiple</option>
+                </select>
+                <label class="opt-mgr-check"><input type="checkbox" id="newgrp-required"> Obligatoire</label>
+                <button class="btn-primary btn-xs" onclick="addOptionGroup('${productId}','${productName.replace(/'/g, "")}')">+ Groupe</button>
+            </div>
+        </div>`);
+}
+
+async function addOptionGroup(productId, productName) {
+    const name = document.getElementById('newgrp-name').value.trim();
+    if (!name) { showToast('Nom du groupe requis', 'error'); return; }
+    try {
+        await apiCall(`/products/${productId}/option-groups`, {
+            method: 'POST',
+            body: JSON.stringify({
+                name,
+                type: document.getElementById('newgrp-type').value,
+                required: document.getElementById('newgrp-required').checked
+            })
+        });
+        manageOptions(productId, productName);
+    } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function deleteOptionGroupMgr(productId, productName, groupId) {
+    try {
+        await apiCall(`/products/option-groups/${groupId}`, { method: 'DELETE' });
+        manageOptions(productId, productName);
+    } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function addOptionItem(productId, productName, groupId) {
+    const name = document.getElementById(`opt-name-${groupId}`).value.trim();
+    if (!name) { showToast('Nom de l\'option requis', 'error'); return; }
+    const delta = parseInt(document.getElementById(`opt-delta-${groupId}`).value, 10) || 0;
+    try {
+        await apiCall(`/products/option-groups/${groupId}/options`, {
+            method: 'POST', body: JSON.stringify({ name, price_delta: delta })
+        });
+        manageOptions(productId, productName);
+    } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function deleteOptionItem(productId, productName, optionId) {
+    try {
+        await apiCall(`/products/product-options/${optionId}`, { method: 'DELETE' });
+        manageOptions(productId, productName);
     } catch (e) { showToast(e.message, 'error'); }
 }

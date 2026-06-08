@@ -1,4 +1,4 @@
-const { Menu, Category, Product, Restaurant } = require('../../models');
+const { Menu, Category, Product, Restaurant, OptionGroup, ProductOption } = require('../../models');
 
 class PublicController {
   // GET /api/public/menu?restaurantId=xxx  ou premier restaurant si absent
@@ -51,13 +51,21 @@ class PublicController {
             model: Product,
             as: 'products',
             where: { is_available: true },
-            required: false
+            required: false,
+            include: [{
+              model: OptionGroup,
+              as: 'optionGroups',
+              required: false,
+              include: [{ model: ProductOption, as: 'options', required: false }]
+            }]
           }]
         }],
         order: [
           ['display_order', 'ASC'],
           ['categories', 'display_order', 'ASC'],
-          ['categories', 'products', 'display_order', 'ASC']
+          ['categories', 'products', 'display_order', 'ASC'],
+          ['categories', 'products', 'optionGroups', 'display_order', 'ASC'],
+          ['categories', 'products', 'optionGroups', 'options', 'display_order', 'ASC']
         ]
       });
 
