@@ -397,6 +397,12 @@ class RestaurantService {
     return { tempPassword };
   }
 
+  /** Ajustement manuel des points fidélité d'un client (par le manager). */
+  async adjustCustomerLoyalty(restaurantId, customerId, points, reason) {
+    const LoyaltyService = require('../loyalty/service');
+    return LoyaltyService.adjust(restaurantId, customerId, points, reason);
+  }
+
   /** Bloque ou réactive un client. */
   async setCustomerStatus(restaurantId, customerId, status) {
     if (!['active', 'blocked'].includes(status)) throw new Error('Statut invalide');

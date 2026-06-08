@@ -25,6 +25,7 @@ router.get('/customers', roleCheck(['owner', 'manager']), RestaurantController.g
 router.get('/customers/:customerId', roleCheck(['owner', 'manager']), RestaurantController.getCustomerDetail);
 router.post('/customers/:customerId/reset-password', roleCheck(['owner', 'manager']), RestaurantController.resetCustomerPassword);
 router.patch('/customers/:customerId/status', roleCheck(['owner', 'manager']), RestaurantController.setCustomerStatus);
+router.post('/customers/:customerId/loyalty', roleCheck(['owner', 'manager']), RestaurantController.adjustCustomerLoyalty);
 
 // Gestion des utilisateurs
 router.get('/users', roleCheck(['owner', 'manager']), RestaurantController.getUsers);

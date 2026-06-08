@@ -972,3 +972,10 @@
   .cust-table td.cust-actions { justify-content: flex-end; flex-wrap: wrap; }
   .cust-table td.cust-actions::before { display: none; }
 }
+
+.loyalty-box { background: var(--bg-subtle, #faf7f2); border-radius: 10px; padding: 12px 14px; margin: 12px 0; }
+.loyalty-balance { font-size: .95rem; margin-bottom: 8px; }
+.loyalty-adjust { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.loyalty-adjust input[type=number] { width: 110px; }
+.loyalty-adjust input { padding: 8px 10px; border: 1px solid var(--border, #ddd); border-radius: 8px; font-family: inherit; }
+.loyalty-adjust input[type=text] { flex: 1; min-width: 120px; }

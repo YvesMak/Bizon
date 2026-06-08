@@ -1318,8 +1318,17 @@ async function viewCustomerDetail(id) {
         <p><strong>Téléphone :</strong> ${escapeHtml(c.phone || '—')}</p>
         <p><strong>Email :</strong> ${escapeHtml(c.email || '—')}</p>
         <p><strong>Adresse :</strong> ${escapeHtml(c.address || '—')}</p>
-        <p><strong>Points fidélité :</strong> ${c.loyalty_points || 0}</p>
         <p><strong>Statut :</strong> ${c.status === 'active' ? 'Actif' : 'Bloqué'}</p>
+
+        <div class="loyalty-box">
+          <div class="loyalty-balance">Points fidélité : <strong id="loy-balance">${c.loyalty_points || 0}</strong></div>
+          <div class="loyalty-adjust">
+            <input type="number" id="loy-points" placeholder="+50 ou -20" step="1">
+            <input type="text" id="loy-reason" placeholder="Motif (facultatif)">
+            <button class="btn-primary btn-xs" onclick="adjustLoyalty('${c.id}')">Appliquer</button>
+          </div>
+        </div>
+
         <h4 style="margin:1rem 0 .5rem">Dernières commandes</h4>
         ${ordersHtml}
       </div>`);
@@ -1347,6 +1356,23 @@ async function toggleCustomerBlock(id, status) {
     });
     if (!r) return;
     showToast(next === 'blocked' ? 'Client bloqué' : 'Client réactivé', 'success');
+    loadCustomers(document.getElementById('customers-search').value);
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function adjustLoyalty(id) {
+  const pts = parseInt(document.getElementById('loy-points').value, 10);
+  const reason = document.getElementById('loy-reason').value.trim();
+  if (!Number.isInteger(pts) || pts === 0) { showToast('Entrez un nombre de points (+/-)', 'error'); return; }
+  try {
+    const r = await apiCall(`/restaurants/customers/${id}/loyalty`, {
+      method: 'POST', body: JSON.stringify({ points: pts, reason })
+    });
+    if (!r) return;
+    document.getElementById('loy-balance').textContent = r.balance;
+    document.getElementById('loy-points').value = '';
+    document.getElementById('loy-reason').value = '';
+    showToast(`Points mis à jour (${r.applied >= 0 ? '+' : ''}${r.applied})`, 'success');
     loadCustomers(document.getElementById('customers-search').value);
   } catch (e) { showToast(e.message, 'error'); }
 }
