@@ -22,6 +22,7 @@ router.get('/stats', roleCheck(['owner', 'manager']), RestaurantController.getSt
 
 // Gestion des clients (manager)
 router.get('/customers', roleCheck(['owner', 'manager']), RestaurantController.getCustomers);
+router.get('/customers/export', roleCheck(['owner', 'manager']), RestaurantController.exportCustomers);
 router.get('/customers/:customerId', roleCheck(['owner', 'manager']), RestaurantController.getCustomerDetail);
 router.post('/customers/:customerId/reset-password', roleCheck(['owner', 'manager']), RestaurantController.resetCustomerPassword);
 router.patch('/customers/:customerId/status', roleCheck(['owner', 'manager']), RestaurantController.setCustomerStatus);

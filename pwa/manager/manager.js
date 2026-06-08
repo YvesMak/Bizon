@@ -1237,15 +1237,28 @@ document.addEventListener('DOMContentLoaded', () => {
 // CLIENTS (gestion par le manager)
 // ============================================
 let customersSearchTimer = null;
+let customersSegment = '';
 
 function fmtFcfa(n) { return `${Number(n || 0).toLocaleString('fr-FR')} FCFA`; }
+
+function setCustomerSegment(seg) {
+  customersSegment = seg;
+  document.querySelectorAll('#customers-segments .filter-btn').forEach((b) => {
+    b.classList.toggle('active', (b.dataset.seg || '') === seg);
+  });
+  loadCustomers(document.getElementById('customers-search').value);
+}
 
 async function loadCustomers(q) {
   const list = document.getElementById('customers-list');
   const statsEl = document.getElementById('customers-stats');
   if (!q) list.innerHTML = '<div class="loading">Chargement des clients...</div>';
   try {
-    const data = await apiCall(`/restaurants/customers${q ? `?q=${encodeURIComponent(q)}` : ''}`);
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (customersSegment) params.set('segment', customersSegment);
+    const qs = params.toString();
+    const data = await apiCall(`/restaurants/customers${qs ? `?${qs}` : ''}`);
     if (!data) return;
     mgrState.customers = data.customers || [];
     if (statsEl && data.stats) {
@@ -1374,5 +1387,27 @@ async function adjustLoyalty(id) {
     document.getElementById('loy-reason').value = '';
     showToast(`Points mis à jour (${r.applied >= 0 ? '+' : ''}${r.applied})`, 'success');
     loadCustomers(document.getElementById('customers-search').value);
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function exportCustomersCsv() {
+  try {
+    const params = new URLSearchParams();
+    const q = document.getElementById('customers-search')?.value;
+    if (q) params.set('q', q);
+    if (customersSegment) params.set('segment', customersSegment);
+    const qs = params.toString();
+    const res = await fetch(`${API_BASE_URL}/restaurants/customers/export${qs ? `?${qs}` : ''}`, {
+      headers: { ...(mgrState.token && { Authorization: `Bearer ${mgrState.token}` }) }
+    });
+    if (!res.ok) { showToast('Export impossible', 'error'); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `clients-bizon-${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    showToast('Export téléchargé', 'success');
   } catch (e) { showToast(e.message, 'error'); }
 }
