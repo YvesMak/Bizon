@@ -1,6 +1,8 @@
 const PaymentService = require('./service');
 const sse = require('../../sse');
 const flutterwave = require('./providers/flutterwave');
+const campay = require('./providers/campay');
+const campayConfig = require('../../config/campay');
 const NotificationService = require('../notifications/service');
 const { Payment } = require('../../models');
 
@@ -127,6 +129,44 @@ class PaymentController {
     } catch (err) {
       // On a déjà répondu 200 ; on journalise pour suivi.
       console.error('[FLW webhook] Échec règlement:', err.message);
+    }
+  }
+
+  /**
+   * Webhook Campay — règle la commande même si le client a fermé l'app.
+   * Sécurité : signature JWT (si clé configurée) + revérification serveur du
+   * statut auprès de l'API Campay (source de vérité).
+   */
+  async campayWebhook(req, res) {
+    // Répondre vite (Campay réessaie sinon) ; on traite ensuite.
+    res.status(200).json({ received: true });
+
+    try {
+      const body = { ...req.query, ...req.body };
+      const reference = body.reference;
+      if (!reference) return;
+
+      // Signature optionnelle : si une clé est configurée, on l'exige valide.
+      if (campayConfig.webhookKey && !campay.verifyWebhookSignature(body.signature)) {
+        console.warn('[Campay webhook] Signature invalide — ignoré');
+        return;
+      }
+
+      const settled = await PaymentService.settleCampayByReference(reference);
+      if (settled && settled.status === 'completed' && settled.order) {
+        const order = settled.order;
+        sse.emit(settled.restaurant_id, 'order_status_changed', { orderId: order.id, status: order.status });
+        if (order.customer_id) {
+          sse.emitToCustomer(order.customer_id, 'order_status_changed', {
+            orderId: order.id, orderNumber: order.order_number, status: order.status
+          });
+          NotificationService.notifyOrderStatus(order.customer_id, {
+            orderNumber: order.order_number, status: order.status
+          }).catch(() => {});
+        }
+      }
+    } catch (err) {
+      console.error('[Campay webhook] Échec règlement:', err.message);
     }
   }
 }

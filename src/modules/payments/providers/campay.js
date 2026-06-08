@@ -1,6 +1,7 @@
 // Provider Campay — Mobile Money Cameroun (MTN MoMo + Orange Money).
 // Flux « collect » : on déclenche une demande de paiement, le client valide
 // via USSD sur son téléphone, puis on suit le statut. `fetch` natif (Node ≥ 18).
+const jwt = require('jsonwebtoken');
 const config = require('../../../config/campay');
 
 let tokenCache = { token: null, expiresAt: 0 };
@@ -90,6 +91,16 @@ const CampayProvider = {
       external_reference: json.external_reference,
       operator: json.operator
     };
+  },
+
+  /**
+   * Vérifie la signature (JWT) d'un webhook Campay avec la clé webhook.
+   * Renvoie false si pas de clé configurée ou signature invalide.
+   * (Le règlement re-vérifie de toute façon la transaction côté API.)
+   */
+  verifyWebhookSignature(signature) {
+    if (!config.webhookKey || !signature) return false;
+    try { jwt.verify(signature, config.webhookKey); return true; } catch { return false; }
   },
 
   _normalizePhone: normalizePhone
