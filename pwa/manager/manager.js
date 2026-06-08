@@ -632,10 +632,10 @@ async function loadProducts() {
                             ${product.name}
                             ${!product.is_available ? '<span class="badge-inactive">Inactif</span>' : ''}
                         </span>
-                        <span>${product.Category ? product.Category.name : '-'}</span>
+                        <span>${product.category ? product.category.name : '<span class="cell-empty">Sans catégorie</span>'}</span>
                         <span class="price-col">${formatAmount(product.price)}</span>
                         <span class="stock-col ${product.track_stock && product.stock_quantity <= 5 ? 'stock-low' : ''}">
-                            ${product.track_stock ? product.stock_quantity : 'N/A'}
+                            ${product.track_stock ? product.stock_quantity : '<span class="cell-empty">Non suivi</span>'}
                         </span>
                         <span class="actions-col">
                             <button class="btn-secondary btn-xs" onclick="showProductForm('${product.id}')">Modifier</button>
