@@ -171,6 +171,8 @@ async function loadMenu() {
       state.serviceTypes = Array.isArray(data.restaurant.service_types) && data.restaurant.service_types.length
         ? data.restaurant.service_types
         : ['dine_in', 'takeaway', 'delivery'];
+      state.deliveryFee = Number(data.restaurant.delivery_fee) || 0;
+      state.minDeliveryOrder = Number(data.restaurant.min_delivery_order) || 0;
       applyServiceTypes();
     }
 
@@ -394,7 +396,13 @@ function renderCartPanel() {
 
   const subtotal = state.cart.reduce((s, i) => s + i.price * i.quantity, 0);
   const discount = Math.min(state.appliedVoucher ? state.appliedVoucher.discount : 0, subtotal);
-  const total = subtotal - discount; // pas de TVA ajoutée
+  const discounted = subtotal - discount;
+
+  // Livraison : frais + minimum de commande (uniquement en mode livraison)
+  const isDelivery = state.orderType === 'delivery';
+  const deliveryFee = isDelivery ? (state.deliveryFee || 0) : 0;
+  const minOrder = state.minDeliveryOrder || 0;
+  const total = discounted + deliveryFee; // pas de TVA ajoutée
 
   document.getElementById('cart-subtotal-amount').textContent = fmt(subtotal);
   document.getElementById('cart-total-amount').textContent = fmt(total);
@@ -406,6 +414,27 @@ function renderCartPanel() {
   } else {
     discountRow.style.display = 'none';
   }
+
+  // Ligne frais de livraison
+  const deliveryRow = document.getElementById('cart-delivery-row');
+  if (deliveryRow) {
+    if (isDelivery && deliveryFee > 0) {
+      deliveryRow.style.display = '';
+      document.getElementById('cart-delivery-amount').textContent = fmt(deliveryFee);
+    } else {
+      deliveryRow.style.display = 'none';
+    }
+  }
+
+  // Minimum de commande pour la livraison
+  const warn = document.getElementById('cart-min-warning');
+  const checkoutBtn = document.getElementById('btn-checkout');
+  const belowMin = isDelivery && minOrder > 0 && discounted < minOrder;
+  if (warn) {
+    warn.style.display = belowMin ? '' : 'none';
+    if (belowMin) warn.textContent = t('cart.minWarning', { min: fmt(minOrder) });
+  }
+  if (checkoutBtn) checkoutBtn.disabled = belowMin;
 }
 
 async function applyVoucher() {
@@ -503,6 +532,8 @@ function selectOrderType(type, btn) {
   if (type === 'delivery' && !addressInput.value && state.customer?.address) {
     addressInput.value = state.customer.address;
   }
+  // Recalculer les totaux (frais de livraison conditionnels)
+  if (document.getElementById('cart-sheet')?.classList.contains('open')) renderCartPanel();
 }
 
 // ============================================

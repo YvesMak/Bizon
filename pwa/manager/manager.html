@@ -115,6 +115,22 @@
                 </div>
             </div>
 
+            <!-- Réglages livraison -->
+            <div class="delivery-settings">
+                <h3>🛵 Livraison</h3>
+                <div class="delivery-fields">
+                    <div class="form-group">
+                        <label>Frais de livraison (FCFA)</label>
+                        <input type="number" id="set-delivery-fee" min="0" step="50" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Minimum de commande livraison (FCFA)</label>
+                        <input type="number" id="set-min-order" min="0" step="100" placeholder="0">
+                    </div>
+                    <button class="btn-primary" onclick="saveDeliverySettings()">Enregistrer</button>
+                </div>
+            </div>
+
             <!-- Owner only: Subscription limits -->
             <div class="owner-only" id="subscription-section" style="display:none;">
                 <h3>Abonnement</h3>

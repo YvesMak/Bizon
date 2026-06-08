@@ -502,6 +502,7 @@
     .od-row { display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--text-muted); padding: 0.25rem 0; }
     .od-total { font-size: 1.0625rem; font-weight: 700; color: var(--text); border-top: 1px solid var(--border-subtle); margin-top: 0.5rem; padding-top: 0.75rem; }
     .od-total span:last-child { color: var(--primary); }
+    .cart-min-warning { background: #FDECEC; color: var(--error, #C62828); border-radius: 10px; padding: 0.625rem 0.875rem; font-size: 0.85rem; font-weight: 600; margin: 0.5rem 0; }
     .od-actions { display: flex; gap: 0.625rem; margin-top: 1.25rem; }
     .od-btn { flex: 1; padding: 0.875rem; border-radius: 12px; font-family: inherit; font-weight: 700; font-size: 0.95rem; cursor: pointer; border: none; transition: 0.15s; }
     .od-reorder { background: var(--primary); color: #fff; }
@@ -996,6 +997,11 @@
           <span class="cart-total-label" style="color:var(--success)" data-i18n="cart.discount">Réduction</span>
           <span style="font-weight:600;color:var(--success)" id="cart-discount-amount">0 FCFA</span>
         </div>
+        <div class="cart-total-row" id="cart-delivery-row" style="display:none">
+          <span class="cart-total-label" data-i18n="cart.deliveryFee">Frais de livraison</span>
+          <span id="cart-delivery-amount">0 FCFA</span>
+        </div>
+        <div class="cart-min-warning" id="cart-min-warning" style="display:none"></div>
         <div class="cart-total-row cart-total-final">
           <span class="cart-total-label" data-i18n="cart.total">Total</span>
           <span class="cart-total-amount" id="cart-total-amount">0 FCFA</span>
