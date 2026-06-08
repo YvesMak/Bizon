@@ -497,6 +497,33 @@ class PaymentService {
   }
 
   /**
+   * CAMPAY — Règlement depuis le webhook (clé : référence transaction Campay).
+   * Re-vérifie le statut côté API (source de vérité), idempotent.
+   * Renvoie le paiement (avec sa commande) ou null si introuvable.
+   */
+  async settleCampayByReference(reference) {
+    if (!reference) throw new Error('Référence manquante');
+    const payment = await Payment.findOne({
+      where: { reference, provider: 'campay' },
+      include: [{ model: Order, as: 'order' }]
+    });
+    if (!payment) return null;
+    if (payment.status === 'completed') return payment;
+
+    const data = await campay.verifyTransaction(reference);
+    if (data.status === 'successful') {
+      if (Number(data.amount) < Number(payment.amount)) throw new Error('Montant payé insuffisant');
+      await this._finalizeSettlement(payment, reference, 'CAMPAY_PAYMENT_SETTLED');
+      return payment;
+    }
+    if (data.status === 'failed') {
+      await payment.update({ status: 'failed' });
+      return payment;
+    }
+    return payment; // toujours pending
+  }
+
+  /**
    * Initiation provider-agnostique : route vers Campay (collect) ou Flutterwave
    * (lien hébergé) selon PAYMENT_PROVIDER.
    */

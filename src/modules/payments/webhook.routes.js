@@ -6,5 +6,6 @@ const router = express.Router();
 const PaymentController = require('./controller');
 
 router.post('/flutterwave', PaymentController.flutterwaveWebhook.bind(PaymentController));
+router.post('/campay', PaymentController.campayWebhook.bind(PaymentController));
 
 module.exports = router;
