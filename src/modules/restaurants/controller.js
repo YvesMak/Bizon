@@ -163,6 +163,17 @@ class RestaurantController {
       res.status(400).json({ error: error.message });
     }
   }
+
+  async adjustCustomerLoyalty(req, res) {
+    try {
+      const result = await RestaurantService.adjustCustomerLoyalty(
+        req.restaurantId, req.params.customerId, req.body.points, req.body.reason
+      );
+      res.json({ message: 'Points mis à jour', ...result });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
 }
 
 module.exports = new RestaurantController();

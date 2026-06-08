@@ -1,4 +1,5 @@
 const { Customer, LoyaltyTransaction } = require('../../models');
+const { sequelize } = require('../../config/database');
 
 // Règle d'acquisition : 1 point par tranche de 100 FCFA dépensés.
 const FCFA_PER_POINT = 100;
@@ -84,6 +85,46 @@ class LoyaltyService {
       balance_after: updated.loyalty_points,
       description: description || 'Échange de points'
     }, { transaction });
+  }
+
+  /**
+   * Ajustement manuel des points par le manager (geste commercial / correction).
+   * `points` positif = créditer, négatif = retirer (sans descendre sous 0).
+   * Écrit une ligne 'adjust' dans le ledger. Atomique.
+   */
+  async adjust(restaurantId, customerId, points, description) {
+    const delta = parseInt(points, 10);
+    if (!Number.isInteger(delta) || delta === 0) throw new Error('Nombre de points invalide');
+
+    const transaction = await sequelize.transaction();
+    try {
+      const customer = await Customer.findOne({
+        where: { id: customerId, restaurant_id: restaurantId }, transaction
+      });
+      if (!customer) throw new Error('Client non trouvé');
+
+      const current = customer.loyalty_points || 0;
+      const newBalance = Math.max(0, current + delta);
+      const applied = newBalance - current; // borné pour ne pas passer sous 0
+
+      await customer.update({ loyalty_points: newBalance }, { transaction });
+
+      const tx = await LoyaltyTransaction.create({
+        restaurant_id: restaurantId,
+        customer_id: customerId,
+        order_id: null,
+        points: applied,
+        type: 'adjust',
+        balance_after: newBalance,
+        description: description || (applied >= 0 ? 'Ajustement manuel (crédit)' : 'Ajustement manuel (retrait)')
+      }, { transaction });
+
+      await transaction.commit();
+      return { balance: newBalance, applied, transaction: tx };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
   }
 
   /**
