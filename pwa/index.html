@@ -887,6 +887,20 @@
               </div>
               <button type="submit" class="btn-primary-full" id="btn-save-profile" data-i18n="profile.save">Enregistrer les modifications</button>
             </form>
+
+            <form id="form-password" style="margin-top:2rem;border-top:1px solid var(--border);padding-top:1.5rem">
+              <h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem" data-i18n="pwd.title">Changer mon mot de passe</h2>
+              <div class="form-group">
+                <label data-i18n="pwd.current">Mot de passe actuel</label>
+                <input type="password" id="pwd-current" autocomplete="current-password">
+              </div>
+              <div class="form-group">
+                <label data-i18n="pwd.new">Nouveau mot de passe</label>
+                <input type="password" id="pwd-new" data-i18n-placeholder="register.password.ph" placeholder="Minimum 6 caractères" autocomplete="new-password">
+              </div>
+              <button type="submit" class="btn-primary-full" id="btn-change-pwd" data-i18n="pwd.submit">Modifier le mot de passe</button>
+            </form>
+
             <div style="text-align:center;margin-top:1.5rem">
               <button onclick="logout()" style="background:none;border:none;color:var(--error);font-size:0.875rem;cursor:pointer;font-family:inherit;font-weight:500" data-i18n="profile.logout">
                 Déconnexion

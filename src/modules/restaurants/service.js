@@ -1,6 +1,17 @@
-const { Restaurant, User, Order, Product, Payment, Subscription } = require('../../models');
+const { Restaurant, User, Order, Product, Payment, Subscription, Customer, OrderItem } = require('../../models');
 const { Op } = require('sequelize');
 const { sequelize } = require('../../config/database');
+
+// Statuts de commande comptant comme « réalisés » (chiffre d'affaires client).
+const FULFILLED_STATUSES = ['confirmed', 'preparing', 'ready', 'paid'];
+
+function genTempPassword() {
+  // 8 caractères lisibles (sans 0/O/1/I) — communiqués au client par le staff.
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let p = '';
+  for (let i = 0; i < 8; i++) p += chars[Math.floor(Math.random() * chars.length)];
+  return p;
+}
 
 class RestaurantService {
   /**
@@ -302,6 +313,99 @@ class RestaurantService {
     const authService = require('../auth/service');
     const token = authService.generateToken(user.id, targetId, user.role);
     return { token, restaurant: restaurant.toJSON() };
+  }
+
+  // ----- Gestion des clients (côté manager) -----
+
+  /**
+   * Liste des clients du restaurant + agrégats (commandes réalisées, total
+   * dépensé, dernière visite). Recherche optionnelle sur nom/téléphone/email.
+   */
+  async listCustomers(restaurantId, { q } = {}) {
+    const where = { restaurant_id: restaurantId };
+    if (q && q.trim()) {
+      const like = { [Op.iLike]: `%${q.trim()}%` };
+      where[Op.or] = [{ first_name: like }, { last_name: like }, { phone: like }, { email: like }];
+    }
+
+    const customers = await Customer.findAll({
+      where,
+      attributes: { exclude: ['password_hash'] },
+      order: [['created_at', 'DESC']]
+    });
+
+    // Agrégats commandes par client (une seule requête).
+    const agg = await Order.findAll({
+      where: { restaurant_id: restaurantId, customer_id: { [Op.ne]: null }, status: { [Op.in]: FULFILLED_STATUSES } },
+      attributes: [
+        'customer_id',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'orders_count'],
+        [sequelize.fn('SUM', sequelize.col('total_amount')), 'total_spent'],
+        [sequelize.fn('MAX', sequelize.col('created_at')), 'last_order_at']
+      ],
+      group: ['customer_id'],
+      raw: true
+    });
+    const byCustomer = agg.reduce((acc, a) => { acc[a.customer_id] = a; return acc; }, {});
+
+    return customers.map((c) => {
+      const j = c.toJSON();
+      const a = byCustomer[c.id];
+      return {
+        ...j,
+        orders_count: a ? parseInt(a.orders_count, 10) : 0,
+        total_spent: a ? Math.round(parseFloat(a.total_spent)) : 0,
+        last_order_at: a ? a.last_order_at : null
+      };
+    });
+  }
+
+  /** Statistiques clients globales du restaurant. */
+  async getCustomerStats(restaurantId) {
+    const total = await Customer.count({ where: { restaurant_id: restaurantId } });
+    const blocked = await Customer.count({ where: { restaurant_id: restaurantId, status: 'blocked' } });
+    const since = new Date(); since.setDate(since.getDate() - 7);
+    const newThisWeek = await Customer.count({
+      where: { restaurant_id: restaurantId, created_at: { [Op.gte]: since } }
+    });
+    return { total, blocked, active: total - blocked, new_this_week: newThisWeek };
+  }
+
+  /** Détail d'un client + ses dernières commandes. */
+  async getCustomerDetail(restaurantId, customerId) {
+    const customer = await Customer.findOne({
+      where: { id: customerId, restaurant_id: restaurantId },
+      attributes: { exclude: ['password_hash'] }
+    });
+    if (!customer) throw new Error('Client non trouvé');
+
+    const orders = await Order.findAll({
+      where: { customer_id: customerId, restaurant_id: restaurantId },
+      include: [{ model: OrderItem, as: 'items' }],
+      order: [['created_at', 'DESC']],
+      limit: 15
+    });
+    return { customer: customer.toJSON(), orders };
+  }
+
+  /** Réinitialise le mot de passe d'un client → renvoie le mot de passe temporaire. */
+  async resetCustomerPassword(restaurantId, customerId) {
+    const customer = await Customer.findOne({ where: { id: customerId, restaurant_id: restaurantId } });
+    if (!customer) throw new Error('Client non trouvé');
+    const tempPassword = genTempPassword();
+    await customer.update({ password_hash: tempPassword }); // hashé par le hook beforeUpdate
+    return { tempPassword };
+  }
+
+  /** Bloque ou réactive un client. */
+  async setCustomerStatus(restaurantId, customerId, status) {
+    if (!['active', 'blocked'].includes(status)) throw new Error('Statut invalide');
+    const customer = await Customer.findOne({ where: { id: customerId, restaurant_id: restaurantId } });
+    if (!customer) throw new Error('Client non trouvé');
+    await customer.update({ status });
+    const j = customer.toJSON();
+    delete j.password_hash;
+    return j;
   }
 }
 

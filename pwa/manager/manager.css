@@ -932,3 +932,43 @@
   width: 36px; height: 36px; border-radius: 9px; object-fit: cover;
   vertical-align: middle; margin-right: 0.6rem; border: 1px solid var(--border-subtle);
 }
+
+/* ============================================
+   CLIENTS (gestion manager)
+   ============================================ */
+.cust-stats { display: flex; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
+.cstat {
+  background: var(--surface, #fff); border: 1px solid var(--border, #eee);
+  border-radius: 12px; padding: 14px 20px; min-width: 120px;
+  display: flex; flex-direction: column;
+}
+.cstat-v { font-size: 1.6rem; font-weight: 800; color: var(--text, #1f1b16); }
+.cstat-k { font-size: .8rem; color: var(--text-light, #888); }
+.cust-search { margin-bottom: 14px; }
+.cust-search input {
+  width: 100%; padding: 11px 14px; border: 1px solid var(--border, #ddd);
+  border-radius: 10px; font-size: .95rem; font-family: inherit;
+}
+.cust-table { width: 100%; border-collapse: collapse; background: var(--surface, #fff); border-radius: 12px; overflow: hidden; }
+.cust-table th, .cust-table td { padding: 12px 14px; text-align: left; font-size: .9rem; border-bottom: 1px solid var(--border, #f0f0f0); }
+.cust-table th { background: var(--bg-subtle, #faf7f2); font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; color: var(--text-light, #888); }
+.cust-table tr.cust-blocked { opacity: .6; }
+.cust-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.cust-order-row { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border, #f0f0f0); font-size: .88rem; }
+.temp-pass {
+  font-size: 1.5rem; font-weight: 800; letter-spacing: .12em; text-align: center;
+  background: var(--bg-subtle, #faf7f2); border: 1px dashed var(--primary, #C62828);
+  color: var(--primary, #C62828); border-radius: 10px; padding: 14px; margin: 12px 0;
+}
+@media (max-width: 720px) {
+  .cust-table thead { display: none; }
+  .cust-table, .cust-table tbody, .cust-table tr, .cust-table td { display: block; width: 100%; }
+  .cust-table tr { margin-bottom: 12px; border: 1px solid var(--border, #eee); border-radius: 10px; padding: 6px; }
+  .cust-table td { border: none; padding: 6px 10px; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+  .cust-table td::before {
+    content: attr(data-label); font-size: .72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .03em; color: var(--text-light, #999);
+  }
+  .cust-table td.cust-actions { justify-content: flex-end; flex-wrap: wrap; }
+  .cust-table td.cust-actions::before { display: none; }
+}

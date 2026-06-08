@@ -27,6 +27,7 @@
                 <a href="#products" class="nav-link" data-page="products" onclick="navigateTo('products')">PRODUITS</a>
                 <a href="#users" class="nav-link" data-page="users" onclick="navigateTo('users')">EQUIPE</a>
                 <a href="#vouchers" class="nav-link" data-page="vouchers" onclick="navigateTo('vouchers')">CODES PROMO</a>
+                <a href="#customers" class="nav-link" data-page="customers" onclick="navigateTo('customers')">CLIENTS</a>
             </nav>
             <div class="header-actions">
                 <span class="user-name" id="user-name"></span>
@@ -228,6 +229,20 @@
 
             <div class="vouchers-list" id="vouchers-list">
                 <div class="loading">Chargement des codes promo...</div>
+            </div>
+        </div>
+
+        <!-- Page: Clients -->
+        <div id="page-customers" class="page">
+            <div class="page-header">
+                <h1>Clients</h1>
+            </div>
+            <div class="cust-stats" id="customers-stats"></div>
+            <div class="cust-search">
+                <input type="text" id="customers-search" placeholder="Rechercher un client (nom, téléphone, email)…" oninput="searchCustomers(this.value)">
+            </div>
+            <div class="customers-list" id="customers-list">
+                <div class="loading">Chargement des clients...</div>
             </div>
         </div>
     </div>

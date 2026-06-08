@@ -53,6 +53,7 @@ class CustomerService {
     }
 
     if (!customer) throw new Error('Identifiants incorrects');
+    if (customer.status === 'blocked') throw new Error('Votre compte a été bloqué. Contactez le restaurant.');
 
     const valid = await customer.comparePassword(password);
     if (!valid) throw new Error('Identifiants incorrects');
@@ -80,6 +81,20 @@ class CustomerService {
     const result = customer.toJSON();
     delete result.password_hash;
     return result;
+  }
+
+  async changePassword(customerId, currentPassword, newPassword) {
+    const customer = await Customer.findByPk(customerId);
+    if (!customer) throw new Error('Client non trouvé');
+    if (customer.password_hash) {
+      const valid = await customer.comparePassword(currentPassword || '');
+      if (!valid) throw new Error('Mot de passe actuel incorrect');
+    }
+    if (!newPassword || `${newPassword}`.length < 6) {
+      throw new Error('Le nouveau mot de passe doit contenir au moins 6 caractères');
+    }
+    await customer.update({ password_hash: newPassword });
+    return true;
   }
 
   async getOrders(customerId, restaurantId) {

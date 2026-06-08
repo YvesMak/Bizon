@@ -951,6 +951,28 @@ document.getElementById('form-profile').addEventListener('submit', async (e) => 
   }
 });
 
+document.getElementById('form-password').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('btn-change-pwd');
+  const cur = document.getElementById('pwd-current').value;
+  const nw = document.getElementById('pwd-new').value;
+  if (!nw || nw.length < 6) { showToast(t('pwd.tooShort'), 'error'); return; }
+  btn.disabled = true;
+  try {
+    await apiCall('/customers/me/password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword: cur, newPassword: nw })
+    });
+    document.getElementById('pwd-current').value = '';
+    document.getElementById('pwd-new').value = '';
+    showToast(t('pwd.success'), 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 document.getElementById('btn-checkout').addEventListener('click', async () => {
   if (!state.token) {
     closeCart();
