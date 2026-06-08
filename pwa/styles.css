@@ -159,8 +159,15 @@ body {
 .main-nav {
   display: flex;
   gap: 0.25rem;
-  flex: 1;
+  flex: 1 1 auto;
+  /* Évite tout clipping des dernières entrées sur écrans moyens (tablette /
+     petit laptop) : la nav défile horizontalement au lieu de couper. */
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+
+.main-nav::-webkit-scrollbar { display: none; }
 
 .nav-link {
   text-decoration: none;
@@ -173,6 +180,7 @@ body {
   border-radius: var(--radius-md);
   transition: all var(--dur) var(--ease);
   position: relative;
+  white-space: nowrap;
 }
 
 .nav-link:hover {
@@ -190,6 +198,7 @@ body {
   display: flex;
   gap: 0.75rem;
   align-items: center;
+  flex-shrink: 0;
 }
 
 /* ============================================
@@ -261,6 +270,21 @@ body {
   background: rgba(255,255,255,0.10);
   border-color: rgba(255,255,255,0.35);
   color: var(--text-inverse);
+}
+
+/* Dans le contenu des pages (fond clair), le style clair-sur-transparent du
+   header devient illisible : on bascule sur la variante lisible. Le header
+   foncé (ex. « Déconnexion ») conserve le style d'origine. */
+.page .btn-secondary {
+  background: var(--bg-surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.page .btn-secondary:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 /* Variante light (sur fond crème) */
