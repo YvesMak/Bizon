@@ -638,8 +638,50 @@ function openOrderDetail(orderId) {
       <div class="od-row"><span>${t('cart.subtotal')}</span><span>${subtotal.toLocaleString(dateLocale())} FCFA</span></div>
       ${discount > 0 ? `<div class="od-row" style="color:var(--success)"><span>${t('cart.discount')}</span><span>-${discount.toLocaleString(dateLocale())} FCFA</span></div>` : ''}
       <div class="od-row od-total"><span>${t('cart.total')}</span><span>${Number(order.total_amount).toLocaleString(dateLocale())} FCFA</span></div>
+    </div>
+    <div class="od-actions">
+      ${['draft', 'confirmed'].includes(order.status) ? `<button class="od-btn od-cancel" onclick="cancelMyOrder('${order.id}')">${t('order.cancel')}</button>` : ''}
+      ${(order.items && order.items.length) ? `<button class="od-btn od-reorder" onclick="reorder('${order.id}')">${t('order.reorder')}</button>` : ''}
     </div>`;
   document.getElementById('order-detail-sheet').classList.add('open');
+}
+
+async function cancelMyOrder(orderId) {
+  if (!confirm(t('order.cancelConfirm'))) return;
+  try {
+    const r = await apiCall(`/customers/orders/${orderId}/cancel`, { method: 'POST' });
+    closeOrderDetail();
+    showToast(r.refund_pending ? t('order.cancelledRefund') : t('order.cancelled'), 'success', 5000);
+    loadOrders();
+    loadActiveOrder();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// Re-commande : remplit le panier avec les articles encore disponibles.
+function reorder(orderId) {
+  const order = (state.orders || []).find(o => o.id === orderId);
+  if (!order || !order.items) return;
+  let added = 0; let skipped = 0;
+  for (const it of order.items) {
+    const product = (state.allProducts || []).find(p => p.id === it.product_id);
+    if (product && product.is_available) {
+      const existing = state.cart.find(c => c.id === product.id);
+      if (existing) existing.quantity += it.quantity;
+      else state.cart.push({ id: product.id, name: product.name, price: product.price, image: product.image_url, quantity: it.quantity });
+      added++;
+    } else { skipped++; }
+  }
+  saveCart();
+  updateCartBadge();
+  closeOrderDetail();
+  if (added) {
+    showToast(skipped ? t('order.reorderPartial') : t('order.reorderDone'), 'success');
+    openCart();
+  } else {
+    showToast(t('order.reorderNone'), 'error');
+  }
 }
 
 function closeOrderDetail() {

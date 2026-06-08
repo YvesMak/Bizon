@@ -670,6 +670,56 @@ class OrderService {
   }
 
   /**
+   * Annulation par le CLIENT lui-même : autorisée tant que la commande n'est
+   * pas en préparation (statuts draft ou confirmed). Restaure le stock si la
+   * commande était confirmée. Si elle était payée, signale un remboursement dû.
+   */
+  async cancelByCustomer(restaurantId, customerId, orderId) {
+    const transaction = await sequelize.transaction();
+    try {
+      const order = await Order.findOne({
+        where: { id: orderId, restaurant_id: restaurantId, customer_id: customerId },
+        include: [{ model: OrderItem, as: 'items' }],
+        transaction
+      });
+      if (!order) throw new Error('Commande non trouvée');
+      if (!['draft', 'confirmed'].includes(order.status)) {
+        throw new Error('Cette commande ne peut plus être annulée (déjà en préparation).');
+      }
+
+      // Restauration du stock si la commande avait été confirmée (stock décrémenté).
+      if (order.status === 'confirmed') {
+        for (const item of order.items) {
+          const product = await Product.findByPk(item.product_id, { transaction });
+          if (product && product.track_stock) {
+            await product.update({ stock_quantity: product.stock_quantity + item.quantity }, { transaction });
+          }
+        }
+      }
+
+      const paid = await Payment.findOne({
+        where: { order_id: orderId, restaurant_id: restaurantId, status: 'completed' },
+        transaction
+      });
+
+      await order.update({ status: 'cancelled' }, { transaction });
+      await transaction.commit();
+
+      return {
+        id: order.id,
+        restaurant_id: restaurantId,
+        customer_id: order.customer_id,
+        order_number: order.order_number,
+        status: 'cancelled',
+        refund_pending: Boolean(paid)
+      };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  }
+
+  /**
    * =================================================================
    * NETTOYAGE : EXPIRATION DES COMMANDES CLIENT NON PAYÉES
    * =================================================================

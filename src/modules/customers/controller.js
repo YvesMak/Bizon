@@ -168,6 +168,17 @@ class CustomerController {
     }
   }
 
+  async cancelOrder(req, res) {
+    try {
+      const result = await OrderService.cancelByCustomer(req.restaurantId, req.customerId, req.params.id);
+      // Notifier les écrans staff que la commande est annulée
+      sse.emit(req.restaurantId, 'order_status_changed', { orderId: result.id, status: 'cancelled' });
+      res.json({ message: 'Commande annulée', ...result });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
   async changePassword(req, res) {
     try {
       const { currentPassword, newPassword } = req.body;
