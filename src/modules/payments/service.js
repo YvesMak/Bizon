@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const { Payment, Order, OrderItem } = require('../../models');
 const InvoiceService = require('../invoices/service');
 const OrderService = require('../orders/service');
@@ -521,6 +522,42 @@ class PaymentService {
       return payment;
     }
     return payment; // toujours pending
+  }
+
+  /**
+   * Rapport de caisse (Z) : encaissements complétés du jour, par mode de paiement.
+   */
+  async cashReport(restaurantId, dateStr) {
+    const day = dateStr ? new Date(dateStr) : new Date();
+    if (Number.isNaN(day.getTime())) throw new Error('Date invalide');
+    const start = new Date(day); start.setHours(0, 0, 0, 0);
+    const end = new Date(day); end.setHours(23, 59, 59, 999);
+
+    const rows = await Payment.findAll({
+      where: {
+        restaurant_id: restaurantId,
+        status: 'completed',
+        verified_at: { [Op.between]: [start, end] }
+      },
+      attributes: [
+        'method',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+        [sequelize.fn('SUM', sequelize.col('amount')), 'total']
+      ],
+      group: ['method'],
+      raw: true
+    });
+
+    const byMethod = rows.map((r) => ({
+      method: r.method,
+      count: parseInt(r.count, 10),
+      total: Math.round(parseFloat(r.total))
+    }));
+    const total = byMethod.reduce((s, r) => s + r.total, 0);
+    const count = byMethod.reduce((s, r) => s + r.count, 0);
+    // Libellé de date en composantes locales (cohérent avec le sélecteur).
+    const ymd = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
+    return { date: ymd, total, count, by_method: byMethod };
   }
 
   /**
