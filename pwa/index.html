@@ -502,6 +502,12 @@
     .od-row { display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--text-muted); padding: 0.25rem 0; }
     .od-total { font-size: 1.0625rem; font-weight: 700; color: var(--text); border-top: 1px solid var(--border-subtle); margin-top: 0.5rem; padding-top: 0.75rem; }
     .od-total span:last-child { color: var(--primary); }
+    .od-actions { display: flex; gap: 0.625rem; margin-top: 1.25rem; }
+    .od-btn { flex: 1; padding: 0.875rem; border-radius: 12px; font-family: inherit; font-weight: 700; font-size: 0.95rem; cursor: pointer; border: none; transition: 0.15s; }
+    .od-reorder { background: var(--primary); color: #fff; }
+    .od-reorder:hover { background: var(--primary-hover, #A01E1E); }
+    .od-cancel { background: transparent; color: var(--error, #C62828); border: 1.5px solid var(--border); }
+    .od-cancel:hover { background: var(--bg-subtle); }
 
     /* ---- Loyalty ---- */
     .loyalty-card {
