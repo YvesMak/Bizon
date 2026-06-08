@@ -168,6 +168,16 @@ class CustomerController {
     }
   }
 
+  async changePassword(req, res) {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      await CustomerService.changePassword(req.customerId, currentPassword, newPassword);
+      res.json({ message: 'Mot de passe modifié' });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
   // ----- Statut de paiement (Mobile Money / Campay) -----
   async getPaymentStatus(req, res) {
     try {

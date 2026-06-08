@@ -12,7 +12,8 @@ const Customer = sequelize.define('Customer', {
   address: { type: DataTypes.TEXT, allowNull: true },
   notes: { type: DataTypes.TEXT, allowNull: true },
   password_hash: { type: DataTypes.STRING, allowNull: true },
-  loyalty_points: { type: DataTypes.INTEGER, defaultValue: 0 }
+  loyalty_points: { type: DataTypes.INTEGER, defaultValue: 0 },
+  status: { type: DataTypes.ENUM('active', 'blocked'), allowNull: false, defaultValue: 'active' }
 }, {
   tableName: 'customers',
   timestamps: true,

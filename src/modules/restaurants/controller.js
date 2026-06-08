@@ -122,6 +122,47 @@ class RestaurantController {
       res.status(400).json({ error: error.message });
     }
   }
+
+  // ----- Gestion des clients (manager) -----
+
+  async getCustomers(req, res) {
+    try {
+      const [customers, stats] = await Promise.all([
+        RestaurantService.listCustomers(req.restaurantId, { q: req.query.q }),
+        RestaurantService.getCustomerStats(req.restaurantId)
+      ]);
+      res.json({ customers, stats });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async getCustomerDetail(req, res) {
+    try {
+      const result = await RestaurantService.getCustomerDetail(req.restaurantId, req.params.customerId);
+      res.json(result);
+    } catch (error) {
+      res.status(404).json({ error: error.message });
+    }
+  }
+
+  async resetCustomerPassword(req, res) {
+    try {
+      const { tempPassword } = await RestaurantService.resetCustomerPassword(req.restaurantId, req.params.customerId);
+      res.json({ message: 'Mot de passe réinitialisé', tempPassword });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  async setCustomerStatus(req, res) {
+    try {
+      const customer = await RestaurantService.setCustomerStatus(req.restaurantId, req.params.customerId, req.body.status);
+      res.json({ message: 'Statut du client mis à jour', customer });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
 }
 
 module.exports = new RestaurantController();

@@ -142,6 +142,7 @@ function navigateTo(page) {
         case 'products': loadProducts(); break;
         case 'users': loadUsers(); break;
         case 'vouchers': loadVouchers(); break;
+        case 'customers': loadCustomers(); break;
     }
 }
 
@@ -1231,3 +1232,121 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 30000);
 });
+
+// ============================================
+// CLIENTS (gestion par le manager)
+// ============================================
+let customersSearchTimer = null;
+
+function fmtFcfa(n) { return `${Number(n || 0).toLocaleString('fr-FR')} FCFA`; }
+
+async function loadCustomers(q) {
+  const list = document.getElementById('customers-list');
+  const statsEl = document.getElementById('customers-stats');
+  if (!q) list.innerHTML = '<div class="loading">Chargement des clients...</div>';
+  try {
+    const data = await apiCall(`/restaurants/customers${q ? `?q=${encodeURIComponent(q)}` : ''}`);
+    if (!data) return;
+    mgrState.customers = data.customers || [];
+    if (statsEl && data.stats) {
+      statsEl.innerHTML = `
+        <div class="cstat"><span class="cstat-v">${data.stats.total}</span><span class="cstat-k">Clients</span></div>
+        <div class="cstat"><span class="cstat-v">${data.stats.new_this_week}</span><span class="cstat-k">Nouveaux (7j)</span></div>
+        <div class="cstat"><span class="cstat-v">${data.stats.blocked}</span><span class="cstat-k">Bloqués</span></div>`;
+    }
+    renderCustomersList(mgrState.customers);
+  } catch (e) {
+    list.innerHTML = `<div class="empty-state"><p>Erreur de chargement</p></div>`;
+  }
+}
+
+function searchCustomers(q) {
+  clearTimeout(customersSearchTimer);
+  customersSearchTimer = setTimeout(() => loadCustomers(q), 300);
+}
+
+function renderCustomersList(customers) {
+  const list = document.getElementById('customers-list');
+  if (!customers.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-state-icon">👤</div><p>Aucun client</p></div>`;
+    return;
+  }
+  list.innerHTML = `
+    <table class="cust-table">
+      <thead><tr>
+        <th>Client</th><th>Téléphone</th><th>Commandes</th><th>Total</th>
+        <th>Points</th><th>Dernière visite</th><th>Statut</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${customers.map(c => `
+          <tr class="${c.status === 'blocked' ? 'cust-blocked' : ''}">
+            <td data-label="Client">
+              <strong>${escapeHtml(c.first_name)} ${escapeHtml(c.last_name)}</strong>
+              ${c.email ? `<br><small style="color:var(--text-light)">${escapeHtml(c.email)}</small>` : ''}
+            </td>
+            <td data-label="Téléphone">${escapeHtml(c.phone || '—')}</td>
+            <td data-label="Commandes">${c.orders_count}</td>
+            <td data-label="Total">${fmtFcfa(c.total_spent)}</td>
+            <td data-label="Points">${c.loyalty_points || 0}</td>
+            <td data-label="Dernière visite">${c.last_order_at ? formatDate(c.last_order_at) : '—'}</td>
+            <td data-label="Statut"><span class="user-status ${c.status === 'active' ? 'status-active' : 'status-inactive'}">${c.status === 'active' ? 'Actif' : 'Bloqué'}</span></td>
+            <td class="cust-actions">
+              <button class="btn-secondary btn-xs" onclick="viewCustomerDetail('${c.id}')">Détail</button>
+              <button class="btn-secondary btn-xs" onclick="resetCustomerPwd('${c.id}')">Reset MDP</button>
+              <button class="btn-secondary btn-xs" onclick="toggleCustomerBlock('${c.id}','${c.status}')">${c.status === 'active' ? 'Bloquer' : 'Réactiver'}</button>
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function viewCustomerDetail(id) {
+  try {
+    const data = await apiCall(`/restaurants/customers/${id}`);
+    if (!data) return;
+    const c = data.customer;
+    const orders = data.orders || [];
+    const ordersHtml = orders.length ? orders.map(o => `
+      <div class="cust-order-row">
+        <span>${escapeHtml(o.order_number || o.id)}</span>
+        <span>${formatDate(o.createdAt || o.created_at)}</span>
+        <span class="oh-status">${escapeHtml(o.status)}</span>
+        <span>${fmtFcfa(o.total_amount)}</span>
+      </div>`).join('') : '<p style="color:var(--text-light)">Aucune commande</p>';
+    showFormModal(`${escapeHtml(c.first_name)} ${escapeHtml(c.last_name)}`, `
+      <div class="cust-detail">
+        <p><strong>Téléphone :</strong> ${escapeHtml(c.phone || '—')}</p>
+        <p><strong>Email :</strong> ${escapeHtml(c.email || '—')}</p>
+        <p><strong>Adresse :</strong> ${escapeHtml(c.address || '—')}</p>
+        <p><strong>Points fidélité :</strong> ${c.loyalty_points || 0}</p>
+        <p><strong>Statut :</strong> ${c.status === 'active' ? 'Actif' : 'Bloqué'}</p>
+        <h4 style="margin:1rem 0 .5rem">Dernières commandes</h4>
+        ${ordersHtml}
+      </div>`);
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function resetCustomerPwd(id) {
+  showModal('Réinitialiser le mot de passe', 'Générer un nouveau mot de passe temporaire pour ce client ?', async () => {
+    try {
+      const r = await apiCall(`/restaurants/customers/${id}/reset-password`, { method: 'POST' });
+      if (!r) return;
+      showFormModal('Mot de passe temporaire', `
+        <p>Communiquez ce mot de passe au client :</p>
+        <div class="temp-pass">${escapeHtml(r.tempPassword)}</div>
+        <p style="color:var(--text-light);font-size:.85rem">Il pourra le changer depuis son profil après connexion.</p>`);
+    } catch (e) { showToast(e.message, 'error'); }
+  });
+}
+
+async function toggleCustomerBlock(id, status) {
+  const next = status === 'active' ? 'blocked' : 'active';
+  try {
+    const r = await apiCall(`/restaurants/customers/${id}/status`, {
+      method: 'PATCH', body: JSON.stringify({ status: next })
+    });
+    if (!r) return;
+    showToast(next === 'blocked' ? 'Client bloqué' : 'Client réactivé', 'success');
+    loadCustomers(document.getElementById('customers-search').value);
+  } catch (e) { showToast(e.message, 'error'); }
+}
