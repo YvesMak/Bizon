@@ -128,10 +128,21 @@ class RestaurantController {
   async getCustomers(req, res) {
     try {
       const [customers, stats] = await Promise.all([
-        RestaurantService.listCustomers(req.restaurantId, { q: req.query.q }),
+        RestaurantService.listCustomers(req.restaurantId, { q: req.query.q, segment: req.query.segment }),
         RestaurantService.getCustomerStats(req.restaurantId)
       ]);
       res.json({ customers, stats });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async exportCustomers(req, res) {
+    try {
+      const csv = await RestaurantService.exportCustomersCsv(req.restaurantId, { q: req.query.q, segment: req.query.segment });
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="clients-bizon-${new Date().toISOString().slice(0, 10)}.csv"`);
+      res.send(csv);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

@@ -321,7 +321,7 @@ class RestaurantService {
    * Liste des clients du restaurant + agrégats (commandes réalisées, total
    * dépensé, dernière visite). Recherche optionnelle sur nom/téléphone/email.
    */
-  async listCustomers(restaurantId, { q } = {}) {
+  async listCustomers(restaurantId, { q, segment } = {}) {
     const where = { restaurant_id: restaurantId };
     if (q && q.trim()) {
       const like = { [Op.iLike]: `%${q.trim()}%` };
@@ -348,7 +348,7 @@ class RestaurantService {
     });
     const byCustomer = agg.reduce((acc, a) => { acc[a.customer_id] = a; return acc; }, {});
 
-    return customers.map((c) => {
+    let rows = customers.map((c) => {
       const j = c.toJSON();
       const a = byCustomer[c.id];
       return {
@@ -358,6 +358,44 @@ class RestaurantService {
         last_order_at: a ? a.last_order_at : null
       };
     });
+
+    // Segments : top clients (plus gros dépensiers) / inactifs (>30 j sans commande).
+    if (segment === 'top') {
+      rows = rows.filter((r) => r.total_spent > 0)
+        .sort((x, y) => y.total_spent - x.total_spent)
+        .slice(0, 50);
+    } else if (segment === 'inactive') {
+      const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      rows = rows.filter((r) => !r.last_order_at || new Date(r.last_order_at).getTime() < cutoff)
+        .sort((x, y) => {
+          const tx = x.last_order_at ? new Date(x.last_order_at).getTime() : 0;
+          const ty = y.last_order_at ? new Date(y.last_order_at).getTime() : 0;
+          return tx - ty; // les plus anciens d'abord
+        });
+    }
+    return rows;
+  }
+
+  /** Génère un CSV des clients (mêmes filtres que la liste). */
+  async exportCustomersCsv(restaurantId, opts = {}) {
+    const rows = await this.listCustomers(restaurantId, opts);
+    const headers = ['Prénom', 'Nom', 'Téléphone', 'Email', 'Commandes', 'Total dépensé (FCFA)', 'Points', 'Dernière visite', 'Statut', 'Inscrit le'];
+    const esc = (v) => {
+      const s = v == null ? '' : String(v);
+      return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const fmtDate = (d) => (d ? new Date(d).toISOString().slice(0, 10) : '');
+    const lines = [headers.join(';')];
+    for (const c of rows) {
+      lines.push([
+        esc(c.first_name), esc(c.last_name), esc(c.phone), esc(c.email),
+        c.orders_count, c.total_spent, c.loyalty_points || 0,
+        fmtDate(c.last_order_at), c.status === 'blocked' ? 'Bloqué' : 'Actif',
+        fmtDate(c.created_at || c.createdAt)
+      ].join(';'));
+    }
+    // BOM UTF-8 pour qu'Excel ouvre correctement les accents.
+    return `﻿${lines.join('\n')}`;
   }
 
   /** Statistiques clients globales du restaurant. */
