@@ -235,6 +235,7 @@ async function submitForm() {
 // ============================================
 
 async function loadDashboard() {
+    loadDeliverySettings();
     try {
         const stats = await apiCall('/restaurants/stats');
         if (!stats) return;
@@ -1410,4 +1411,32 @@ async function exportCustomersCsv() {
     URL.revokeObjectURL(url);
     showToast('Export téléchargé', 'success');
   } catch (e) { showToast(e.message, 'error'); }
+}
+
+// ============================================
+// RÉGLAGES LIVRAISON
+// ============================================
+async function loadDeliverySettings() {
+    try {
+        const resto = await apiCall('/restaurants');
+        if (!resto) return;
+        const s = resto.settings || {};
+        const feeEl = document.getElementById('set-delivery-fee');
+        const minEl = document.getElementById('set-min-order');
+        if (feeEl) feeEl.value = s.delivery_fee || 0;
+        if (minEl) minEl.value = s.min_delivery_order || 0;
+    } catch (e) { /* silencieux */ }
+}
+
+async function saveDeliverySettings() {
+    const fee = parseInt(document.getElementById('set-delivery-fee').value, 10) || 0;
+    const min = parseInt(document.getElementById('set-min-order').value, 10) || 0;
+    try {
+        const r = await apiCall('/restaurants', {
+            method: 'PUT',
+            body: JSON.stringify({ settings: { delivery_fee: fee, min_delivery_order: min } })
+        });
+        if (!r) return;
+        showToast('Réglages livraison enregistrés', 'success');
+    } catch (e) { showToast(e.message, 'error'); }
 }

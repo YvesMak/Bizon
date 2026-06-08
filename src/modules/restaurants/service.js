@@ -42,14 +42,12 @@ class RestaurantService {
     }
 
     const { name, address, phone, email, logo_url, settings } = data;
-    await restaurant.update({
-      name,
-      address,
-      phone,
-      email,
-      logo_url,
-      settings
-    });
+    const patch = { name, address, phone, email, logo_url };
+    // Fusionner les settings (ne pas écraser service_types, etc.).
+    if (settings && typeof settings === 'object') {
+      patch.settings = { ...(restaurant.settings || {}), ...settings };
+    }
+    await restaurant.update(patch);
 
     return restaurant;
   }

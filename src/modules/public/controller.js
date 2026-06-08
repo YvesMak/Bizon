@@ -35,7 +35,9 @@ class PublicController {
         phone: restaurantRow.phone,
         service_types: Array.isArray(restaurantRow.settings?.service_types) && restaurantRow.settings.service_types.length
           ? restaurantRow.settings.service_types
-          : ['dine_in', 'takeaway', 'delivery']
+          : ['dine_in', 'takeaway', 'delivery'],
+        delivery_fee: Number(restaurantRow.settings?.delivery_fee) || 0,
+        min_delivery_order: Number(restaurantRow.settings?.min_delivery_order) || 0
       } : null;
 
       const menus = await Menu.findAll({

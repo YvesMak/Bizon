@@ -979,3 +979,13 @@
 .loyalty-adjust input[type=number] { width: 110px; }
 .loyalty-adjust input { padding: 8px 10px; border: 1px solid var(--border, #ddd); border-radius: 8px; font-family: inherit; }
 .loyalty-adjust input[type=text] { flex: 1; min-width: 120px; }
+
+/* Réglages livraison (dashboard) */
+.delivery-settings {
+    background: var(--bg-surface, #fff); border: 1.5px solid var(--border, #eee);
+    border-radius: 16px; padding: 1.5rem; margin-top: 1.5rem; max-width: 640px;
+}
+.delivery-settings h3 { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; }
+.delivery-fields { display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; }
+.delivery-fields .form-group { flex: 1; min-width: 160px; }
+.delivery-fields input { width: 100%; padding: 9px 12px; border: 1px solid var(--border, #ddd); border-radius: 8px; font-family: inherit; }

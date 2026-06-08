@@ -71,6 +71,10 @@ const Order = sequelize.define('Order', {
     type: DataTypes.DECIMAL(10, 2),
     defaultValue: 0
   },
+  delivery_fee: {
+    type: DataTypes.DECIMAL(10, 2),
+    defaultValue: 0
+  },
   total_amount: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,

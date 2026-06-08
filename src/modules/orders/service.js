@@ -434,7 +434,17 @@ class OrderService {
       const discountedSubtotal = subtotal - discount;
       // Pas de TVA ajoutée au montant à payer
       const taxAmount = 0;
-      const totalAmount = discountedSubtotal;
+
+      // Livraison : minimum de commande + frais (réglés par le restaurant).
+      let deliveryFee = 0;
+      if (type === 'delivery') {
+        const minOrder = Number(restaurant.settings?.min_delivery_order) || 0;
+        if (minOrder > 0 && discountedSubtotal < minOrder) {
+          throw new Error(`Minimum de commande pour la livraison : ${minOrder} FCFA`);
+        }
+        deliveryFee = Number(restaurant.settings?.delivery_fee) || 0;
+      }
+      const totalAmount = discountedSubtotal + deliveryFee;
 
       const order = await Order.create({
         restaurant_id: restaurantId,
@@ -449,6 +459,7 @@ class OrderService {
         subtotal,
         tax_amount: taxAmount,
         discount_amount: discount,
+        delivery_fee: deliveryFee,
         total_amount: totalAmount,
         notes
       }, { transaction });
@@ -471,6 +482,7 @@ class OrderService {
         table_number: order.table_number,
         subtotal,
         discount_amount: discount,
+        delivery_fee: deliveryFee,
         total_amount: totalAmount,
         created_at: order.created_at
       };
