@@ -68,6 +68,53 @@ class ProductController {
       res.status(400).json({ error: error.message });
     }
   }
+
+  // ----- Options / variantes -----
+
+  async getOptionGroups(req, res) {
+    try {
+      const groups = await ProductService.listOptionGroups(req.restaurantId, req.params.productId);
+      res.json(groups);
+    } catch (error) {
+      res.status(404).json({ error: error.message });
+    }
+  }
+
+  async createOptionGroup(req, res) {
+    try {
+      const group = await ProductService.createOptionGroup(req.restaurantId, req.params.productId, req.body);
+      res.status(201).json(group);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  async deleteOptionGroup(req, res) {
+    try {
+      await ProductService.deleteOptionGroup(req.restaurantId, req.params.groupId);
+      res.json({ message: 'Groupe supprimé' });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  async createOption(req, res) {
+    try {
+      const option = await ProductService.createOption(req.restaurantId, req.params.groupId, req.body);
+      res.status(201).json(option);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  async deleteOption(req, res) {
+    try {
+      await ProductService.deleteOption(req.restaurantId, req.params.optionId);
+      res.json({ message: 'Option supprimée' });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
 }
 
 module.exports = new ProductController();

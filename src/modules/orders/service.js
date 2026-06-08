@@ -1,4 +1,4 @@
-const { Order, OrderItem, Product, Customer, Payment, Restaurant } = require('../../models');
+const { Order, OrderItem, Product, Customer, Payment, Restaurant, OptionGroup, ProductOption } = require('../../models');
 const { sequelize } = require('../../config/database');
 const { Op } = require('sequelize');
 const ProductService = require('../products/service');
@@ -363,6 +363,45 @@ class OrderService {
    * Créée en DRAFT, stock NON engagé : il le sera au règlement du paiement.
    * Types supportés : dine_in (table), takeaway, delivery (adresse).
    */
+  /**
+   * Valide les options sélectionnées pour un produit et calcule le delta de prix.
+   * @param product produit avec optionGroups → options
+   * @param selectedIds tableau d'ids d'options choisies
+   * @returns {{ delta:number, snapshot:Array }}
+   */
+  _validateAndPriceOptions(product, selectedIds) {
+    const groups = product.optionGroups || [];
+    const selected = Array.isArray(selectedIds) ? selectedIds.map(String) : [];
+
+    // Index option_id → { option, group }
+    const optIndex = {};
+    for (const g of groups) {
+      for (const o of (g.options || [])) optIndex[String(o.id)] = { option: o, group: g };
+    }
+
+    // Toutes les options choisies doivent appartenir à ce produit.
+    for (const id of selected) {
+      if (!optIndex[id]) throw new Error('Option invalide pour ce produit');
+    }
+
+    let delta = 0;
+    const snapshot = [];
+    for (const g of groups) {
+      const chosen = (g.options || []).filter((o) => selected.includes(String(o.id)));
+      if (g.type === 'single') {
+        if (chosen.length > 1) throw new Error(`Une seule option possible pour « ${g.name} »`);
+        if (g.required && chosen.length !== 1) throw new Error(`Choisissez une option pour « ${g.name} »`);
+      } else { // multiple
+        if (g.required && chosen.length < 1) throw new Error(`Choisissez au moins une option pour « ${g.name} »`);
+      }
+      for (const o of chosen) {
+        delta += parseFloat(o.price_delta) || 0;
+        snapshot.push({ id: o.id, group: g.name, name: o.name, price_delta: Number(o.price_delta) || 0 });
+      }
+    }
+    return { delta, snapshot };
+  }
+
   async createForCustomer(restaurantId, customerId, data) {
     const transaction = await sequelize.transaction();
     try {
@@ -404,19 +443,26 @@ class OrderService {
       const validatedItems = [];
       for (const item of items) {
         const product = await Product.findOne({
-          where: { id: item.product_id, restaurant_id: restaurantId }, transaction
+          where: { id: item.product_id, restaurant_id: restaurantId },
+          include: [{ model: OptionGroup, as: 'optionGroups', include: [{ model: ProductOption, as: 'options' }] }],
+          transaction
         });
         if (!product) throw new Error(`Produit ${item.product_id} non trouvé`);
         if (!product.is_available) throw new Error(`Le produit "${product.name}" n'est pas disponible`);
         if (product.track_stock && product.stock_quantity < item.quantity) {
           throw new Error(`Stock insuffisant pour "${product.name}"`);
         }
-        const itemSubtotal = parseFloat(product.price) * item.quantity;
+
+        // Options/variantes : validation + delta de prix
+        const { delta, snapshot } = this._validateAndPriceOptions(product, item.options);
+        const unitPrice = parseFloat(product.price) + delta;
+        const itemSubtotal = unitPrice * item.quantity;
         subtotal += itemSubtotal;
         validatedItems.push({
           product_id: product.id, product_name: product.name,
-          quantity: item.quantity, unit_price: product.price,
-          subtotal: itemSubtotal, notes: item.notes
+          quantity: item.quantity, unit_price: unitPrice,
+          subtotal: itemSubtotal, notes: item.notes,
+          options: snapshot.length ? snapshot : null
         });
       }
 

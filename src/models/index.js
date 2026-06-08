@@ -13,6 +13,8 @@ const LoyaltyTransaction = require('./LoyaltyTransaction');
 const Voucher = require('./Voucher');
 const PlatformAdmin = require('./PlatformAdmin');
 const PushSubscription = require('./PushSubscription');
+const OptionGroup = require('./OptionGroup');
+const ProductOption = require('./ProductOption');
 
 // Définition des relations
 const initModels = () => {
@@ -52,6 +54,12 @@ const initModels = () => {
   Product.belongsTo(Restaurant, { foreignKey: 'restaurant_id', as: 'restaurant' });
   Product.belongsTo(Category, { foreignKey: 'category_id', as: 'category' });
   Product.hasMany(OrderItem, { foreignKey: 'product_id', as: 'orderItems' });
+
+  // Options / variantes
+  Product.hasMany(OptionGroup, { foreignKey: 'product_id', as: 'optionGroups', onDelete: 'CASCADE' });
+  OptionGroup.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
+  OptionGroup.hasMany(ProductOption, { foreignKey: 'group_id', as: 'options', onDelete: 'CASCADE' });
+  ProductOption.belongsTo(OptionGroup, { foreignKey: 'group_id', as: 'group' });
 
   // Order relations
   Order.belongsTo(Restaurant, { foreignKey: 'restaurant_id', as: 'restaurant' });
@@ -114,5 +122,7 @@ module.exports = {
   Voucher,
   PlatformAdmin,
   PushSubscription,
+  OptionGroup,
+  ProductOption,
   initModels
 };

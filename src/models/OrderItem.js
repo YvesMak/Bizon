@@ -46,6 +46,10 @@ const OrderItem = sequelize.define('OrderItem', {
   notes: {
     type: DataTypes.TEXT,
     allowNull: true
+  },
+  options: {
+    type: DataTypes.JSONB,
+    allowNull: true
   }
 }, {
   tableName: 'order_items',

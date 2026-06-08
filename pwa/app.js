@@ -325,14 +325,88 @@ function searchProducts(query) {
 // CART
 // ============================================
 
+function lineKeyFor(productId, optionIds) {
+  return `${productId}|${(optionIds || []).slice().sort().join(',')}`;
+}
+
 function addToCart(product) {
-  const existing = state.cart.find(i => i.id === product.id);
+  const groups = product.optionGroups || [];
+  if (groups.length) { openOptionSheet(product); return; }
+  pushToCart(product, [], [], Number(product.price));
+}
+
+// Ajoute (ou incrémente) une ligne panier, en distinguant les configurations d'options.
+function pushToCart(product, optionIds, optionsSnapshot, unitPrice) {
+  const key = lineKeyFor(product.id, optionIds);
+  const existing = state.cart.find(i => lineKeyFor(i.id, i.optionIds || []) === key);
   if (existing) existing.quantity++;
-  else state.cart.push({ id: product.id, name: product.name, price: product.price, image: product.image_url, quantity: 1 });
+  else state.cart.push({
+    id: product.id, lineKey: key, name: product.name, price: unitPrice,
+    image: product.image_url, quantity: 1,
+    optionIds: optionIds || [], options: optionsSnapshot || []
+  });
   resetVoucher();
   saveCart();
   updateCartBadge();
-  showToast(`${product.name} ajouté`, 'success');
+  showToast(`${product.name} ${t('cart.added')}`, 'success');
+}
+
+// ----- Feuille de sélection des options -----
+let optionProduct = null;
+
+function openOptionSheet(product) {
+  optionProduct = product;
+  const groups = product.optionGroups || [];
+  const body = document.getElementById('option-content');
+  body.innerHTML = `
+    <div class="opt-head"><h3>${product.name}</h3></div>
+    ${groups.map(g => `
+      <div class="opt-group" data-group="${g.id}" data-type="${g.type}" data-required="${g.required}">
+        <div class="opt-group-title">${g.name}${g.required ? ' <span class="opt-req">*</span>' : ''}</div>
+        ${(g.options || []).map(o => `
+          <label class="opt-row">
+            <input type="${g.type === 'single' ? 'radio' : 'checkbox'}" name="grp-${g.id}" value="${o.id}" onchange="recomputeOptionPrice()">
+            <span class="opt-name">${o.name}</span>
+            ${Number(o.price_delta) ? `<span class="opt-delta">+${Number(o.price_delta).toLocaleString('fr-FR')} FCFA</span>` : ''}
+          </label>`).join('')}
+      </div>`).join('')}`;
+  document.getElementById('opt-add-price').textContent = `${Number(product.price).toLocaleString('fr-FR')} FCFA`;
+  document.getElementById('option-sheet').classList.add('open');
+}
+
+function closeOptionSheet() {
+  document.getElementById('option-sheet').classList.remove('open');
+  optionProduct = null;
+}
+
+function collectSelectedOptions() {
+  const ids = []; const snapshot = []; let delta = 0; let valid = true;
+  document.querySelectorAll('#option-content .opt-group').forEach(groupEl => {
+    const checked = groupEl.querySelectorAll('input:checked');
+    if (groupEl.dataset.required === 'true' && checked.length < 1) valid = false;
+    checked.forEach(input => {
+      const id = input.value;
+      ids.push(id);
+      const opt = (optionProduct.optionGroups || [])
+        .flatMap(g => g.options || []).find(o => String(o.id) === String(id));
+      if (opt) { delta += Number(opt.price_delta) || 0; snapshot.push({ id: opt.id, name: opt.name, price_delta: Number(opt.price_delta) || 0 }); }
+    });
+  });
+  return { ids, snapshot, delta, valid };
+}
+
+function recomputeOptionPrice() {
+  if (!optionProduct) return;
+  const { delta } = collectSelectedOptions();
+  document.getElementById('opt-add-price').textContent = `${(Number(optionProduct.price) + delta).toLocaleString('fr-FR')} FCFA`;
+}
+
+function confirmOptions() {
+  if (!optionProduct) return;
+  const { ids, snapshot, delta, valid } = collectSelectedOptions();
+  if (!valid) { showToast(t('cart.optionRequired'), 'error'); return; }
+  pushToCart(optionProduct, ids, snapshot, Number(optionProduct.price) + delta);
+  closeOptionSheet();
 }
 
 function saveCart() { localStorage.setItem('bizon_cart', JSON.stringify(state.cart)); }
@@ -383,6 +457,7 @@ function renderCartPanel() {
       </div>
       <div class="cart-item-info">
         <div class="cart-item-name">${item.name}</div>
+        ${item.options && item.options.length ? `<div class="cart-item-opts">${item.options.map(o => o.name).join(', ')}</div>` : ''}
         <div class="cart-item-price">${Number(item.price).toLocaleString('fr-FR')} FCFA × ${item.quantity}</div>
       </div>
       <div class="cart-qty">
@@ -698,9 +773,16 @@ function reorder(orderId) {
   for (const it of order.items) {
     const product = (state.allProducts || []).find(p => p.id === it.product_id);
     if (product && product.is_available) {
-      const existing = state.cart.find(c => c.id === product.id);
+      const snapshot = Array.isArray(it.options) ? it.options : [];
+      const optionIds = snapshot.map(o => o.id);
+      const key = lineKeyFor(product.id, optionIds);
+      const existing = state.cart.find(c => lineKeyFor(c.id, c.optionIds || []) === key);
       if (existing) existing.quantity += it.quantity;
-      else state.cart.push({ id: product.id, name: product.name, price: product.price, image: product.image_url, quantity: it.quantity });
+      else state.cart.push({
+        id: product.id, lineKey: key, name: product.name,
+        price: Number(it.unit_price) || Number(product.price), image: product.image_url,
+        quantity: it.quantity, optionIds, options: snapshot
+      });
       added++;
     } else { skipped++; }
   }
@@ -1058,7 +1140,7 @@ document.getElementById('btn-checkout').addEventListener('click', async () => {
   // Construire le corps selon le type de commande
   const body = {
     type: state.orderType,
-    items: state.cart.map(i => ({ product_id: i.id, quantity: i.quantity }))
+    items: state.cart.map(i => ({ product_id: i.id, quantity: i.quantity, options: i.optionIds || [] }))
   };
   if (state.appliedVoucher) body.voucher_code = state.appliedVoucher.code;
   if (state.orderType === 'dine_in') {

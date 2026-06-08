@@ -503,6 +503,16 @@
     .od-total { font-size: 1.0625rem; font-weight: 700; color: var(--text); border-top: 1px solid var(--border-subtle); margin-top: 0.5rem; padding-top: 0.75rem; }
     .od-total span:last-child { color: var(--primary); }
     .cart-min-warning { background: #FDECEC; color: var(--error, #C62828); border-radius: 10px; padding: 0.625rem 0.875rem; font-size: 0.85rem; font-weight: 600; margin: 0.5rem 0; }
+    .cart-item-opts { font-size: 0.78rem; color: var(--text-muted); margin: 1px 0; }
+    .opt-head h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.75rem; }
+    .opt-group { margin-bottom: 1.25rem; }
+    .opt-group-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.5rem; }
+    .opt-req { color: var(--primary); }
+    .opt-row { display: flex; align-items: center; gap: 0.625rem; padding: 0.625rem 0.75rem; border: 1px solid var(--border-subtle); border-radius: 10px; margin-bottom: 0.5rem; cursor: pointer; }
+    .opt-row:hover { border-color: var(--primary); }
+    .opt-row input { width: 18px; height: 18px; accent-color: var(--primary); }
+    .opt-name { flex: 1; }
+    .opt-delta { color: var(--primary); font-weight: 600; font-size: 0.875rem; }
     .od-actions { display: flex; gap: 0.625rem; margin-top: 1.25rem; }
     .od-btn { flex: 1; padding: 0.875rem; border-radius: 12px; font-family: inherit; font-weight: 700; font-size: 0.95rem; cursor: pointer; border: none; transition: 0.15s; }
     .od-reorder { background: var(--primary); color: #fff; }
@@ -1020,6 +1030,23 @@
         <button class="btn-close-cart" onclick="closeOrderDetail()">✕</button>
       </div>
       <div class="cart-items" id="od-content"></div>
+    </div>
+  </div>
+
+  <!-- Option/variant selection sheet -->
+  <div class="cart-sheet" id="option-sheet">
+    <div class="cart-backdrop" onclick="closeOptionSheet()"></div>
+    <div class="cart-panel">
+      <div class="cart-header">
+        <h2 data-i18n="cart.chooseOptions">Personnaliser</h2>
+        <button class="btn-close-cart" onclick="closeOptionSheet()">✕</button>
+      </div>
+      <div class="cart-items" id="option-content"></div>
+      <div class="cart-footer">
+        <button class="btn-order" onclick="confirmOptions()">
+          <span data-i18n="cart.addToCart">Ajouter au panier</span> · <span id="opt-add-price"></span>
+        </button>
+      </div>
     </div>
   </div>
 
