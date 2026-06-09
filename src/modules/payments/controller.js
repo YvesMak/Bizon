@@ -103,6 +103,26 @@ class PaymentController {
     }
   }
 
+  // GET /api/payments/accounting?from=&to= — comptabilité du restaurant courant
+  async accounting(req, res) {
+    try {
+      const result = await PaymentService.accountingReport(req.restaurantId, req.query);
+      res.json(result);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  // GET /api/payments/accounting/consolidated?from=&to= — vue owner multi-restos
+  async consolidated(req, res) {
+    try {
+      const result = await PaymentService.consolidatedReport(req.user, req.query);
+      res.json(result);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
   // GET /api/payments/:id/status — statut d'un paiement (polling de secours)
   async status(req, res) {
     try {

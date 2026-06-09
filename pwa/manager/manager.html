@@ -28,6 +28,7 @@
                 <a href="#users" class="nav-link" data-page="users" onclick="navigateTo('users')">EQUIPE</a>
                 <a href="#vouchers" class="nav-link" data-page="vouchers" onclick="navigateTo('vouchers')">CODES PROMO</a>
                 <a href="#customers" class="nav-link" data-page="customers" onclick="navigateTo('customers')">CLIENTS</a>
+                <a href="#accounting" class="nav-link" data-page="accounting" onclick="navigateTo('accounting')">COMPTA</a>
             </nav>
             <div class="header-actions">
                 <span class="user-name" id="user-name"></span>
@@ -297,6 +298,46 @@
             </div>
             <div class="customers-list" id="customers-list">
                 <div class="loading">Chargement des clients...</div>
+            </div>
+        </div>
+
+        <!-- Page: Comptabilité -->
+        <div id="page-accounting" class="page">
+            <div class="page-header">
+                <h1>Comptabilité</h1>
+            </div>
+
+            <div class="acct-period">
+                <div class="filters" id="acct-ranges">
+                    <button class="filter-btn" data-range="7" onclick="setAcctRange(7)">7 jours</button>
+                    <button class="filter-btn active" data-range="30" onclick="setAcctRange(30)">30 jours</button>
+                    <button class="filter-btn" data-range="90" onclick="setAcctRange(90)">90 jours</button>
+                </div>
+                <div class="acct-dates">
+                    <input type="date" id="acct-from">
+                    <span>→</span>
+                    <input type="date" id="acct-to">
+                    <button class="btn-primary" onclick="applyAcctDates()">Appliquer</button>
+                </div>
+            </div>
+
+            <div class="stats-grid" id="acct-kpis"></div>
+
+            <div class="analytics-grid">
+                <div class="analytics-card analytics-card-wide">
+                    <h3>Encaissements par jour</h3>
+                    <div class="revenue-chart" id="acct-daily"><div class="loading">Chargement…</div></div>
+                </div>
+                <div class="analytics-card">
+                    <h3>Par méthode de paiement</h3>
+                    <div id="acct-methods"></div>
+                </div>
+            </div>
+
+            <!-- Owner : vue consolidée multi-restaurants -->
+            <div class="owner-only" id="acct-consolidated-section" style="display:none;">
+                <h3>Vue d'ensemble — tous mes restaurants</h3>
+                <div id="acct-consolidated"></div>
             </div>
         </div>
     </div>

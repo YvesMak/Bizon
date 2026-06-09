@@ -143,6 +143,7 @@ function navigateTo(page) {
         case 'users': loadUsers(); break;
         case 'vouchers': loadVouchers(); break;
         case 'customers': loadCustomers(); break;
+        case 'accounting': loadAccounting(); break;
     }
 }
 
@@ -1574,4 +1575,124 @@ async function savePaymentConfig() {
         showToast('Compte d\'encaissement enregistré', 'success');
         loadPaymentConfig();
     } catch (e) { showToast(e.message, 'error'); }
+}
+
+// ============================================
+// COMPTABILITÉ
+// ============================================
+const acctState = { from: null, to: null };
+
+function ymd(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function setAcctRange(days) {
+    const to = new Date();
+    const from = new Date(); from.setDate(from.getDate() - (days - 1));
+    acctState.from = ymd(from); acctState.to = ymd(to);
+    document.querySelectorAll('#acct-ranges .filter-btn').forEach(b => b.classList.toggle('active', Number(b.dataset.range) === days));
+    document.getElementById('acct-from').value = acctState.from;
+    document.getElementById('acct-to').value = acctState.to;
+    loadAccounting();
+}
+
+function applyAcctDates() {
+    const from = document.getElementById('acct-from').value;
+    const to = document.getElementById('acct-to').value;
+    if (!from || !to) { showToast('Choisis une période', 'error'); return; }
+    acctState.from = from; acctState.to = to;
+    document.querySelectorAll('#acct-ranges .filter-btn').forEach(b => b.classList.remove('active'));
+    loadAccounting();
+}
+
+async function loadAccounting() {
+    // Période par défaut : 30 jours
+    if (!acctState.from) {
+        const to = new Date(); const from = new Date(); from.setDate(from.getDate() - 29);
+        acctState.from = ymd(from); acctState.to = ymd(to);
+        document.getElementById('acct-from').value = acctState.from;
+        document.getElementById('acct-to').value = acctState.to;
+    }
+    const qs = `?from=${acctState.from}&to=${acctState.to}`;
+    try {
+        const rep = await apiCall('/payments/accounting' + qs);
+        if (!rep) return;
+        renderAcctKpis(rep);
+        renderAcctDaily(rep);
+        renderAcctMethods(rep);
+    } catch (e) { showToast(e.message, 'error'); }
+
+    // Vue consolidée (owner uniquement)
+    if (mgrState.isOwner) {
+        try {
+            const cons = await apiCall('/payments/accounting/consolidated' + qs);
+            if (cons) renderAcctConsolidated(cons);
+        } catch (e) { /* manager : 403 ignoré */ }
+    }
+}
+
+function renderAcctKpis(rep) {
+    const cards = [
+        { icon: '💰', value: formatAmount(rep.total), label: 'Encaissé' },
+        { icon: '✅', value: formatAmount(rep.net), label: 'Net (après remboursements)' },
+        { icon: '↩️', value: formatAmount(rep.refunds_total), label: `Remboursements (${rep.refunds_count})` },
+        { icon: '🧾', value: rep.count, label: 'Paiements' }
+    ];
+    document.getElementById('acct-kpis').innerHTML = cards.map(c => `
+        <div class="stat-card">
+            <div class="stat-icon">${c.icon}</div>
+            <div class="stat-info">
+                <div class="stat-value">${c.value}</div>
+                <div class="stat-label">${c.label}</div>
+            </div>
+        </div>`).join('');
+}
+
+function renderAcctDaily(rep) {
+    const el = document.getElementById('acct-daily');
+    if (!rep.daily.length) { el.innerHTML = '<p class="acct-empty">Aucun encaissement sur la période.</p>'; return; }
+    const max = Math.max(1, ...rep.daily.map(d => d.total));
+    el.innerHTML = rep.daily.map(d => {
+        const h = Math.max(2, Math.round((d.total / max) * 100));
+        const label = new Date(d.date + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+        return `<div class="bar-col">
+            <div class="bar-wrap"><div class="bar" style="height:${h}%" title="${formatAmount(d.total)}"></div></div>
+            <span class="bar-label">${label}</span>
+        </div>`;
+    }).join('');
+}
+
+function renderAcctMethods(rep) {
+    const labels = { mobile_money: 'Mobile Money', cash: 'Espèces', card: 'Carte' };
+    const el = document.getElementById('acct-methods');
+    if (!rep.by_method.length) { el.innerHTML = '<p class="acct-empty">—</p>'; return; }
+    el.innerHTML = rep.by_method.map(m => `
+        <div class="acct-method-row">
+            <span>${labels[m.method] || m.method} <small>(${m.count})</small></span>
+            <strong>${formatAmount(m.total)}</strong>
+        </div>`).join('');
+}
+
+function renderAcctConsolidated(cons) {
+    document.getElementById('acct-consolidated-section').style.display = '';
+    const rows = cons.restaurants.map(r => `
+        <div class="table-row">
+            <span class="product-name-col">${escapeHtml(r.name)}</span>
+            <span>${r.count}</span>
+            <span>${formatAmount(r.refunds_total)}</span>
+            <span class="price-col">${formatAmount(r.net)}</span>
+        </div>`).join('');
+    document.getElementById('acct-consolidated').innerHTML = `
+        <div class="products-table">
+            <div class="table-header acct-cons-row">
+                <span>Restaurant</span><span>Paiements</span><span>Remb.</span><span>Net</span>
+            </div>
+            ${rows}
+            <div class="table-row acct-cons-total">
+                <span class="product-name-col">Total groupe</span>
+                <span>${cons.count}</span>
+                <span>${formatAmount(cons.refunds_total)}</span>
+                <span class="price-col">${formatAmount(cons.net)}</span>
+            </div>
+        </div>`;
 }

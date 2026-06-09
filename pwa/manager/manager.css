@@ -1026,3 +1026,14 @@
 .pay-status.ok { color: var(--success, #2e7d32); }
 .pay-status.warn { color: var(--error, #C62828); }
 .pay-fields .form-group { min-width: 200px; }
+
+/* Comptabilité */
+.acct-period { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+.acct-dates { display: flex; align-items: center; gap: 0.5rem; }
+.acct-dates input { padding: 8px 10px; border: 1px solid var(--border, #ddd); border-radius: 8px; font-family: inherit; }
+.acct-method-row { display: flex; justify-content: space-between; align-items: center; padding: 0.625rem 0; border-bottom: 1px solid var(--border-subtle); }
+.acct-method-row:last-child { border-bottom: none; }
+.acct-method-row small { color: var(--text-light, #999); }
+.acct-empty { color: var(--text-light, #999); font-size: .9rem; }
+.acct-cons-row, .acct-cons-total { grid-template-columns: 2fr 1fr 1fr 1fr; }
+.acct-cons-total { font-weight: 700; background: var(--bg-subtle); }
