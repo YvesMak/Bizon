@@ -449,6 +449,63 @@ class RestaurantService {
     delete j.password_hash;
     return j;
   }
+
+  // =================================================================
+  // CONFIG DE PAIEMENT PAR RESTAURANT (Modèle B — reversement direct)
+  // =================================================================
+
+  /**
+   * Renvoie la config de paiement du restaurant SANS jamais exposer les secrets
+   * (mot de passe / clé webhook masqués).
+   */
+  async getPaymentConfig(restaurantId) {
+    const restaurant = await Restaurant.findByPk(restaurantId);
+    if (!restaurant) throw new Error('Restaurant non trouvé');
+    const pc = (restaurant.settings && restaurant.settings.payment && restaurant.settings.payment.campay) || {};
+    const username = pc.username || '';
+    const baseUrl = pc.base_url || '';
+    return {
+      provider: 'campay',
+      configured: Boolean(pc.username && pc.password_enc),
+      username_masked: username ? `${username.slice(0, 2)}••••${username.slice(-2)}` : '',
+      env: baseUrl.includes('www.campay') ? 'prod' : (baseUrl ? 'demo' : ''),
+      has_webhook_key: Boolean(pc.webhook_key_enc)
+    };
+  }
+
+  /**
+   * Enregistre les identifiants Campay du restaurant (secrets chiffrés).
+   * Le mot de passe / la clé webhook laissés vides conservent l'existant.
+   */
+  async setPaymentConfig(restaurantId, data) {
+    const { encrypt } = require('../../utils/secrets');
+    const restaurant = await Restaurant.findByPk(restaurantId);
+    if (!restaurant) throw new Error('Restaurant non trouvé');
+
+    const { username, password, webhook_key, env } = data;
+    if (!username || !String(username).trim()) throw new Error('Identifiant Campay (username) requis');
+
+    const existing = (restaurant.settings && restaurant.settings.payment && restaurant.settings.payment.campay) || {};
+
+    let password_enc;
+    if (password) password_enc = encrypt(String(password));
+    else if (existing.password_enc) password_enc = existing.password_enc;
+    else throw new Error('Mot de passe Campay requis');
+
+    const campay = {
+      username: String(username).trim(),
+      password_enc,
+      base_url: env === 'prod' ? 'https://www.campay.net' : 'https://demo.campay.net'
+    };
+    if (webhook_key) campay.webhook_key_enc = encrypt(String(webhook_key));
+    else if (existing.webhook_key_enc) campay.webhook_key_enc = existing.webhook_key_enc;
+
+    const settings = { ...(restaurant.settings || {}) };
+    settings.payment = { ...(settings.payment || {}), provider: 'campay', campay };
+    await restaurant.update({ settings });
+
+    return this.getPaymentConfig(restaurantId);
+  }
 }
 
 module.exports = new RestaurantService();

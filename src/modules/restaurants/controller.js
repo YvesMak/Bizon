@@ -28,6 +28,24 @@ class RestaurantController {
     }
   }
 
+  // Config de paiement (Campay) du restaurant — secrets jamais renvoyés.
+  async getPaymentConfig(req, res) {
+    try {
+      res.json(await RestaurantService.getPaymentConfig(req.restaurantId));
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  async setPaymentConfig(req, res) {
+    try {
+      const config = await RestaurantService.setPaymentConfig(req.restaurantId, req.body);
+      res.json({ message: 'Identifiants de paiement enregistrés', ...config });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
   /**
    * Obtenir les statistiques du restaurant
    */

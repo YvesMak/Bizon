@@ -1,10 +1,26 @@
 // Provider Campay — Mobile Money Cameroun (MTN MoMo + Orange Money).
 // Flux « collect » : on déclenche une demande de paiement, le client valide
 // via USSD sur son téléphone, puis on suit le statut. `fetch` natif (Node ≥ 18).
+//
+// Multi-compte (Modèle B) : chaque méthode accepte des identifiants `creds`
+// optionnels { username, password, baseUrl, webhookKey }. Sans `creds`, on
+// retombe sur la configuration globale (.env) — rétro-compatible.
 const jwt = require('jsonwebtoken');
 const config = require('../../../config/campay');
 
-let tokenCache = { token: null, expiresAt: 0 };
+// Cache de token par compte (clé : baseUrl + username).
+const tokenCache = new Map();
+
+// Complète des identifiants partiels avec la config globale.
+function buildCreds(creds) {
+  const c = creds || {};
+  return {
+    username: c.username || config.username,
+    password: c.password || config.password,
+    baseUrl: c.baseUrl || config.baseUrl,
+    webhookKey: c.webhookKey != null ? c.webhookKey : config.webhookKey
+  };
+}
 
 // Normalise un numéro camerounais au format attendu par Campay : 2376XXXXXXXX.
 function normalizePhone(input) {
@@ -15,10 +31,10 @@ function normalizePhone(input) {
   return `237${d}`;
 }
 
-async function campayFetch(path, { method = 'GET', body, token } = {}) {
+async function campayFetch(baseUrl, path, { method = 'GET', body, token } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Token ${token}`;
-  const res = await fetch(`${config.baseUrl}${path}`, {
+  const res = await fetch(`${baseUrl}${path}`, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined
@@ -35,20 +51,25 @@ const CampayProvider = {
   name: 'campay',
   currency: config.currency,
 
-  isConfigured() {
-    return config.isConfigured();
+  isConfigured(creds) {
+    const c = buildCreds(creds);
+    return Boolean(c.username && c.password);
   },
 
-  async getToken(force = false) {
+  async getToken(creds, force = false) {
+    const c = buildCreds(creds);
+    const cacheKey = `${c.baseUrl}::${c.username}`;
+    const cached = tokenCache.get(cacheKey);
     const now = Date.now();
-    if (!force && tokenCache.token && now < tokenCache.expiresAt) return tokenCache.token;
-    const json = await campayFetch('/api/token/', {
+    if (!force && cached && now < cached.expiresAt) return cached.token;
+
+    const json = await campayFetch(c.baseUrl, '/api/token/', {
       method: 'POST',
-      body: { username: config.username, password: config.password }
+      body: { username: c.username, password: c.password }
     });
     if (!json.token) throw new Error('Authentification Campay échouée (token manquant)');
     const ttlMs = (Number(json.expires_in) ? Number(json.expires_in) * 1000 : 10 * 60 * 1000) - 30000;
-    tokenCache = { token: json.token, expiresAt: now + Math.max(ttlMs, 60000) };
+    tokenCache.set(cacheKey, { token: json.token, expiresAt: now + Math.max(ttlMs, 60000) });
     return json.token;
   },
 
@@ -56,9 +77,10 @@ const CampayProvider = {
    * Déclenche une demande de paiement Mobile Money (le client valide par USSD).
    * @returns {Promise<{reference: string, status: string, ussd_code?: string, operator?: string}>}
    */
-  async collect({ amount, phone, description, externalReference }) {
-    const token = await this.getToken();
-    const json = await campayFetch('/api/collect/', {
+  async collect({ amount, phone, description, externalReference }, creds) {
+    const c = buildCreds(creds);
+    const token = await this.getToken(creds);
+    const json = await campayFetch(c.baseUrl, '/api/collect/', {
       method: 'POST',
       token,
       body: {
@@ -76,9 +98,10 @@ const CampayProvider = {
    * Statut d'une transaction (source de vérité).
    * Normalise vers { status: 'successful'|'failed'|'pending', ... }.
    */
-  async verifyTransaction(reference) {
-    const token = await this.getToken();
-    const json = await campayFetch(`/api/transaction/${reference}/`, { token });
+  async verifyTransaction(reference, creds) {
+    const c = buildCreds(creds);
+    const token = await this.getToken(creds);
+    const json = await campayFetch(c.baseUrl, `/api/transaction/${reference}/`, { token });
     const raw = String(json.status || '').toUpperCase();
     const status = raw === 'SUCCESSFUL' ? 'successful'
       : (raw === 'FAILED' ? 'failed' : 'pending');
@@ -94,13 +117,14 @@ const CampayProvider = {
   },
 
   /**
-   * Vérifie la signature (JWT) d'un webhook Campay avec la clé webhook.
+   * Vérifie la signature (JWT) d'un webhook Campay avec la clé webhook du compte.
    * Renvoie false si pas de clé configurée ou signature invalide.
    * (Le règlement re-vérifie de toute façon la transaction côté API.)
    */
-  verifyWebhookSignature(signature) {
-    if (!config.webhookKey || !signature) return false;
-    try { jwt.verify(signature, config.webhookKey); return true; } catch { return false; }
+  verifyWebhookSignature(signature, creds) {
+    const c = buildCreds(creds);
+    if (!c.webhookKey || !signature) return false;
+    try { jwt.verify(signature, c.webhookKey); return true; } catch { return false; }
   },
 
   _normalizePhone: normalizePhone

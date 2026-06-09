@@ -20,6 +20,10 @@ router.put('/', roleCheck(['owner', 'manager']), RestaurantController.updateRest
 // Statistiques
 router.get('/stats', roleCheck(['owner', 'manager']), RestaurantController.getStats);
 
+// Config de paiement (Campay) — identifiants propres au restaurant
+router.get('/payment-config', roleCheck(['owner', 'manager']), RestaurantController.getPaymentConfig);
+router.put('/payment-config', roleCheck(['owner', 'manager']), RestaurantController.setPaymentConfig);
+
 // Gestion des clients (manager)
 router.get('/customers', roleCheck(['owner', 'manager']), RestaurantController.getCustomers);
 router.get('/customers/export', roleCheck(['owner', 'manager']), RestaurantController.exportCustomers);

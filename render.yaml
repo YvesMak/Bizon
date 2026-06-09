@@ -59,6 +59,11 @@ services:
         generateValue: true        # généré automatiquement par Render
       - key: JWT_EXPIRES_IN
         value: 7d
+      # Clé de chiffrement des secrets en base (identifiants de paiement par
+      # restaurant). Générée une fois et conservée — ne pas la changer après
+      # coup (sinon les secrets déjà chiffrés deviennent illisibles).
+      - key: APP_SECRETS_KEY
+        generateValue: true
 
       # --- URL publique (à renseigner après le 1er déploiement) ---
       - key: APP_BASE_URL
