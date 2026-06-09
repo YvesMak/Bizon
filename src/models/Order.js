@@ -33,8 +33,9 @@ const Order = sequelize.define('Order', {
   },
   order_number: {
     type: DataTypes.STRING,
-    allowNull: false,
-    unique: true
+    allowNull: false
+    // Unicité par restaurant (index composite ci-dessous), pas globale :
+    // le numéro est généré par compteur par restaurant/jour.
   },
   type: {
     type: DataTypes.ENUM('dine_in', 'takeaway', 'delivery'),
@@ -90,7 +91,11 @@ const Order = sequelize.define('Order', {
   }
 }, {
   tableName: 'orders',
-  timestamps: true
+  timestamps: true,
+  indexes: [
+    // Unicité du numéro de commande PAR restaurant (multi-restaurant safe).
+    { unique: true, fields: ['restaurant_id', 'order_number'], name: 'orders_restaurant_order_number_unique' }
+  ]
 });
 
 module.exports = Order;
