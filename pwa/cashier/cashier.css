@@ -6,6 +6,9 @@
    LAYOUT
    ============================================ */
 .cashier-container {
+  /* Voir manager.css : on neutralise le display:flex de .container (pas de
+     sidebar ici) pour que les pages remplissent la largeur sur desktop. */
+  display: block;
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
