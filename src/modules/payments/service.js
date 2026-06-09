@@ -613,6 +613,128 @@ class PaymentService {
 
     return payments;
   }
+
+  /**
+   * =================================================================
+   * COMPTABILITÉ (par restaurant + vue owner consolidée)
+   * =================================================================
+   */
+
+  // Bornes d'une période [from, to] (jours locaux inclus). Défaut : 30 derniers jours.
+  _periodBounds(from, to) {
+    const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const end = to ? new Date(to) : new Date();
+    if (Number.isNaN(end.getTime())) throw new Error('Date de fin invalide');
+    const start = from ? new Date(from) : new Date(end.getTime() - 29 * 24 * 3600 * 1000);
+    if (Number.isNaN(start.getTime())) throw new Error('Date de début invalide');
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+    if (start > end) throw new Error('La date de début doit précéder la date de fin');
+    return { start, end, fromYmd: ymd(start), toYmd: ymd(end) };
+  }
+
+  /**
+   * Comptabilité d'un restaurant sur une période : encaissé, par méthode,
+   * remboursements, net, et ventilation journalière (pour graphe).
+   */
+  async accountingReport(restaurantId, { from, to } = {}) {
+    const { start, end, fromYmd, toYmd } = this._periodBounds(from, to);
+    const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+    const rows = await Payment.findAll({
+      where: {
+        restaurant_id: restaurantId,
+        status: { [Op.in]: ['completed', 'refunded'] },
+        verified_at: { [Op.between]: [start, end] }
+      },
+      attributes: ['amount', 'method', 'status', 'verified_at'],
+      raw: true
+    });
+
+    const byMethodMap = {};
+    const dailyMap = {};
+    let total = 0; let count = 0; let refundsTotal = 0; let refundsCount = 0;
+
+    for (const r of rows) {
+      const amount = Math.round(parseFloat(r.amount) || 0);
+      if (r.status === 'refunded') {
+        refundsTotal += amount; refundsCount += 1;
+        continue;
+      }
+      total += amount; count += 1;
+      const m = byMethodMap[r.method] || (byMethodMap[r.method] = { method: r.method, count: 0, total: 0 });
+      m.count += 1; m.total += amount;
+      const day = ymd(new Date(r.verified_at));
+      dailyMap[day] = (dailyMap[day] || 0) + amount;
+    }
+
+    const daily = Object.keys(dailyMap).sort().map((date) => ({ date, total: dailyMap[date] }));
+
+    return {
+      from: fromYmd, to: toYmd,
+      total, count,
+      refunds_total: refundsTotal, refunds_count: refundsCount,
+      net: total - refundsTotal,
+      by_method: Object.values(byMethodMap).sort((a, b) => b.total - a.total),
+      daily
+    };
+  }
+
+  /**
+   * Vue consolidée pour un propriétaire multi-restaurants : une ligne par
+   * restaurant + total du groupe, sur une période.
+   */
+  async consolidatedReport(user, { from, to } = {}) {
+    const { start, end, fromYmd, toYmd } = this._periodBounds(from, to);
+
+    const restaurants = await Restaurant.findAll({
+      where: { [Op.or]: [{ owner_id: user.id }, { id: user.restaurant_id }] },
+      attributes: ['id', 'name'],
+      order: [['created_at', 'ASC']]
+    });
+    const ids = restaurants.map((r) => r.id);
+    if (!ids.length) {
+      return { from: fromYmd, to: toYmd, restaurants: [], total: 0, count: 0, refunds_total: 0, net: 0 };
+    }
+
+    const rows = await Payment.findAll({
+      where: {
+        restaurant_id: { [Op.in]: ids },
+        status: { [Op.in]: ['completed', 'refunded'] },
+        verified_at: { [Op.between]: [start, end] }
+      },
+      attributes: ['restaurant_id', 'amount', 'status'],
+      raw: true
+    });
+
+    const agg = {};
+    for (const id of ids) agg[id] = { total: 0, count: 0, refunds_total: 0 };
+    for (const r of rows) {
+      const amount = Math.round(parseFloat(r.amount) || 0);
+      const a = agg[r.restaurant_id];
+      if (!a) continue;
+      if (r.status === 'refunded') a.refunds_total += amount;
+      else { a.total += amount; a.count += 1; }
+    }
+
+    const perRestaurant = restaurants.map((r) => ({
+      restaurant_id: r.id,
+      name: r.name,
+      total: agg[r.id].total,
+      count: agg[r.id].count,
+      refunds_total: agg[r.id].refunds_total,
+      net: agg[r.id].total - agg[r.id].refunds_total
+    }));
+
+    return {
+      from: fromYmd, to: toYmd,
+      restaurants: perRestaurant,
+      total: perRestaurant.reduce((s, r) => s + r.total, 0),
+      count: perRestaurant.reduce((s, r) => s + r.count, 0),
+      refunds_total: perRestaurant.reduce((s, r) => s + r.refunds_total, 0),
+      net: perRestaurant.reduce((s, r) => s + r.net, 0)
+    };
+  }
 }
 
 module.exports = new PaymentService();

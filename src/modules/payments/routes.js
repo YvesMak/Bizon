@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const PaymentController = require('./controller');
 const auth = require('../../middlewares/auth');
+const roleCheck = require('../../middlewares/roleCheck');
 const tenantIsolation = require('../../middlewares/tenantIsolation');
 
 router.use(auth, tenantIsolation);
@@ -15,6 +16,10 @@ router.get('/:id/campay-status', PaymentController.campayStatus);
 
 // Rapport de caisse (Z) du jour
 router.get('/report', PaymentController.report);
+
+// Comptabilité (période) — défini avant /:id pour éviter toute ambiguïté
+router.get('/accounting/consolidated', roleCheck(['owner']), PaymentController.consolidated);
+router.get('/accounting', roleCheck(['owner', 'manager']), PaymentController.accounting);
 
 router.get('/:id/status', PaymentController.status);
 
