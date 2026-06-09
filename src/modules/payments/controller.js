@@ -176,8 +176,11 @@ class PaymentController {
       const reference = body.reference;
       if (!reference) return;
 
-      // Signature optionnelle : si une clé est configurée, on l'exige valide.
-      if (campayConfig.webhookKey && !campay.verifyWebhookSignature(body.signature)) {
+      // Signature optionnelle, vérifiée avec la clé webhook du compte concerné
+      // (celui du restaurant, sinon global). Le règlement re-vérifie de toute
+      // façon la transaction côté API (source de vérité).
+      const creds = await PaymentService.campayCredsForReference(reference);
+      if (creds.webhookKey && !campay.verifyWebhookSignature(body.signature, creds)) {
         console.warn('[Campay webhook] Signature invalide — ignoré');
         return;
       }

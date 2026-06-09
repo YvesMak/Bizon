@@ -131,6 +131,38 @@
                 </div>
             </div>
 
+            <!-- Compte d'encaissement (Campay) du restaurant -->
+            <div class="delivery-settings">
+                <h3>💳 Compte d'encaissement (Mobile Money)</h3>
+                <p class="pay-help">
+                    Renseigne les identifiants du <strong>compte Campay de ce restaurant</strong> :
+                    l'argent des paiements ira directement sur <strong>son</strong> compte.
+                    <span id="pay-status" class="pay-status"></span>
+                </p>
+                <div class="delivery-fields pay-fields">
+                    <div class="form-group">
+                        <label>Environnement</label>
+                        <select id="pay-env">
+                            <option value="demo">Démo (test)</option>
+                            <option value="prod">Production (réel)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Identifiant (username / app username)</label>
+                        <input type="text" id="pay-username" autocomplete="off" placeholder="ex. resto_app_xxx">
+                    </div>
+                    <div class="form-group">
+                        <label>Mot de passe / clé secrète</label>
+                        <input type="password" id="pay-password" autocomplete="new-password" placeholder="laisser vide pour conserver">
+                    </div>
+                    <div class="form-group">
+                        <label>Clé webhook (optionnel)</label>
+                        <input type="password" id="pay-webhook" autocomplete="new-password" placeholder="laisser vide pour conserver">
+                    </div>
+                    <button class="btn-primary" onclick="savePaymentConfig()">Enregistrer</button>
+                </div>
+            </div>
+
             <!-- Owner only: Subscription limits -->
             <div class="owner-only" id="subscription-section" style="display:none;">
                 <h3>Abonnement</h3>

@@ -236,6 +236,7 @@ async function submitForm() {
 
 async function loadDashboard() {
     loadDeliverySettings();
+    loadPaymentConfig();
     try {
         const stats = await apiCall('/restaurants/stats');
         if (!stats) return;
@@ -1529,5 +1530,48 @@ async function deleteOptionItem(productId, productName, optionId) {
     try {
         await apiCall(`/products/product-options/${optionId}`, { method: 'DELETE' });
         manageOptions(productId, productName);
+    } catch (e) { showToast(e.message, 'error'); }
+}
+
+// ============================================
+// COMPTE D'ENCAISSEMENT (CAMPAY) PAR RESTAURANT
+// ============================================
+async function loadPaymentConfig() {
+    try {
+        const cfg = await apiCall('/restaurants/payment-config');
+        if (!cfg) return;
+        const status = document.getElementById('pay-status');
+        const envSel = document.getElementById('pay-env');
+        const userInput = document.getElementById('pay-username');
+        if (envSel && cfg.env) envSel.value = cfg.env;
+        if (userInput && cfg.configured) userInput.value = cfg.username_masked || '';
+        if (status) {
+            status.textContent = cfg.configured
+                ? `✓ Configuré (${cfg.env === 'prod' ? 'production' : 'démo'})`
+                : '⚠ Non configuré — les paiements iront sur le compte global';
+            status.className = 'pay-status ' + (cfg.configured ? 'ok' : 'warn');
+        }
+    } catch (e) { /* silencieux */ }
+}
+
+async function savePaymentConfig() {
+    const username = document.getElementById('pay-username').value.trim();
+    const password = document.getElementById('pay-password').value;
+    const webhook_key = document.getElementById('pay-webhook').value;
+    const env = document.getElementById('pay-env').value;
+    if (!username || username.includes('••')) {
+        showToast('Saisis l\'identifiant Campay du restaurant', 'error');
+        return;
+    }
+    try {
+        const r = await apiCall('/restaurants/payment-config', {
+            method: 'PUT',
+            body: JSON.stringify({ username, password, webhook_key, env })
+        });
+        if (!r) return;
+        document.getElementById('pay-password').value = '';
+        document.getElementById('pay-webhook').value = '';
+        showToast('Compte d\'encaissement enregistré', 'success');
+        loadPaymentConfig();
     } catch (e) { showToast(e.message, 'error'); }
 }

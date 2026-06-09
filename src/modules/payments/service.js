@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
-const { Payment, Order, OrderItem } = require('../../models');
+const { Payment, Order, OrderItem, Restaurant } = require('../../models');
+const { getRestaurantCampay } = require('./credentials');
 const InvoiceService = require('../invoices/service');
 const OrderService = require('../orders/service');
 const LoyaltyService = require('../loyalty/service');
@@ -404,6 +405,19 @@ class PaymentService {
    * Déclenche une demande de paiement MoMo : le client valide via USSD.
    * Retourne le paiement `pending` ; le statut se suit via checkCampayStatus.
    */
+  // Identifiants Campay à utiliser pour ce restaurant (son compte, sinon global).
+  async _campayCreds(restaurantId) {
+    const restaurant = await Restaurant.findByPk(restaurantId);
+    return getRestaurantCampay(restaurant);
+  }
+
+  // Identifiants Campay associés à une référence de transaction (via le paiement).
+  async campayCredsForReference(reference) {
+    const payment = await Payment.findOne({ where: { reference, provider: 'campay' } });
+    if (!payment) return getRestaurantCampay(null); // repli global
+    return this._campayCreds(payment.restaurant_id);
+  }
+
   async initiateCampayCollect(restaurantId, data) {
     const { order_id, phone, customer = {} } = data;
     if (!phone) throw new Error('Numéro Mobile Money requis');
@@ -427,6 +441,7 @@ class PaymentService {
       };
     }
 
+    const creds = await this._campayCreds(restaurantId);
     const externalRef = `BIZON-${order.order_number}-${Date.now()}`;
     let collectRes;
     try {
@@ -435,7 +450,7 @@ class PaymentService {
         phone,
         description: `Commande ${order.order_number}`,
         externalReference: externalRef
-      });
+      }, creds);
     } catch (error) {
       throw new Error(`Échec de l'initiation Mobile Money : ${error.message}`);
     }
@@ -449,7 +464,7 @@ class PaymentService {
       provider: 'campay',
       reference: collectRes.reference, // référence transaction Campay
       phone_number: campay._normalizePhone(phone),
-      metadata: { external_reference: externalRef, operator: collectRes.operator, ussd_code: collectRes.ussd_code }
+      metadata: { external_reference: externalRef, operator: collectRes.operator, ussd_code: collectRes.ussd_code, account: creds.source }
     });
 
     await logger.critical('CAMPAY_PAYMENT_INITIATED', {
@@ -481,7 +496,8 @@ class PaymentService {
     if (payment.status === 'completed') return { status: 'completed', payment };
     if (payment.status === 'failed') return { status: 'failed', payment };
 
-    const data = await campay.verifyTransaction(payment.reference);
+    const creds = await this._campayCreds(payment.restaurant_id);
+    const data = await campay.verifyTransaction(payment.reference, creds);
 
     if (data.status === 'successful') {
       if (Number(data.amount) < Number(payment.amount)) {
@@ -511,7 +527,8 @@ class PaymentService {
     if (!payment) return null;
     if (payment.status === 'completed') return payment;
 
-    const data = await campay.verifyTransaction(reference);
+    const creds = await this._campayCreds(payment.restaurant_id);
+    const data = await campay.verifyTransaction(reference, creds);
     if (data.status === 'successful') {
       if (Number(data.amount) < Number(payment.amount)) throw new Error('Montant payé insuffisant');
       await this._finalizeSettlement(payment, reference, 'CAMPAY_PAYMENT_SETTLED');

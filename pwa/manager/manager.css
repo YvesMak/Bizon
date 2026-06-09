@@ -1019,3 +1019,10 @@
 .opt-mgr-newgroup h4 { width: 100%; font-size: .9rem; margin-bottom: 4px; }
 .opt-mgr-newgroup input[type=text], .opt-mgr-newgroup select { padding: 6px 10px; border: 1px solid var(--border, #ddd); border-radius: 6px; font-family: inherit; }
 .opt-mgr-check { display: flex; align-items: center; gap: 4px; font-size: .85rem; }
+
+/* Compte d'encaissement (Campay) */
+.pay-help { font-size: .85rem; color: var(--text-muted, #777); margin-bottom: 1rem; line-height: 1.5; max-width: 640px; }
+.pay-status { display: inline-block; margin-left: 4px; font-weight: 600; }
+.pay-status.ok { color: var(--success, #2e7d32); }
+.pay-status.warn { color: var(--error, #C62828); }
+.pay-fields .form-group { min-width: 200px; }
