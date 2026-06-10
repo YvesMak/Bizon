@@ -615,8 +615,10 @@ async function sendToKitchen() {
  * Met à jour le statut d'une commande
  */
 async function updateOrderStatus(orderId, newStatus) {
+    // Route backend : PATCH /orders/:id/status (un PUT renvoyait 404 → le
+    // changement de statut, dont « Envoyer en cuisine », échouait en silence).
     return await apiCall(`/orders/${orderId}/status`, {
-        method: 'PUT',
+        method: 'PATCH',
         body: JSON.stringify({ status: newStatus })
     });
 }
