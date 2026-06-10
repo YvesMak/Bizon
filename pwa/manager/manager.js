@@ -406,6 +406,9 @@ async function viewOrderDetail(orderId) {
         if (!response) throw new Error('Commande introuvable');
 
         const order = response.order || response;
+        mgrCurrentOrderId = order.id;
+        const receiptBtn = document.getElementById('detail-receipt-btn');
+        if (receiptBtn) receiptBtn.style.display = ['draft', 'cancelled'].includes(order.status) ? 'none' : '';
         document.getElementById('order-number').textContent = `#${order.id}`;
         document.getElementById('detail-table').textContent = order.table_number || 'N/A';
         document.getElementById('detail-customer').textContent = order.customer_name || 'Client anonyme';
@@ -1713,5 +1716,23 @@ async function exportAccountingCsv() {
         document.body.appendChild(a); a.click(); a.remove();
         URL.revokeObjectURL(url);
         showToast('Export téléchargé', 'success');
+    } catch (e) { showToast(e.message, 'error'); }
+}
+
+// Téléchargement du reçu PDF d'une commande (manager)
+let mgrCurrentOrderId = null;
+async function downloadManagerReceipt() {
+    if (!mgrCurrentOrderId) return;
+    try {
+        const res = await fetch(`${API_BASE_URL}/orders/${mgrCurrentOrderId}/receipt`, {
+            headers: { ...(mgrState.token && { Authorization: `Bearer ${mgrState.token}` }) }
+        });
+        if (!res.ok) { showToast('Reçu indisponible', 'error'); return; }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `recu-${mgrCurrentOrderId}.pdf`;
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
     } catch (e) { showToast(e.message, 'error'); }
 }

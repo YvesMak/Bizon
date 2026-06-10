@@ -30,6 +30,7 @@ router.post('/me/password', customerAuth, CustomerController.changePassword.bind
 router.get('/me/orders', customerAuth, CustomerController.getOrders.bind(CustomerController));
 router.post('/orders', customerAuth, CustomerController.createOrder.bind(CustomerController));
 router.post('/orders/:id/cancel', customerAuth, CustomerController.cancelOrder.bind(CustomerController));
+router.get('/orders/:id/receipt', customerAuth, CustomerController.orderReceipt.bind(CustomerController));
 router.get('/payments/:paymentId/status', customerAuth, CustomerController.getPaymentStatus.bind(CustomerController));
 router.get('/me/loyalty', customerAuth, CustomerController.getLoyalty.bind(CustomerController));
 router.post('/validate-voucher', customerAuth, CustomerController.validateVoucher.bind(CustomerController));

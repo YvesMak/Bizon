@@ -197,6 +197,29 @@ class OrderService {
   }
 
   /**
+   * Données pour générer un reçu : commande (articles + options) + restaurant +
+   * paiement. Si customerId est fourni, vérifie la propriété (reçu client).
+   */
+  async getReceiptData(restaurantId, orderId, customerId = null) {
+    const where = { id: orderId, restaurant_id: restaurantId };
+    if (customerId) where.customer_id = customerId;
+    const order = await Order.findOne({
+      where,
+      include: [
+        { model: OrderItem, as: 'items' },
+        { model: Payment, as: 'payments' }
+      ]
+    });
+    if (!order) throw new Error('Commande non trouvée');
+    if (order.status === 'draft') throw new Error('Reçu indisponible pour une commande non confirmée');
+
+    const restaurant = await Restaurant.findByPk(restaurantId);
+    const payments = order.payments || [];
+    const payment = payments.find((p) => p.status === 'completed') || payments[0] || null;
+    return { order, restaurant, payment };
+  }
+
+  /**
    * =================================================================
    * CRÉATION COMMANDE - RÈGLE CRITIQUE : DRAFT PAR DÉFAUT
    * =================================================================

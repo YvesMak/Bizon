@@ -12,6 +12,7 @@ router.get('/stream', OrderController.stream);
 
 // CRUD commandes
 router.get('/', OrderController.getAll);
+router.get('/:id/receipt', OrderController.receipt);
 router.get('/:id', OrderController.getById);
 router.post('/', OrderController.create);
 

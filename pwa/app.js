@@ -747,9 +747,26 @@ function openOrderDetail(orderId) {
     </div>
     <div class="od-actions">
       ${['draft', 'confirmed'].includes(order.status) ? `<button class="od-btn od-cancel" onclick="cancelMyOrder('${order.id}')">${t('order.cancel')}</button>` : ''}
+      ${!['draft', 'cancelled'].includes(order.status) ? `<button class="od-btn od-receipt" onclick="downloadReceipt('${order.id}')">${t('order.receipt')}</button>` : ''}
       ${(order.items && order.items.length) ? `<button class="od-btn od-reorder" onclick="reorder('${order.id}')">${t('order.reorder')}</button>` : ''}
     </div>`;
   document.getElementById('order-detail-sheet').classList.add('open');
+}
+
+// Télécharge le reçu PDF de la commande (client).
+async function downloadReceipt(orderId) {
+  try {
+    const res = await fetch(`${API}/customers/orders/${orderId}/receipt`, {
+      headers: state.token ? { Authorization: `Bearer ${state.token}` } : {}
+    });
+    if (!res.ok) { showToast(t('order.receiptError'), 'error'); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `recu-${orderId}.pdf`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) { showToast(e.message, 'error'); }
 }
 
 async function cancelMyOrder(orderId) {
