@@ -19,6 +19,7 @@ router.get('/report', PaymentController.report);
 
 // Comptabilité (période) — défini avant /:id pour éviter toute ambiguïté
 router.get('/accounting/consolidated', roleCheck(['owner']), PaymentController.consolidated);
+router.get('/accounting/export', roleCheck(['owner', 'manager']), PaymentController.accountingExport);
 router.get('/accounting', roleCheck(['owner', 'manager']), PaymentController.accounting);
 
 router.get('/:id/status', PaymentController.status);

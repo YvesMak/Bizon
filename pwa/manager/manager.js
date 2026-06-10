@@ -1696,3 +1696,22 @@ function renderAcctConsolidated(cons) {
             </div>
         </div>`;
 }
+
+// Export CSV de la comptabilité (période courante)
+async function exportAccountingCsv() {
+    const qs = `?from=${acctState.from}&to=${acctState.to}`;
+    try {
+        const res = await fetch(`${API_BASE_URL}/payments/accounting/export${qs}`, {
+            headers: { ...(mgrState.token && { Authorization: `Bearer ${mgrState.token}` }) }
+        });
+        if (!res.ok) { showToast('Export impossible', 'error'); return; }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `comptabilite-bizon-${acctState.from}_${acctState.to}.csv`;
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+        showToast('Export téléchargé', 'success');
+    } catch (e) { showToast(e.message, 'error'); }
+}

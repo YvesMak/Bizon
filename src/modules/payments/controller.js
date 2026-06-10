@@ -123,6 +123,19 @@ class PaymentController {
     }
   }
 
+  // GET /api/payments/accounting/export?from=&to= — export CSV de la compta
+  async accountingExport(req, res) {
+    try {
+      const csv = await PaymentService.accountingCsv(req.restaurantId, req.query);
+      const stamp = new Date().toISOString().slice(0, 10);
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="comptabilite-bizon-${stamp}.csv"`);
+      res.send(csv);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
   // GET /api/payments/:id/status — statut d'un paiement (polling de secours)
   async status(req, res) {
     try {
