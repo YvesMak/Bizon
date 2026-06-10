@@ -6,6 +6,7 @@ const VoucherService = require('../vouchers/service');
 const NotificationService = require('../notifications/service');
 const sse = require('../../sse');
 const { Restaurant, Customer } = require('../../models');
+const { streamReceipt } = require('../../utils/receiptPdf');
 
 class CustomerController {
   // Résout le restaurantId depuis l'id, sinon le slug, sinon le premier actif
@@ -176,6 +177,16 @@ class CustomerController {
       res.json({ message: 'Commande annulée', ...result });
     } catch (error) {
       res.status(400).json({ error: error.message });
+    }
+  }
+
+  // GET /api/customers/orders/:id/receipt — reçu PDF de SA commande
+  async orderReceipt(req, res) {
+    try {
+      const data = await OrderService.getReceiptData(req.restaurantId, req.params.id, req.customerId);
+      streamReceipt(res, data);
+    } catch (error) {
+      res.status(404).json({ error: error.message });
     }
   }
 

@@ -1,8 +1,19 @@
 const OrderService = require('./service');
 const sse = require('../../sse');
 const NotificationService = require('../notifications/service');
+const { streamReceipt } = require('../../utils/receiptPdf');
 
 class OrderController {
+  // GET /api/orders/:id/receipt — reçu PDF (staff)
+  async receipt(req, res) {
+    try {
+      const data = await OrderService.getReceiptData(req.restaurantId, req.params.id);
+      streamReceipt(res, data);
+    } catch (error) {
+      res.status(404).json({ error: error.message });
+    }
+  }
+
   async getAll(req, res) {
     try {
       // Passer le rôle de l'utilisateur pour filtrage
