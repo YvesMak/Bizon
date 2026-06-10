@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bizon — Écran cuisine</title>
+  <link rel="stylesheet" href="kitchen.css">
+</head>
+<body>
+  <header class="kds-header">
+    <div class="kds-brand">
+      <span class="kds-logo">🍳</span>
+      <div>
+        <h1>Cuisine</h1>
+        <span class="kds-resto" id="kds-resto"></span>
+      </div>
+    </div>
+    <div class="kds-header-right">
+      <span class="kds-live" id="kds-live" title="Temps réel">● en direct</span>
+      <button class="kds-btn-ghost" id="kds-sound" title="Son à la nouvelle commande" onclick="toggleSound()">🔔</button>
+      <button class="kds-btn-ghost" id="kds-logout" title="Déconnexion">⎋</button>
+    </div>
+  </header>
+
+  <main class="kds-board">
+    <section class="kds-col" data-col="confirmed">
+      <div class="kds-col-head"><span>À préparer</span><span class="kds-count" id="count-confirmed">0</span></div>
+      <div class="kds-col-body" id="col-confirmed"></div>
+    </section>
+    <section class="kds-col" data-col="preparing">
+      <div class="kds-col-head"><span>En préparation</span><span class="kds-count" id="count-preparing">0</span></div>
+      <div class="kds-col-body" id="col-preparing"></div>
+    </section>
+    <section class="kds-col" data-col="ready">
+      <div class="kds-col-head"><span>Prêtes</span><span class="kds-count" id="count-ready">0</span></div>
+      <div class="kds-col-body" id="col-ready"></div>
+    </section>
+  </main>
+
+  <div class="kds-toast" id="kds-toast"></div>
+  <audio id="kds-ding" preload="auto" src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA="></audio>
+
+  <script src="kitchen.js"></script>
+</body>
+</html>
