@@ -735,6 +735,58 @@ class PaymentService {
       net: perRestaurant.reduce((s, r) => s + r.net, 0)
     };
   }
+
+  /**
+   * Export CSV de la comptabilité (grand livre des paiements de la période) :
+   * une ligne par paiement (encaissé/remboursé) + un récapitulatif en pied.
+   */
+  async accountingCsv(restaurantId, { from, to } = {}) {
+    const { start, end, fromYmd, toYmd } = this._periodBounds(from, to);
+    const rows = await Payment.findAll({
+      where: {
+        restaurant_id: restaurantId,
+        status: { [Op.in]: ['completed', 'refunded'] },
+        verified_at: { [Op.between]: [start, end] }
+      },
+      include: [{ model: Order, as: 'order', attributes: ['order_number', 'type'] }],
+      order: [['verified_at', 'ASC']]
+    });
+
+    const METHOD = { mobile_money: 'Mobile Money', cash: 'Espèces', card: 'Carte' };
+    const TYPE = { dine_in: 'Sur place', takeaway: 'À emporter', delivery: 'Livraison' };
+    const esc = (v) => {
+      const s = v == null ? '' : String(v);
+      return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const pad = (n) => String(n).padStart(2, '0');
+
+    const headers = ['Date', 'Heure', 'N° commande', 'Type', 'Méthode', 'Statut', 'Montant (FCFA)'];
+    const lines = [`Comptabilité du ${fromYmd} au ${toYmd}`, '', headers.join(';')];
+
+    let total = 0; let refunds = 0;
+    for (const p of rows) {
+      const d = new Date(p.verified_at);
+      const amount = Math.round(parseFloat(p.amount) || 0);
+      if (p.status === 'refunded') refunds += amount; else total += amount;
+      lines.push([
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+        `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+        esc(p.order ? p.order.order_number : ''),
+        esc(p.order ? (TYPE[p.order.type] || p.order.type) : ''),
+        esc(METHOD[p.method] || p.method),
+        p.status === 'refunded' ? 'Remboursé' : 'Encaissé',
+        amount
+      ].join(';'));
+    }
+
+    lines.push('');
+    lines.push(['', '', '', '', '', 'Total encaissé', total].join(';'));
+    lines.push(['', '', '', '', '', 'Remboursements', refunds].join(';'));
+    lines.push(['', '', '', '', '', 'Net', total - refunds].join(';'));
+
+    // BOM UTF-8 pour qu'Excel ouvre correctement les accents.
+    return `﻿${lines.join('\n')}`;
+  }
 }
 
 module.exports = new PaymentService();
