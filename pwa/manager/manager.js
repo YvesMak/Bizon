@@ -1768,3 +1768,33 @@ function generateTableQrs() {
     </body></html>`);
     w.document.close();
 }
+
+// ============================================
+// CAMPAGNE PUSH MARKETING
+// ============================================
+async function sendPushCampaign() {
+    const title = document.getElementById('campaign-title').value.trim();
+    const body = document.getElementById('campaign-body').value.trim();
+    const segment = document.getElementById('campaign-segment').value;
+    const url = document.getElementById('campaign-url').value.trim();
+    if (!title || !body) { showToast('Titre et message requis', 'error'); return; }
+    const cibleLabel = segment === 'inactive' ? 'aux clients inactifs' : (segment === 'top' ? 'aux top clients' : 'à tous les abonnés');
+    if (!confirm(`Envoyer cette notification ${cibleLabel} ?\n\n${title}\n${body}`)) return;
+    const status = document.getElementById('campaign-status');
+    if (status) { status.textContent = 'Envoi…'; status.className = 'pay-status'; }
+    try {
+        const r = await apiCall('/restaurants/campaigns', {
+            method: 'POST',
+            body: JSON.stringify({ title, body, segment, url: url || undefined })
+        });
+        if (!r) return;
+        if (status) { status.textContent = `✓ ${r.reached} client(s) atteint(s) sur ${r.targeted} ciblé(s)`; status.className = 'pay-status ok'; }
+        showToast(`Campagne envoyée : ${r.reached} client(s)`, 'success');
+        document.getElementById('campaign-title').value = '';
+        document.getElementById('campaign-body').value = '';
+        document.getElementById('campaign-url').value = '';
+    } catch (e) {
+        if (status) { status.textContent = '⚠ ' + e.message; status.className = 'pay-status warn'; }
+        showToast(e.message, 'error');
+    }
+}
