@@ -145,6 +145,7 @@
       'track.ready.sub': 'Récupérez votre commande',
       'track.delivering.sub': 'Votre commande est en route',
       'track.follow': 'Suivre',
+      'track.dismiss': 'Masquer',
       'queue.next': 'Vous êtes le prochain 🎉',
       'queue.ahead': '{n} commande(s) avant vous',
       // Installation PWA
@@ -306,6 +307,7 @@
       'track.ready.sub': 'Pick up your order',
       'track.delivering.sub': 'Your order is on the way',
       'track.follow': 'Track',
+      'track.dismiss': 'Dismiss',
       'queue.next': "You're next 🎉",
       'queue.ahead': '{n} order(s) ahead of you',
       'install.title': 'Install the app',

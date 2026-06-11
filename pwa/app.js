@@ -868,13 +868,35 @@ const ACTIVE_STATUS = {
 
 let queuePollTimer = null;
 
+// Au-delà de cette ancienneté, une commande « active » n'est plus considérée
+// comme en cours pour le bandeau (commande oubliée/jamais servie côté cuisine).
+const BANNER_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+
+function bannerDismissed() {
+  try { return JSON.parse(localStorage.getItem('bizon_dismissed_orders') || '[]'); } catch { return []; }
+}
+function dismissBanner(orderId) {
+  const list = bannerDismissed();
+  if (!list.includes(orderId)) { list.push(orderId); localStorage.setItem('bizon_dismissed_orders', JSON.stringify(list.slice(-50))); }
+  const banner = document.getElementById('active-order-banner');
+  if (banner) banner.style.display = 'none';
+  stopQueuePoll();
+}
+function bannerEligible(o) {
+  if (!ACTIVE_STATUS[o.status]) return false;
+  if (bannerDismissed().includes(o.id)) return false;
+  const created = new Date(o.created_at || o.createdAt).getTime();
+  if (!Number.isNaN(created) && Date.now() - created > BANNER_MAX_AGE_MS) return false;
+  return true;
+}
+
 async function loadActiveOrder() {
   const banner = document.getElementById('active-order-banner');
   if (!banner) return;
   if (!state.token) { banner.style.display = 'none'; stopQueuePoll(); return; }
   try {
     const orders = await apiCall('/customers/me/orders');
-    const active = orders.find(o => ACTIVE_STATUS[o.status]);
+    const active = orders.find(bannerEligible);
     renderActiveOrder(active);
     // Rafraîchir la position dans la file tant qu'une commande est en préparation
     // (les autres commandes avancent sans déclencher notre flux SSE).
@@ -917,7 +939,8 @@ function renderActiveOrder(order) {
       <h4>${order.order_number || t('order.detail.title')} · ${statusLabel(order.status)}</h4>
       <p>${q || t(s.subKey)}</p>
     </div>
-    <button class="track-btn" onclick="showSection('orders')">${t('track.follow')}</button>`;
+    <button class="track-btn" onclick="showSection('orders')">${t('track.follow')}</button>
+    <button class="track-close" aria-label="${t('track.dismiss')}" title="${t('track.dismiss')}" onclick="dismissBanner('${order.id}')">✕</button>`;
 }
 
 let orderStream = null;
