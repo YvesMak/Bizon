@@ -211,6 +211,7 @@
         if (payload.exp > now) {
           if (payload.role === 'waiter') window.location.href = '../waiter/waiter.html';
           else if (payload.role === 'cashier') window.location.href = '../cashier/cashier.html';
+          else if (payload.role === 'kitchen') window.location.href = '../kitchen/kitchen.html';
           else if (payload.role === 'manager' || payload.role === 'owner') window.location.href = '../manager/manager.html';
         }
       } catch {}
@@ -243,6 +244,7 @@
           const role = data.user?.role;
           if (role === 'waiter') window.location.href = '../waiter/waiter.html';
           else if (role === 'cashier') window.location.href = '../cashier/cashier.html';
+          else if (role === 'kitchen') window.location.href = '../kitchen/kitchen.html';
           else window.location.href = '../manager/manager.html';
         }, 800);
       } catch (err) {
