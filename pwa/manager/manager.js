@@ -176,7 +176,7 @@ function getStatusBadge(status) {
 
 function getRoleBadge(role) {
     const roleLabels = {
-        owner: 'Propriétaire', manager: 'Manager', waiter: 'Serveur', cashier: 'Caissier'
+        owner: 'Propriétaire', manager: 'Manager', waiter: 'Serveur', cashier: 'Caissier', kitchen: 'Cuisine'
     };
     return `<span class="role-label role-${role}">${roleLabels[role] || role}</span>`;
 }
@@ -955,6 +955,7 @@ function showUserForm(userId = null) {
             <label>Rôle *</label>
             <select id="form-user-role">
                 <option value="waiter" ${user && user.role === 'waiter' ? 'selected' : ''}>Serveur</option>
+                <option value="kitchen" ${user && user.role === 'kitchen' ? 'selected' : ''}>Cuisine</option>
                 <option value="cashier" ${user && user.role === 'cashier' ? 'selected' : ''}>Caissier</option>
                 <option value="manager" ${user && user.role === 'manager' ? 'selected' : ''}>Manager</option>
             </select>

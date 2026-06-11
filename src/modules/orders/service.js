@@ -40,6 +40,7 @@ const STATUS_TRANSITIONS = {
 // États visibles par rôle
 const VISIBLE_STATUS_BY_ROLE = {
   waiter: ['draft', 'confirmed', 'preparing', 'ready'],  // Pas de paid/cancelled
+  kitchen: ['confirmed', 'preparing', 'ready'],          // Écran cuisine (KDS)
   cashier: ['ready', 'paid'],                            // Uniquement paiement
   manager: ['draft', 'confirmed', 'preparing', 'ready', 'paid', 'cancelled'],  // Tout
   owner: ['draft', 'confirmed', 'preparing', 'ready', 'paid', 'cancelled']     // Tout

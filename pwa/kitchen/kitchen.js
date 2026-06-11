@@ -22,7 +22,7 @@ function checkAuth() {
     const payload = JSON.parse(atob(kds.token.split('.')[1]));
     kds.user = payload;
     // L'écran cuisine convient aux rôles voyant les statuts de préparation.
-    if (!['waiter', 'manager', 'owner', 'cashier'].includes(payload.role)) {
+    if (!['kitchen', 'waiter', 'manager', 'owner', 'cashier'].includes(payload.role)) {
       window.location.href = '../staff/login.html';
       return false;
     }

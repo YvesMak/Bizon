@@ -19,6 +19,7 @@ const SLUG = process.env.DEMO_SLUG || 'resto-demo';
 const PASSWORD = process.env.DEMO_PASSWORD || 'demo1234';
 const OWNER_EMAIL = process.env.DEMO_OWNER_EMAIL || 'demo@bizon.cm';
 const WAITER_EMAIL = process.env.DEMO_WAITER_EMAIL || 'serveur@bizon.cm';
+const KITCHEN_EMAIL = process.env.DEMO_KITCHEN_EMAIL || 'cuisine@bizon.cm';
 const BASE_URL = process.env.APP_BASE_URL || 'http://localhost:3000';
 
 const MENU = [
@@ -102,6 +103,13 @@ async function main() {
       role: 'waiter', status: 'active'
     }, { transaction: t });
 
+    await User.create({
+      restaurant_id: restaurant.id,
+      email: KITCHEN_EMAIL, password: PASSWORD,
+      first_name: 'Demo', last_name: 'Cuisine',
+      role: 'kitchen', status: 'active'
+    }, { transaction: t });
+
     const trialEnd = new Date(); trialEnd.setDate(trialEnd.getDate() + 30);
     await Subscription.create({
       restaurant_id: restaurant.id, plan: 'trial', status: 'active',
@@ -152,6 +160,9 @@ function printSummary(restaurant) {
   console.log('');
   console.log(`  SERVEUR  : ${BASE_URL}/staff/login.html`);
   console.log(`     email : ${WAITER_EMAIL}   mot de passe : ${PASSWORD}`);
+  console.log('');
+  console.log(`  CUISINE  : ${BASE_URL}/staff/login.html  (→ écran cuisine)`);
+  console.log(`     email : ${KITCHEN_EMAIL}   mot de passe : ${PASSWORD}`);
   console.log('');
   console.log(`  ADMIN    : ${BASE_URL}/admin/   (compte via : npm run create-admin)`);
   console.log(line);
