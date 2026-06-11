@@ -116,6 +116,45 @@ class NotificationService {
       data: { url: '/', orderNumber, status }
     });
   }
+
+  /**
+   * Campagne marketing : envoie une notification push aux clients d'un
+   * restaurant (tous les abonnés, ou un segment top/inactif).
+   * @returns {{ targeted:number, reached:number, notifications:number }}
+   */
+  async sendCampaign(restaurantId, { title, body, url, segment } = {}) {
+    if (!configured) throw new Error('Notifications push non configurées (VAPID manquant)');
+    if (!title || !String(title).trim()) throw new Error('Titre requis');
+    if (!body || !String(body).trim()) throw new Error('Message requis');
+
+    let customerIds;
+    if (segment === 'top' || segment === 'inactive') {
+      // eslint-disable-next-line global-require
+      const RestaurantService = require('../restaurants/service');
+      const list = await RestaurantService.listCustomers(restaurantId, { segment });
+      customerIds = list.map((c) => c.id);
+    } else {
+      const subs = await PushSubscription.findAll({
+        where: { restaurant_id: restaurantId }, attributes: ['customer_id']
+      });
+      customerIds = [...new Set(subs.map((s) => s.customer_id).filter(Boolean))];
+    }
+
+    const payload = {
+      title: String(title).trim(),
+      body: String(body).trim(),
+      tag: `campaign-${Date.now()}`,
+      data: { url: url || '/' }
+    };
+
+    let reached = 0;
+    let notifications = 0;
+    for (const id of customerIds) {
+      const res = await this.sendToCustomer(id, payload);
+      if (res.sent > 0) { reached += 1; notifications += res.sent; }
+    }
+    return { targeted: customerIds.length, reached, notifications };
+  }
 }
 
 module.exports = new NotificationService();

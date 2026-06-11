@@ -180,6 +180,40 @@
                 </div>
             </div>
 
+            <!-- Campagnes push marketing -->
+            <div class="delivery-settings">
+                <h3>📣 Campagne push</h3>
+                <p class="pay-help">
+                    Envoie une notification (promo, nouveauté…) aux clients qui ont activé
+                    les notifications. <span id="campaign-status" class="pay-status"></span>
+                </p>
+                <div class="campaign-fields">
+                    <div class="form-group">
+                        <label>Titre</label>
+                        <input type="text" id="campaign-title" maxlength="60" placeholder="Promo du jour 🔥">
+                    </div>
+                    <div class="form-group">
+                        <label>Message</label>
+                        <input type="text" id="campaign-body" maxlength="140" placeholder="-20% sur les grillades ce soir !">
+                    </div>
+                    <div class="campaign-row">
+                        <div class="form-group">
+                            <label>Cible</label>
+                            <select id="campaign-segment">
+                                <option value="">Tous les abonnés</option>
+                                <option value="inactive">Clients inactifs (30j)</option>
+                                <option value="top">Top clients</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Lien (optionnel)</label>
+                            <input type="text" id="campaign-url" placeholder="/">
+                        </div>
+                        <button class="btn-primary" onclick="sendPushCampaign()">Envoyer</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Owner only: Subscription limits -->
             <div class="owner-only" id="subscription-section" style="display:none;">
                 <h3>Abonnement</h3>

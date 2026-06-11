@@ -1,6 +1,17 @@
 const RestaurantService = require('./service');
+const NotificationService = require('../notifications/service');
 
 class RestaurantController {
+  // POST /api/restaurants/campaigns — campagne push marketing (owner/manager)
+  async sendCampaign(req, res) {
+    try {
+      const result = await NotificationService.sendCampaign(req.restaurantId, req.body);
+      res.json({ message: 'Campagne envoyée', ...result });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
   /**
    * Obtenir les informations du restaurant
    */

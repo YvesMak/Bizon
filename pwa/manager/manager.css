@@ -1037,3 +1037,9 @@
 .acct-empty { color: var(--text-light, #999); font-size: .9rem; }
 .acct-cons-row, .acct-cons-total { grid-template-columns: 2fr 1fr 1fr 1fr; }
 .acct-cons-total { font-weight: 700; background: var(--bg-subtle); }
+
+/* Campagne push */
+.campaign-fields { display: flex; flex-direction: column; gap: 0.75rem; }
+.campaign-fields .form-group input, .campaign-fields select { width: 100%; padding: 9px 12px; border: 1px solid var(--border, #ddd); border-radius: 8px; font-family: inherit; }
+.campaign-row { display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; }
+.campaign-row .form-group { flex: 1; min-width: 160px; }
