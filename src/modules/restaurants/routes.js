@@ -20,6 +20,9 @@ router.put('/', roleCheck(['owner', 'manager']), RestaurantController.updateRest
 // Statistiques
 router.get('/stats', roleCheck(['owner', 'manager']), RestaurantController.getStats);
 
+// QR codes des tables (commande à table)
+router.get('/qr', roleCheck(['owner', 'manager']), RestaurantController.tableQr);
+
 // Config de paiement (Campay) — identifiants propres au restaurant
 router.get('/payment-config', roleCheck(['owner', 'manager']), RestaurantController.getPaymentConfig);
 router.put('/payment-config', roleCheck(['owner', 'manager']), RestaurantController.setPaymentConfig);

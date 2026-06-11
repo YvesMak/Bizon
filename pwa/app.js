@@ -13,6 +13,7 @@ const state = {
   menus: [],
   cart: JSON.parse(localStorage.getItem('bizon_cart') || '[]'),
   orderType: 'dine_in',
+  tableNumber: null, // QR commande à table : numéro imposé par le QR scanné
   appliedVoucher: null
 };
 
@@ -33,6 +34,15 @@ function resolveRestaurantFromUrl() {
   const params = new URLSearchParams(location.search);
   const id = params.get('restaurantId') || params.get('restaurant');
   const slug = params.get('r') || params.get('slug');
+  // QR commande à table : numéro de table imposé. Persiste pour la session
+  // (survit à un rechargement) mais pas entre sessions.
+  const table = params.get('table');
+  if (table && /^[\w-]{1,16}$/.test(table)) {
+    state.tableNumber = table;
+    try { sessionStorage.setItem('bizon_table', table); } catch { /* ignore */ }
+  } else {
+    try { state.tableNumber = sessionStorage.getItem('bizon_table') || null; } catch { /* ignore */ }
+  }
   if (id) {
     state.restaurantId = id;
     rememberRestaurant({ id });
@@ -581,7 +591,8 @@ function changeQty(index, delta) {
 // N'affiche que les modes de commande proposés par le restaurant,
 // et sélectionne automatiquement le premier disponible.
 function applyServiceTypes() {
-  const allowed = state.serviceTypes || ['dine_in', 'takeaway', 'delivery'];
+  // QR commande à table : on impose « Sur place » et la table.
+  const allowed = state.tableNumber ? ['dine_in'] : (state.serviceTypes || ['dine_in', 'takeaway', 'delivery']);
   const buttons = document.querySelectorAll('.otype');
   let firstBtn = null;
   buttons.forEach((b) => {
@@ -592,6 +603,27 @@ function applyServiceTypes() {
   // Si le mode actuellement sélectionné n'est plus autorisé, basculer sur le premier dispo.
   if (firstBtn && !allowed.includes(state.orderType)) {
     selectOrderType(firstBtn.dataset.type, firstBtn);
+  }
+  applyTableLock();
+}
+
+// Verrouille la commande à table quand un QR a fixé le numéro de table.
+function applyTableLock() {
+  const banner = document.getElementById('table-banner');
+  const selector = document.getElementById('order-type-select');
+  const tableInput = document.getElementById('order-table');
+  if (!state.tableNumber) {
+    if (banner) banner.style.display = 'none';
+    if (tableInput) tableInput.readOnly = false;
+    return;
+  }
+  state.orderType = 'dine_in';
+  if (tableInput) { tableInput.value = state.tableNumber; tableInput.readOnly = true; }
+  // Un seul mode possible → on masque le sélecteur (la bannière indique la table).
+  if (selector) selector.style.display = 'none';
+  if (banner) {
+    banner.style.display = '';
+    banner.innerHTML = `🍽️ ${t('table.banner', { n: state.tableNumber })}`;
   }
 }
 

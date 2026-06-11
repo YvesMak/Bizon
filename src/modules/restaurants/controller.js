@@ -28,6 +28,19 @@ class RestaurantController {
     }
   }
 
+  // GET /api/restaurants/qr?table=N — QR code PNG d'une table (commande à table)
+  async tableQr(req, res) {
+    try {
+      const baseUrl = process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`;
+      const png = await RestaurantService.tableQrPng(req.restaurantId, req.query.table, baseUrl);
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Cache-Control', 'no-store');
+      res.send(png);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
   // Config de paiement (Campay) du restaurant — secrets jamais renvoyés.
   async getPaymentConfig(req, res) {
     try {

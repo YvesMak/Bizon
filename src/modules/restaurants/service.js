@@ -506,6 +506,21 @@ class RestaurantService {
 
     return this.getPaymentConfig(restaurantId);
   }
+
+  /**
+   * QR code (PNG) d'une table : encode l'URL du menu avec la table pré-remplie
+   * (le client scanne → menu « Sur place » + table imposée).
+   */
+  async tableQrPng(restaurantId, tableNumber, baseUrl) {
+    const QRCode = require('qrcode');
+    const restaurant = await Restaurant.findByPk(restaurantId, { attributes: ['id', 'slug'] });
+    if (!restaurant) throw new Error('Restaurant non trouvé');
+    const table = String(tableNumber || '').trim();
+    if (!/^[\w-]{1,16}$/.test(table)) throw new Error('Numéro de table invalide');
+    const base = (baseUrl || '').replace(/\/+$/, '');
+    const url = `${base}/?r=${encodeURIComponent(restaurant.slug)}&table=${encodeURIComponent(table)}`;
+    return QRCode.toBuffer(url, { type: 'png', width: 400, margin: 1, errorCorrectionLevel: 'M' });
+  }
 }
 
 module.exports = new RestaurantService();

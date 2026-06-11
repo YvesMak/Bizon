@@ -1736,3 +1736,35 @@ async function downloadManagerReceipt() {
         URL.revokeObjectURL(url);
     } catch (e) { showToast(e.message, 'error'); }
 }
+
+// ============================================
+// QR CODES DES TABLES (commande à table)
+// ============================================
+function generateTableQrs() {
+    const count = parseInt(document.getElementById('qr-table-count').value, 10) || 0;
+    if (count < 1 || count > 100) { showToast('Nombre de tables invalide (1–100)', 'error'); return; }
+    const base = `${location.origin}${API_BASE_URL}/restaurants/qr`;
+    const tok = encodeURIComponent(mgrState.token);
+    let cards = '';
+    for (let i = 1; i <= count; i++) {
+        cards += `<div class="qrcard"><img src="${base}?table=${i}&token=${tok}" alt="Table ${i}"><div class="qrlabel">Table ${i}</div></div>`;
+    }
+    const w = window.open('', '_blank');
+    if (!w) { showToast('Autorise les pop-ups pour imprimer les QR', 'error'); return; }
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR tables — Bizon</title><style>
+        body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px; color: #1c1917; }
+        h1 { font-size: 20px; }
+        .bar { margin-bottom: 16px; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+        .qrcard { border: 1px solid #e5e0d8; border-radius: 14px; padding: 16px; text-align: center; page-break-inside: avoid; }
+        .qrcard img { width: 100%; max-width: 220px; height: auto; }
+        .qrlabel { font-weight: 800; font-size: 18px; margin-top: 8px; }
+        button { font: inherit; font-weight: 700; padding: 8px 16px; border-radius: 10px; border: none; background: #C62828; color: #fff; cursor: pointer; }
+        @media print { .noprint { display: none; } }
+    </style></head><body>
+        <h1>QR codes des tables</h1>
+        <div class="bar noprint"><button onclick="window.print()">🖨️ Imprimer</button></div>
+        <div class="grid">${cards}</div>
+    </body></html>`);
+    w.document.close();
+}
