@@ -787,6 +787,105 @@ class PaymentService {
     // BOM UTF-8 pour qu'Excel ouvre correctement les accents.
     return `﻿${lines.join('\n')}`;
   }
+
+  /**
+   * =================================================================
+   * REMBOURSEMENTS
+   * =================================================================
+   * Commandes à rembourser : annulées, avec un paiement encaissé et aucun
+   * remboursement encore enregistré.
+   */
+  async listRefundable(restaurantId) {
+    const orders = await Order.findAll({
+      where: { restaurant_id: restaurantId, status: 'cancelled' },
+      include: [{ model: Payment, as: 'payments' }],
+      order: [['updated_at', 'DESC']],
+      limit: 100
+    });
+    const result = [];
+    for (const o of orders) {
+      const payments = o.payments || [];
+      const completed = payments.find((p) => p.status === 'completed');
+      const refunded = payments.find((p) => p.status === 'refunded');
+      if (completed && !refunded) {
+        result.push({
+          order_id: o.id,
+          order_number: o.order_number,
+          customer_name: o.customer_name,
+          amount: Math.round(parseFloat(completed.amount) || 0),
+          method: completed.method,
+          phone: completed.phone_number || null,
+          cancelled_at: o.updated_at
+        });
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Rembourse une commande payée et annulée.
+   * @param mode 'campay' (décaissement MoMo réel) ou 'manual' (déjà remboursé
+   *             par un autre moyen — on enregistre juste l'opération).
+   */
+  async refundOrder(restaurantId, orderId, { mode = 'manual' } = {}) {
+    const order = await Order.findOne({
+      where: { id: orderId, restaurant_id: restaurantId },
+      include: [{ model: Payment, as: 'payments' }]
+    });
+    if (!order) throw new Error('Commande non trouvée');
+
+    const payments = order.payments || [];
+    const completed = payments.find((p) => p.status === 'completed');
+    if (!completed) throw new Error('Aucun paiement encaissé à rembourser');
+    if (payments.some((p) => p.status === 'refunded')) throw new Error('Cette commande a déjà été remboursée');
+
+    const amount = Math.round(parseFloat(completed.amount) || 0);
+    const externalRef = `REFUND-${order.order_number}-${Date.now()}`;
+    let providerRef = null;
+    let method = completed.method;
+
+    if (mode === 'campay') {
+      if (completed.method !== 'mobile_money') throw new Error('Remboursement Campay possible uniquement pour un paiement Mobile Money');
+      if (!completed.phone_number) throw new Error('Numéro Mobile Money introuvable pour cette commande');
+      const creds = await this._campayCreds(restaurantId);
+      let res;
+      try {
+        res = await campay.disburse({
+          amount, phone: completed.phone_number,
+          description: `Remboursement ${order.order_number}`, externalReference: externalRef
+        }, creds);
+      } catch (error) {
+        throw new Error(`Échec du remboursement Mobile Money : ${error.message}`);
+      }
+      providerRef = res.reference || externalRef;
+      method = 'mobile_money';
+    }
+
+    const refund = await Payment.create({
+      restaurant_id: restaurantId,
+      order_id: orderId,
+      amount,
+      method,
+      status: 'refunded',
+      provider: mode === 'campay' ? 'campay' : 'manual',
+      reference: providerRef || externalRef,
+      phone_number: completed.phone_number || null,
+      verified_at: new Date(),
+      metadata: { mode, refund_of: completed.id, external_reference: externalRef }
+    });
+
+    await logger.critical('PAYMENT_REFUNDED', {
+      restaurant_id: restaurantId, order_id: orderId, payment_id: refund.id, amount, mode
+    });
+
+    return {
+      order_id: orderId,
+      order_number: order.order_number,
+      amount,
+      mode,
+      reference: refund.reference
+    };
+  }
 }
 
 module.exports = new PaymentService();

@@ -17,6 +17,10 @@ router.get('/:id/campay-status', PaymentController.campayStatus);
 // Rapport de caisse (Z) du jour
 router.get('/report', PaymentController.report);
 
+// Remboursements (avant /:id)
+router.get('/refunds', roleCheck(['owner', 'manager']), PaymentController.listRefunds);
+router.post('/refunds/:orderId', roleCheck(['owner', 'manager']), PaymentController.refund);
+
 // Comptabilité (période) — défini avant /:id pour éviter toute ambiguïté
 router.get('/accounting/consolidated', roleCheck(['owner']), PaymentController.consolidated);
 router.get('/accounting/export', roleCheck(['owner', 'manager']), PaymentController.accountingExport);

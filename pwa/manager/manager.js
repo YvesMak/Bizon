@@ -1626,6 +1626,8 @@ async function loadAccounting() {
         renderAcctMethods(rep);
     } catch (e) { showToast(e.message, 'error'); }
 
+    loadRefunds();
+
     // Vue consolidée (owner uniquement)
     if (mgrState.isOwner) {
         try {
@@ -1798,4 +1800,43 @@ async function sendPushCampaign() {
         if (status) { status.textContent = '⚠ ' + e.message; status.className = 'pay-status warn'; }
         showToast(e.message, 'error');
     }
+}
+
+// ============================================
+// REMBOURSEMENTS
+// ============================================
+async function loadRefunds() {
+    const section = document.getElementById('refunds-section');
+    if (!section) return;
+    try {
+        const list = await apiCall('/payments/refunds');
+        if (!list) return;
+        if (!list.length) { section.style.display = 'none'; return; }
+        section.style.display = '';
+        document.getElementById('refunds-count').textContent = list.length;
+        document.getElementById('refunds-list').innerHTML = list.map(r => `
+            <div class="refund-row">
+                <div class="refund-info">
+                    <strong>${escapeHtml(r.order_number)}</strong> · ${escapeHtml(r.customer_name || 'Client')}
+                    <span class="refund-meta">${formatAmount(r.amount)}${r.phone ? ' · ' + escapeHtml(r.phone) : ''}</span>
+                </div>
+                <div class="refund-actions">
+                    ${r.method === 'mobile_money' && r.phone ? `<button class="btn-primary btn-xs" onclick="doRefund('${r.order_id}','campay','${formatAmount(r.amount)}')">Rembourser MoMo</button>` : ''}
+                    <button class="btn-secondary btn-xs" onclick="doRefund('${r.order_id}','manual','${formatAmount(r.amount)}')">Marquer remboursé</button>
+                </div>
+            </div>`).join('');
+    } catch (e) { /* silencieux */ }
+}
+
+async function doRefund(orderId, mode, amountLabel) {
+    const msg = mode === 'campay'
+        ? `Envoyer ${amountLabel} au client par Mobile Money (Campay) ?`
+        : `Marquer cette commande comme remboursée (${amountLabel}) ? À faire si tu as déjà remboursé par un autre moyen.`;
+    if (!confirm(msg)) return;
+    try {
+        const r = await apiCall(`/payments/refunds/${orderId}`, { method: 'POST', body: JSON.stringify({ mode }) });
+        if (!r) return;
+        showToast(mode === 'campay' ? 'Remboursement Mobile Money envoyé' : 'Remboursement enregistré', 'success');
+        loadAccounting();
+    } catch (e) { showToast(e.message, 'error'); }
 }

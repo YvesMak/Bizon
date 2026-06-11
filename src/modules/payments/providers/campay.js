@@ -95,6 +95,28 @@ const CampayProvider = {
   },
 
   /**
+   * Décaissement (remboursement) : envoie de l'argent depuis le compte du
+   * restaurant vers un numéro Mobile Money. Endpoint Campay : POST /api/withdraw/.
+   * @returns {Promise<{reference: string, status?: string}>}
+   */
+  async disburse({ amount, phone, description, externalReference }, creds) {
+    const c = buildCreds(creds);
+    const token = await this.getToken(creds);
+    const json = await campayFetch(c.baseUrl, '/api/withdraw/', {
+      method: 'POST',
+      token,
+      body: {
+        amount: String(amount),
+        currency: config.currency,
+        to: normalizePhone(phone),
+        description: description || 'Remboursement Bizon',
+        external_reference: externalReference || ''
+      }
+    });
+    return json; // { reference, status, ... }
+  },
+
+  /**
    * Statut d'une transaction (source de vérité).
    * Normalise vers { status: 'successful'|'failed'|'pending', ... }.
    */

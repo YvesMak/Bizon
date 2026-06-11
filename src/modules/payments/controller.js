@@ -123,6 +123,25 @@ class PaymentController {
     }
   }
 
+  // GET /api/payments/refunds — commandes payées + annulées à rembourser
+  async listRefunds(req, res) {
+    try {
+      res.json(await PaymentService.listRefundable(req.restaurantId));
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  // POST /api/payments/refunds/:orderId — rembourse (campay = MoMo réel, manual)
+  async refund(req, res) {
+    try {
+      const result = await PaymentService.refundOrder(req.restaurantId, req.params.orderId, { mode: req.body.mode });
+      res.json({ message: 'Remboursement enregistré', ...result });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
   // GET /api/payments/accounting/export?from=&to= — export CSV de la compta
   async accountingExport(req, res) {
     try {
