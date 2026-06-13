@@ -211,12 +211,13 @@ async function loadRestaurants() {
           <a class="link-url" href="${clientLink}" target="_blank" rel="noopener">${esc(clientLink)}</a>
           <button class="btn btn-ghost btn-sm" onclick="copyLink('${clientLink.replace(/'/g, "\\'")}')">Copier</button>
         </div>
-        <div class="sub" style="margin-top:8px">Slug : <code>${esc(r.slug)}</code> &nbsp;·&nbsp; ${domainRow}</div>
+        <div class="sub" style="margin-top:8px">Slug : <code>${esc(r.slug)}</code> &nbsp;·&nbsp; ${domainRow} <span id="dstatus-${r.id}" class="domain-status"></span></div>
 
         <div class="chips">${chips}</div>
         <div class="card-actions">
           <button class="btn btn-ghost btn-sm" onclick="editServiceTypes('${r.id}')">Modes de service</button>
           <button class="btn btn-ghost btn-sm" onclick="editDomain('${r.id}')">Domaine personnalisé</button>
+          ${r.custom_domain ? `<button class="btn btn-ghost btn-sm" onclick="verifyDomain('${r.id}')">Vérifier le domaine</button>` : ''}
           <button class="btn btn-ghost btn-sm" onclick="toggleRestaurant('${r.id}', '${r.status}')">${r.status === 'active' ? 'Suspendre' : 'Réactiver'}</button>
         </div>
       </div>`;
@@ -309,6 +310,30 @@ async function editDomain(restaurantId) {
     toast(input.trim() ? 'Domaine enregistré' : 'Domaine retiré');
     loadRestaurants();
   } catch (e) { toast(e.message, true); }
+}
+
+// Présentation des statuts renvoyés par /verify-domain.
+const DOMAIN_STATUS = {
+  active: { cls: 'ok', icon: '✅', label: 'Actif', msg: 'Le domaine pointe bien vers ce restaurant.' },
+  wrong_restaurant: { cls: 'err', icon: '❌', label: 'Mauvais restaurant', msg: 'Le domaine répond mais sert un AUTRE restaurant.' },
+  unresolved: { cls: 'warn', icon: '⚠️', label: 'Non résolu', msg: 'Joignable, mais aucun restaurant n’est résolu pour ce domaine.' },
+  unreachable: { cls: 'warn', icon: '⏳', label: 'Injoignable', msg: 'DNS non encore propagé, TLS absent, ou domaine non ajouté chez l’hébergeur (Render → Custom Domains).' },
+  no_domain: { cls: 'muted', icon: '–', label: 'Aucun domaine', msg: 'Aucun domaine personnalisé configuré.' }
+};
+
+// Teste en réel la chaîne DNS → hébergeur → app → bon restaurant.
+async function verifyDomain(restaurantId) {
+  const el = document.getElementById(`dstatus-${restaurantId}`);
+  if (el) el.innerHTML = '<span class="domain-badge muted">⏳ Vérification…</span>';
+  try {
+    const res = await api(`/restaurants/${restaurantId}/verify-domain`);
+    const s = DOMAIN_STATUS[res.status] || DOMAIN_STATUS.unreachable;
+    if (el) el.innerHTML = `<span class="domain-badge ${s.cls}" title="${esc(s.msg)}">${s.icon} ${s.label}</span>`;
+    toast(`${s.icon} ${s.label} — ${s.msg}`, res.status !== 'active');
+  } catch (e) {
+    if (el) el.innerHTML = '';
+    toast(e.message, true);
+  }
 }
 
 /* ---------- Modal utils ---------- */

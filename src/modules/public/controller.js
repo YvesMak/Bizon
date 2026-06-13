@@ -79,6 +79,35 @@ class PublicController {
     }
   }
 
+  // GET /api/public/whoami
+  // Renvoie le restaurant résolu UNIQUEMENT via le Host (domaine perso ou
+  // sous-domaine slug). Sert de sonde pour vérifier qu'un domaine personnalisé
+  // pointe bien vers ce déploiement ET vers le bon restaurant.
+  async whoami(req, res) {
+    try {
+      const host = PublicController.hostFromRequest(req);
+      const id = await PublicController.resolveByHost(req);
+      if (!id) return res.json({ resolved: false, host });
+      const r = await Restaurant.findByPk(id, {
+        attributes: ['id', 'name', 'slug', 'custom_domain']
+      });
+      if (!r) return res.json({ resolved: false, host });
+      res.json({
+        resolved: true,
+        host,
+        restaurant: { id: r.id, name: r.name, slug: r.slug, custom_domain: r.custom_domain }
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  /** Extrait l'hôte normalisé (sans port) de la requête. */
+  static hostFromRequest(req) {
+    const raw = (req.headers['x-forwarded-host'] || req.headers.host || req.hostname || '');
+    return raw.split(',')[0].trim().split(':')[0].toLowerCase();
+  }
+
   /**
    * Résout un restaurant depuis le nom d'hôte de la requête :
    *  1) domaine personnalisé exact (custom_domain),
@@ -86,8 +115,7 @@ class PublicController {
    * Renvoie l'id du restaurant actif trouvé, sinon null.
    */
   static async resolveByHost(req) {
-    const raw = (req.headers['x-forwarded-host'] || req.headers.host || req.hostname || '');
-    const host = raw.split(',')[0].trim().split(':')[0].toLowerCase();
+    const host = PublicController.hostFromRequest(req);
     if (!host) return null;
 
     // 1) Domaine personnalisé

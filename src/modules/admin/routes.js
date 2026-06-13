@@ -19,5 +19,6 @@ router.patch('/owners/:ownerId', AdminController.updateOwner);
 router.get('/restaurants', AdminController.listRestaurants);
 router.post('/restaurants', AdminController.createRestaurant);
 router.patch('/restaurants/:restaurantId', AdminController.updateRestaurant);
+router.get('/restaurants/:restaurantId/verify-domain', AdminController.verifyDomain);
 
 module.exports = router;
