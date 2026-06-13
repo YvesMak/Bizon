@@ -239,8 +239,11 @@ input:focus, select:focus { outline: none; border-color: var(--red); }
 .empty p { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
 
 /* ---------- CARDS : entrée animée + interaction ---------- */
-.card { transition: box-shadow .2s, transform .2s; }
+.card { position: relative; transition: box-shadow .2s, transform .2s; }
 .card:hover { box-shadow: var(--shadow-pop); }
+/* La carte dont le menu overflow est ouvert passe au-dessus des cartes voisines
+   (sinon la carte suivante, opaque, masque la partie du menu qui dépasse). */
+.card.menu-open { z-index: 5; }
 .cards .card { animation: fadeSlideUp .3s var(--ease, ease) both; }
 .cards .card:nth-child(2) { animation-delay: .04s }
 .cards .card:nth-child(3) { animation-delay: .08s }
