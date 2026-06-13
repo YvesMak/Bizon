@@ -320,6 +320,76 @@ class AdminService {
     }
     return { status: 'active', domain, url, resolved: probe.restaurant };
   }
+
+  /**
+   * Liste tous les abonnements (un par restaurant) avec le restaurant et son
+   * propriétaire, plus des champs calculés (jours restants, expiré).
+   */
+  async listSubscriptions() {
+    const subs = await Subscription.findAll({
+      include: [{
+        model: Restaurant,
+        as: 'restaurant',
+        attributes: ['id', 'name', 'slug', 'status'],
+        include: [{ model: User, as: 'owner', attributes: ['id', 'first_name', 'last_name', 'email'] }]
+      }],
+      order: [['end_date', 'ASC']]
+    });
+    const now = Date.now();
+    return subs.map((s) => {
+      const j = s.toJSON();
+      const r = j.restaurant;
+      const end = new Date(j.end_date).getTime();
+      const daysRemaining = Math.ceil((end - now) / 86400000);
+      return {
+        restaurant_id: j.restaurant_id,
+        restaurant: r ? { id: r.id, name: r.name, slug: r.slug, status: r.status } : null,
+        owner: r && r.owner
+          ? { id: r.owner.id, name: `${r.owner.first_name} ${r.owner.last_name}`.trim(), email: r.owner.email }
+          : null,
+        plan: j.plan,
+        status: j.status,
+        start_date: j.start_date,
+        end_date: j.end_date,
+        daysRemaining,
+        isExpired: j.status === 'expired' || (j.status !== 'cancelled' && daysRemaining < 0)
+      };
+    });
+  }
+
+  /**
+   * Gère l'abonnement d'un restaurant : changement de plan, de statut, et/ou
+   * prolongation de l'échéance (extend_days). Une prolongation positive
+   * réactive l'abonnement si aucun statut explicite n'est fourni.
+   */
+  async updateSubscription(restaurantId, data) {
+    const sub = await Subscription.findOne({ where: { restaurant_id: restaurantId } });
+    if (!sub) throw new Error('Abonnement non trouvé');
+
+    const PLANS = ['trial', 'basic', 'premium', 'enterprise'];
+    const STATUSES = ['active', 'expired', 'cancelled', 'suspended'];
+    const patch = {};
+
+    if (data.plan !== undefined) {
+      if (!PLANS.includes(data.plan)) throw new Error('Plan invalide');
+      patch.plan = data.plan;
+    }
+    if (data.status !== undefined) {
+      if (!STATUSES.includes(data.status)) throw new Error('Statut invalide');
+      patch.status = data.status;
+    }
+    if (data.extend_days !== undefined && data.extend_days !== null && data.extend_days !== '') {
+      const n = parseInt(data.extend_days, 10);
+      if (!Number.isInteger(n)) throw new Error('Prolongation invalide');
+      const base = new Date(Math.max(Date.now(), new Date(sub.end_date).getTime()));
+      base.setDate(base.getDate() + n);
+      patch.end_date = base;
+      if (n > 0 && data.status === undefined) patch.status = 'active';
+    }
+
+    await sub.update(patch);
+    return sub.toJSON();
+  }
 }
 
 module.exports = new AdminService();

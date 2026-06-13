@@ -45,6 +45,7 @@
       <nav class="tabs" role="tablist" aria-label="Sections d'administration">
         <button class="tab active" id="tab-btn-owners" role="tab" aria-selected="true" aria-controls="tab-owners" data-tab="owners" onclick="switchTab('owners')">Propriétaires</button>
         <button class="tab" id="tab-btn-restaurants" role="tab" aria-selected="false" aria-controls="tab-restaurants" data-tab="restaurants" onclick="switchTab('restaurants')">Restaurants</button>
+        <button class="tab" id="tab-btn-subscriptions" role="tab" aria-selected="false" aria-controls="tab-subscriptions" data-tab="subscriptions" onclick="switchTab('subscriptions')">Abonnements</button>
       </nav>
 
       <!-- PROPRIÉTAIRES -->
@@ -63,6 +64,15 @@
           <button class="btn btn-primary" onclick="openRestaurantModal()">+ Nouveau restaurant</button>
         </div>
         <div id="restaurants-list" class="cards"></div>
+      </section>
+
+      <!-- ABONNEMENTS -->
+      <section id="tab-subscriptions" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-btn-subscriptions">
+        <div class="panel-head">
+          <h2>Abonnements</h2>
+        </div>
+        <div id="sub-summary" class="sub-summary"></div>
+        <div id="subscriptions-list" class="cards"></div>
       </section>
     </main>
   </div>
@@ -182,6 +192,38 @@
         <p class="error-msg" id="quota-error" role="alert"></p>
         <div class="modal-actions">
           <button type="button" class="btn btn-ghost" onclick="closeModal('quota-modal')">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODALE GESTION ABONNEMENT -->
+  <div id="sub-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="sub-modal-title">
+    <div class="modal-card">
+      <h3 id="sub-modal-title">Gérer l'abonnement</h3>
+      <p class="modal-desc" id="sub-modal-sub"></p>
+      <form id="sub-form">
+        <label for="sub-plan">Plan</label>
+        <select id="sub-plan">
+          <option value="trial">Essai (gratuit)</option>
+          <option value="basic">Basic — 5 000 FCFA/mois</option>
+          <option value="premium">Premium — 15 000 FCFA/mois</option>
+          <option value="enterprise">Enterprise — sur devis</option>
+        </select>
+        <label for="sub-status">Statut</label>
+        <select id="sub-status">
+          <option value="active">Actif</option>
+          <option value="expired">Expiré</option>
+          <option value="suspended">Suspendu</option>
+          <option value="cancelled">Annulé</option>
+        </select>
+        <label for="sub-extend">Prolonger l'échéance (jours)</label>
+        <input id="sub-extend" type="number" min="0" placeholder="ex. 30">
+        <p class="hint">Laisser vide pour ne pas modifier l'échéance. Une prolongation positive réactive l'abonnement.</p>
+        <p class="error-msg" id="sub-error" role="alert"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" onclick="closeModal('sub-modal')">Annuler</button>
           <button type="submit" class="btn btn-primary">Enregistrer</button>
         </div>
       </form>

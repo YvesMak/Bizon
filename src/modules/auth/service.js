@@ -60,6 +60,9 @@ class AuthService {
         status: 'active'
       }, { transaction });
 
+      // Lier le restaurant à son propriétaire (back-office, multi-restaurant).
+      await restaurant.update({ owner_id: user.id }, { transaction });
+
       // Créer la subscription trial (14 jours)
       const trialEndDate = new Date();
       trialEndDate.setDate(trialEndDate.getDate() + 14);

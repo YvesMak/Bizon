@@ -5,8 +5,12 @@ const TYPE_LABELS = { dine_in: 'Sur place', takeaway: 'À emporter', delivery: '
 const state = {
   token: localStorage.getItem('bizon_admin_token') || null,
   owners: [],
-  restaurants: []
+  restaurants: [],
+  subscriptions: []
 };
+
+const PLAN_LABELS = { trial: 'Essai', basic: 'Basic', premium: 'Premium', enterprise: 'Enterprise' };
+const PLAN_PRICE = { trial: 'Gratuit', basic: '5 000 FCFA/mois', premium: '15 000 FCFA/mois', enterprise: 'Sur devis' };
 
 /* ---------- Helpers ---------- */
 function esc(s) {
@@ -88,7 +92,7 @@ async function boot() {
   try {
     const me = await api('/me');
     document.getElementById('admin-name').textContent = me.admin.name;
-    await Promise.all([loadStats(), loadOwners(), loadRestaurants()]);
+    await Promise.all([loadStats(), loadOwners(), loadRestaurants(), loadSubscriptions()]);
   } catch (err) {
     toast(err.message, true);
   }
@@ -116,6 +120,7 @@ function switchTab(tab) {
   });
   document.getElementById('tab-owners').classList.toggle('hidden', tab !== 'owners');
   document.getElementById('tab-restaurants').classList.toggle('hidden', tab !== 'restaurants');
+  document.getElementById('tab-subscriptions').classList.toggle('hidden', tab !== 'subscriptions');
 }
 
 /* ---------- Menu overflow (⋯) ---------- */
@@ -483,6 +488,111 @@ function confirmDialog({ title, message, confirmLabel = 'Confirmer', danger = tr
   ok.addEventListener('click', handler);
   openModal('confirm-modal');
 }
+
+/* ---------- Abonnements ---------- */
+function subBadgeClass(s) {
+  if (s.status === 'cancelled') return 'closed';
+  if (s.isExpired) return 'suspended';
+  if (s.plan !== 'trial') return 'active';
+  return 'trial';
+}
+// Statut effectif : un abonnement « actif » mais dont l'échéance est passée
+// est affiché « Expiré » (cohérence avec le compteur de jours).
+function subStatusLabel(s) {
+  if (s.status === 'cancelled') return 'Annulé';
+  if (s.status === 'suspended') return 'Suspendu';
+  if (s.isExpired) return 'Expiré';
+  return 'Actif';
+}
+function daysLabel(s) {
+  if (s.status === 'cancelled') return 'Annulé';
+  if (s.isExpired) return `Expiré depuis ${Math.abs(s.daysRemaining)} j`;
+  if (s.daysRemaining <= 3) return `Expire dans ${s.daysRemaining} j`;
+  return `${s.daysRemaining} j restants`;
+}
+function daysClass(s) {
+  if (s.isExpired || s.status === 'cancelled') return 'days-bad';
+  if (s.daysRemaining <= 3) return 'days-warn';
+  return 'days-ok';
+}
+
+async function loadSubscriptions() {
+  const list = document.getElementById('subscriptions-list');
+  list.innerHTML = skeletons(3);
+  state.subscriptions = await api('/subscriptions');
+  renderSubSummary();
+  if (!state.subscriptions.length) {
+    document.getElementById('sub-summary').innerHTML = '';
+    list.innerHTML = '<p class="muted">Aucun abonnement.</p>';
+    return;
+  }
+  list.innerHTML = state.subscriptions.map((s) => {
+    const restoName = s.restaurant ? esc(s.restaurant.name) : '<span class="muted">Restaurant supprimé</span>';
+    const owner = s.owner ? `${esc(s.owner.name)} · ${esc(s.owner.email)}` : '<span class="muted">Sans propriétaire</span>';
+    const end = new Date(s.end_date).toLocaleDateString('fr-FR');
+    return `
+      <div class="card">
+        <div class="card-row">
+          <div>
+            <h3>${restoName}</h3>
+            <div class="sub">${owner}</div>
+          </div>
+          <span class="plan-badge plan-${s.plan}">${PLAN_LABELS[s.plan] || s.plan}</span>
+        </div>
+        <div class="sub-meta">
+          <span class="badge ${subBadgeClass(s)}">${subStatusLabel(s)}</span>
+          <span class="days ${daysClass(s)}">${daysLabel(s)}</span>
+          <span class="muted" style="font-size:13px">Échéance : ${end} · ${esc(PLAN_PRICE[s.plan] || '')}</span>
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-ghost btn-sm" onclick="openSubModal('${s.restaurant_id}')">Gérer l'abonnement</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderSubSummary() {
+  const subs = state.subscriptions;
+  const trials = subs.filter((s) => s.plan === 'trial' && !s.isExpired && s.status !== 'cancelled').length;
+  const expiringSoon = subs.filter((s) => !s.isExpired && s.status === 'active' && s.daysRemaining <= 3).length;
+  const paying = subs.filter((s) => s.plan !== 'trial' && s.status === 'active' && !s.isExpired).length;
+  const expired = subs.filter((s) => s.isExpired).length;
+  document.getElementById('sub-summary').innerHTML = `
+    <div class="stat-card"><div class="v">${paying}</div><div class="k">Abonnés payants</div></div>
+    <div class="stat-card accent"><div class="v">${trials}</div><div class="k">Essais en cours</div></div>
+    <div class="stat-card"><div class="v">${expiringSoon}</div><div class="k">Expirent sous 3 j</div></div>
+    <div class="stat-card"><div class="v">${expired}</div><div class="k">Expirés</div></div>
+  `;
+}
+
+let subRestaurantId = null;
+function openSubModal(restaurantId) {
+  const s = state.subscriptions.find((x) => x.restaurant_id === restaurantId);
+  subRestaurantId = restaurantId;
+  document.getElementById('sub-modal-sub').textContent = s && s.restaurant ? s.restaurant.name : '';
+  document.getElementById('sub-plan').value = (s && s.plan) || 'trial';
+  document.getElementById('sub-status').value = (s && s.status) || 'active';
+  document.getElementById('sub-extend').value = '';
+  document.getElementById('sub-error').textContent = '';
+  openModal('sub-modal');
+}
+document.getElementById('sub-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const err = document.getElementById('sub-error');
+  err.textContent = '';
+  const body = {
+    plan: document.getElementById('sub-plan').value,
+    status: document.getElementById('sub-status').value
+  };
+  const extend = document.getElementById('sub-extend').value.trim();
+  if (extend !== '') body.extend_days = parseInt(extend, 10);
+  try {
+    await api(`/subscriptions/${subRestaurantId}`, { method: 'PATCH', body: JSON.stringify(body) });
+    closeModal('sub-modal');
+    toast('Abonnement mis à jour');
+    loadSubscriptions();
+  } catch (e2) { err.textContent = e2.message; }
+});
 
 /* ---------- Modal infra (focus-trap, Échap, restauration du focus) ---------- */
 let modalOpener = null;
