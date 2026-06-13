@@ -80,6 +80,22 @@ class AdminController {
       res.status(400).json({ error: error.message });
     }
   }
+
+  async listSubscriptions(req, res) {
+    try {
+      res.json(await AdminService.listSubscriptions());
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async updateSubscription(req, res) {
+    try {
+      res.json(await AdminService.updateSubscription(req.params.restaurantId, req.body));
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
 }
 
 module.exports = new AdminController();

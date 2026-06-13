@@ -21,4 +21,7 @@ router.post('/restaurants', AdminController.createRestaurant);
 router.patch('/restaurants/:restaurantId', AdminController.updateRestaurant);
 router.get('/restaurants/:restaurantId/verify-domain', AdminController.verifyDomain);
 
+router.get('/subscriptions', AdminController.listSubscriptions);
+router.patch('/subscriptions/:restaurantId', AdminController.updateSubscription);
+
 module.exports = router;
