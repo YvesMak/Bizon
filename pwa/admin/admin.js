@@ -38,6 +38,17 @@ async function api(path, options = {}) {
 function getChecked(containerId) {
   return [...document.querySelectorAll(`#${containerId} input:checked`)].map((c) => c.value);
 }
+function skeletons(n = 3) {
+  return Array.from({ length: n }, () => (
+    '<div class="skeleton-card"><div class="sk title"></div>'
+    + '<div class="sk line w60"></div><div class="sk line w30"></div></div>'
+  )).join('');
+}
+function emptyState(emoji, title, msg, ctaLabel, ctaFn) {
+  return `<div class="empty"><div class="emoji" aria-hidden="true">${emoji}</div>`
+    + `<h3>${esc(title)}</h3><p>${esc(msg)}</p>`
+    + `<button class="btn btn-primary" onclick="${ctaFn}">${esc(ctaLabel)}</button></div>`;
+}
 
 /* ---------- Auth ---------- */
 document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -45,18 +56,16 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   const errEl = document.getElementById('login-error');
   errEl.textContent = '';
   try {
-    const data = await (await fetch(API + '/login', {
+    const r = await fetch(API + '/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email: document.getElementById('login-email').value,
         password: document.getElementById('login-password').value
       })
-    }).then(async (r) => {
-      const b = await r.json();
-      if (!r.ok) throw new Error(b.error || 'Identifiants invalides');
-      return { json: () => b };
-    })).json();
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Identifiants invalides');
     state.token = data.token;
     localStorage.setItem('bizon_admin_token', data.token);
     boot();
@@ -100,15 +109,49 @@ async function loadStats() {
 
 /* ---------- Tabs ---------- */
 function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.tab').forEach((t) => {
+    const on = t.dataset.tab === tab;
+    t.classList.toggle('active', on);
+    t.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
   document.getElementById('tab-owners').classList.toggle('hidden', tab !== 'owners');
   document.getElementById('tab-restaurants').classList.toggle('hidden', tab !== 'restaurants');
 }
 
+/* ---------- Menu overflow (⋯) ---------- */
+function closeAllMenus() {
+  document.querySelectorAll('.menu-pop').forEach((p) => p.classList.add('hidden'));
+  document.querySelectorAll('.menu-btn').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+}
+function toggleMenu(e, btn) {
+  e.stopPropagation();
+  const pop = btn.nextElementSibling;
+  const isOpen = !pop.classList.contains('hidden');
+  closeAllMenus();
+  if (!isOpen) { pop.classList.remove('hidden'); btn.setAttribute('aria-expanded', 'true'); }
+}
+
+function menu(items) {
+  // items : [{ label, fn, danger }] — rendu d'un menu overflow
+  const inner = items.map((it) => (
+    `<button class="${it.danger ? 'danger' : ''}" onclick="${it.fn}">${esc(it.label)}</button>`
+  )).join('');
+  return `<div class="menu-wrap">
+      <button class="menu-btn" aria-haspopup="true" aria-expanded="false" aria-label="Plus d'actions" onclick="toggleMenu(event,this)">⋯</button>
+      <div class="menu-pop hidden" role="menu">${inner}</div>
+    </div>`;
+}
+
 /* ---------- Owners ---------- */
 async function loadOwners() {
+  const list = document.getElementById('owners-list');
+  list.innerHTML = skeletons(2);
   state.owners = await api('/owners');
-  const html = state.owners.map((o) => {
+  if (!state.owners.length) {
+    list.innerHTML = emptyState('👤', 'Aucun propriétaire', 'Créez un propriétaire pour démarrer.', '+ Nouveau propriétaire', 'openOwnerModal()');
+    return;
+  }
+  list.innerHTML = state.owners.map((o) => {
     const restos = (o.ownedRestaurants || []).map((r) => `<span class="resto-mini">• ${esc(r.name)}</span>`).join(' ');
     return `
       <div class="card">
@@ -122,19 +165,22 @@ async function loadOwners() {
         <div class="sub" style="margin-top:8px">Quota : <strong>${o.max_restaurants}</strong> restaurant(s) · Possède ${(o.ownedRestaurants || []).length}</div>
         <div class="chips">${restos || '<span class="resto-mini">Aucun restaurant lié</span>'}</div>
         <div class="card-actions">
-          <button class="btn btn-ghost btn-sm" onclick="editQuota('${o.id}', ${o.max_restaurants})">Modifier le quota</button>
-          <button class="btn btn-ghost btn-sm" onclick="toggleOwner('${o.id}', '${o.status}')">${o.status === 'active' ? 'Désactiver' : 'Réactiver'}</button>
+          <button class="btn btn-ghost btn-sm" onclick="openQuotaModal('${o.id}')">Modifier le quota</button>
+          ${menu([{
+    label: o.status === 'active' ? 'Désactiver le propriétaire' : 'Réactiver le propriétaire',
+    fn: `confirmToggleOwner('${o.id}','${o.status}')`,
+    danger: o.status === 'active'
+  }])}
         </div>
       </div>`;
   }).join('');
-  document.getElementById('owners-list').innerHTML = html || '<p class="muted">Aucun propriétaire.</p>';
 }
 
 function openOwnerModal() {
   document.getElementById('owner-form').reset();
   document.getElementById('owner-error').textContent = '';
   document.querySelectorAll('#o-service-types input').forEach((c) => { c.checked = true; });
-  document.getElementById('owner-modal').classList.remove('hidden');
+  openModal('owner-modal');
 }
 
 document.getElementById('owner-form').addEventListener('submit', async (e) => {
@@ -163,32 +209,60 @@ document.getElementById('owner-form').addEventListener('submit', async (e) => {
   }
 });
 
-async function editQuota(ownerId, current) {
-  const val = prompt('Nouveau quota de restaurants :', current);
-  if (val == null) return;
-  const n = parseInt(val, 10);
-  if (!Number.isInteger(n) || n < 1) return toast('Quota invalide', true);
+/* Quota — modale (remplace le prompt) */
+let quotaOwnerId = null;
+function openQuotaModal(ownerId) {
+  const o = state.owners.find((x) => x.id === ownerId);
+  quotaOwnerId = ownerId;
+  document.getElementById('quota-modal-sub').textContent = o ? `${o.first_name} ${o.last_name}` : '';
+  document.getElementById('q-value').value = (o && o.max_restaurants) || 1;
+  document.getElementById('quota-error').textContent = '';
+  openModal('quota-modal');
+}
+document.getElementById('quota-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const err = document.getElementById('quota-error');
+  err.textContent = '';
+  const n = parseInt(document.getElementById('q-value').value, 10);
+  if (!Number.isInteger(n) || n < 1) { err.textContent = 'Quota invalide (minimum 1).'; return; }
   try {
-    await api(`/owners/${ownerId}`, { method: 'PATCH', body: JSON.stringify({ max_restaurants: n }) });
+    await api(`/owners/${quotaOwnerId}`, { method: 'PATCH', body: JSON.stringify({ max_restaurants: n }) });
+    closeModal('quota-modal');
     toast('Quota mis à jour');
     loadOwners();
-  } catch (e) { toast(e.message, true); }
-}
+  } catch (e2) { err.textContent = e2.message; }
+});
 
-async function toggleOwner(ownerId, status) {
+function confirmToggleOwner(ownerId, status) {
+  const o = state.owners.find((x) => x.id === ownerId);
   const next = status === 'active' ? 'inactive' : 'active';
-  try {
-    await api(`/owners/${ownerId}`, { method: 'PATCH', body: JSON.stringify({ status: next }) });
-    toast('Statut mis à jour');
-    loadOwners();
-  } catch (e) { toast(e.message, true); }
+  const off = next === 'inactive';
+  confirmDialog({
+    title: off ? 'Désactiver le propriétaire ?' : 'Réactiver le propriétaire ?',
+    message: `${o ? o.first_name + ' ' + o.last_name : 'Ce compte'} ${off ? 'ne pourra plus se connecter.' : 'pourra de nouveau se connecter.'}`,
+    confirmLabel: off ? 'Désactiver' : 'Réactiver',
+    danger: off,
+    onConfirm: async () => {
+      try {
+        await api(`/owners/${ownerId}`, { method: 'PATCH', body: JSON.stringify({ status: next }) });
+        toast('Statut mis à jour');
+        loadOwners();
+      } catch (e) { toast(e.message, true); }
+    }
+  });
 }
 
 /* ---------- Restaurants ---------- */
 async function loadRestaurants() {
+  const list = document.getElementById('restaurants-list');
+  list.innerHTML = skeletons(2);
   state.restaurants = await api('/restaurants');
   const origin = location.origin;
-  const html = state.restaurants.map((r) => {
+  if (!state.restaurants.length) {
+    list.innerHTML = emptyState('🍽️', 'Aucun restaurant', 'Ajoutez un restaurant et rattachez-le à un propriétaire.', '+ Nouveau restaurant', 'openRestaurantModal()');
+    return;
+  }
+  list.innerHTML = state.restaurants.map((r) => {
     const types = (r.settings && r.settings.service_types) || ['dine_in', 'takeaway', 'delivery'];
     const chips = types.map((t) => `<span class="chip">${TYPE_LABELS[t] || t}</span>`).join('');
     const owner = r.owner ? `${esc(r.owner.first_name)} ${esc(r.owner.last_name)}` : '<span class="muted">Sans propriétaire</span>';
@@ -196,6 +270,13 @@ async function loadRestaurants() {
     const domainRow = r.custom_domain
       ? `<span class="chip">🌐 ${esc(r.custom_domain)}</span>`
       : '<span class="muted" style="font-size:12px">Aucun domaine personnalisé</span>';
+    const overflow = [];
+    if (r.custom_domain) overflow.push({ label: 'Vérifier le domaine', fn: `verifyDomain('${r.id}')` });
+    overflow.push({
+      label: r.status === 'active' ? 'Suspendre le restaurant' : 'Réactiver le restaurant',
+      fn: `confirmToggleRestaurant('${r.id}','${r.status}')`,
+      danger: r.status === 'active'
+    });
     return `
       <div class="card">
         <div class="card-row">
@@ -215,14 +296,12 @@ async function loadRestaurants() {
 
         <div class="chips">${chips}</div>
         <div class="card-actions">
-          <button class="btn btn-ghost btn-sm" onclick="editServiceTypes('${r.id}')">Modes de service</button>
-          <button class="btn btn-ghost btn-sm" onclick="editDomain('${r.id}')">Domaine personnalisé</button>
-          ${r.custom_domain ? `<button class="btn btn-ghost btn-sm" onclick="verifyDomain('${r.id}')">Vérifier le domaine</button>` : ''}
-          <button class="btn btn-ghost btn-sm" onclick="toggleRestaurant('${r.id}', '${r.status}')">${r.status === 'active' ? 'Suspendre' : 'Réactiver'}</button>
+          <button class="btn btn-ghost btn-sm" onclick="openDomainModal('${r.id}')">Domaine personnalisé</button>
+          <button class="btn btn-ghost btn-sm" onclick="openServiceModal('${r.id}')">Modes de service</button>
+          ${menu(overflow)}
         </div>
       </div>`;
   }).join('');
-  document.getElementById('restaurants-list').innerHTML = html || '<p class="muted">Aucun restaurant.</p>';
 }
 
 function openRestaurantModal() {
@@ -232,7 +311,7 @@ function openRestaurantModal() {
   const sel = document.getElementById('r-owner');
   sel.innerHTML = state.owners.map((o) => `<option value="${o.id}">${esc(o.first_name)} ${esc(o.last_name)} (${esc(o.email)})</option>`).join('');
   if (!state.owners.length) { sel.innerHTML = '<option value="">Créez d\'abord un propriétaire</option>'; }
-  document.getElementById('restaurant-modal').classList.remove('hidden');
+  openModal('restaurant-modal');
 }
 
 document.getElementById('restaurant-form').addEventListener('submit', async (e) => {
@@ -258,30 +337,48 @@ document.getElementById('restaurant-form').addEventListener('submit', async (e) 
   }
 });
 
-async function editServiceTypes(restaurantId) {
+/* Modes de service — modale (remplace le prompt) */
+let serviceRestaurantId = null;
+function openServiceModal(restaurantId) {
   const r = state.restaurants.find((x) => x.id === restaurantId);
+  serviceRestaurantId = restaurantId;
+  document.getElementById('service-modal-sub').textContent = r ? r.name : '';
   const current = (r && r.settings && r.settings.service_types) || ['dine_in', 'takeaway', 'delivery'];
-  const input = prompt(
-    'Modes proposés (séparés par des virgules) parmi : dine_in, takeaway, delivery',
-    current.join(',')
-  );
-  if (input == null) return;
-  const types = input.split(',').map((s) => s.trim()).filter((s) => ['dine_in', 'takeaway', 'delivery'].includes(s));
-  if (!types.length) return toast('Au moins un mode valide requis', true);
+  document.querySelectorAll('#s-service-types input').forEach((c) => { c.checked = current.includes(c.value); });
+  document.getElementById('service-error').textContent = '';
+  openModal('service-modal');
+}
+document.getElementById('service-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const err = document.getElementById('service-error');
+  err.textContent = '';
+  const types = getChecked('s-service-types');
+  if (!types.length) { err.textContent = 'Au moins un mode de service est requis.'; return; }
   try {
-    await api(`/restaurants/${restaurantId}`, { method: 'PATCH', body: JSON.stringify({ service_types: types }) });
+    await api(`/restaurants/${serviceRestaurantId}`, { method: 'PATCH', body: JSON.stringify({ service_types: types }) });
+    closeModal('service-modal');
     toast('Modes de service mis à jour');
     loadRestaurants();
-  } catch (e) { toast(e.message, true); }
-}
+  } catch (e2) { err.textContent = e2.message; }
+});
 
-async function toggleRestaurant(restaurantId, status) {
+function confirmToggleRestaurant(restaurantId, status) {
+  const r = state.restaurants.find((x) => x.id === restaurantId);
   const next = status === 'active' ? 'suspended' : 'active';
-  try {
-    await api(`/restaurants/${restaurantId}`, { method: 'PATCH', body: JSON.stringify({ status: next }) });
-    toast('Statut mis à jour');
-    loadRestaurants();
-  } catch (e) { toast(e.message, true); }
+  const off = next === 'suspended';
+  confirmDialog({
+    title: off ? 'Suspendre le restaurant ?' : 'Réactiver le restaurant ?',
+    message: `« ${r ? r.name : ''} » ${off ? 'ne sera plus accessible aux clients.' : 'redeviendra accessible aux clients.'}`,
+    confirmLabel: off ? 'Suspendre' : 'Réactiver',
+    danger: off,
+    onConfirm: async () => {
+      try {
+        await api(`/restaurants/${restaurantId}`, { method: 'PATCH', body: JSON.stringify({ status: next }) });
+        toast('Statut mis à jour');
+        await Promise.all([loadRestaurants(), loadStats()]);
+      } catch (e) { toast(e.message, true); }
+    }
+  });
 }
 
 function copyLink(url) {
@@ -290,26 +387,61 @@ function copyLink(url) {
     .catch(() => toast('Copie impossible', true));
 }
 
-async function editDomain(restaurantId) {
+/* ---------- Domaine personnalisé — modale (remplace le prompt) ---------- */
+let domainRestaurantId = null;
+function appHost() { return location.host; }
+
+function openDomainModal(restaurantId) {
   const r = state.restaurants.find((x) => x.id === restaurantId);
-  const host = location.host;
-  const input = prompt(
-    'Domaine personnalisé du restaurant (laisser vide pour retirer).\n\n'
-    + 'Ex. : commande.mon-resto.cm\n\n'
-    + 'Le restaurateur doit créer un enregistrement DNS :\n'
-    + `  CNAME  →  ${host}\n`
-    + '(puis ajouter ce domaine dans Render → Settings → Custom Domains)',
-    (r && r.custom_domain) || ''
-  );
-  if (input == null) return; // annulé
+  domainRestaurantId = restaurantId;
+  document.getElementById('domain-modal-sub').textContent = r ? r.name : '';
+  document.getElementById('d-domain').value = (r && r.custom_domain) || '';
+  document.getElementById('d-cname').textContent = appHost();
+  document.getElementById('domain-error').textContent = '';
+  document.getElementById('d-verify-status').innerHTML = '';
+  const hasDomain = !!(r && r.custom_domain);
+  document.getElementById('d-remove-btn').style.display = hasDomain ? '' : 'none';
+  document.getElementById('d-verify-btn').style.display = hasDomain ? '' : 'none';
+  openModal('domain-modal');
+}
+function copyCname() {
+  navigator.clipboard.writeText(appHost())
+    .then(() => toast('CNAME copié'))
+    .catch(() => toast('Copie impossible', true));
+}
+document.getElementById('domain-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const err = document.getElementById('domain-error');
+  err.textContent = '';
   try {
-    await api(`/restaurants/${restaurantId}`, {
+    await api(`/restaurants/${domainRestaurantId}`, {
       method: 'PATCH',
-      body: JSON.stringify({ custom_domain: input.trim() })
+      body: JSON.stringify({ custom_domain: document.getElementById('d-domain').value.trim() })
     });
-    toast(input.trim() ? 'Domaine enregistré' : 'Domaine retiré');
+    closeModal('domain-modal');
+    toast('Domaine enregistré');
     loadRestaurants();
-  } catch (e) { toast(e.message, true); }
+  } catch (e2) { err.textContent = e2.message; }
+});
+async function removeDomain() {
+  try {
+    await api(`/restaurants/${domainRestaurantId}`, { method: 'PATCH', body: JSON.stringify({ custom_domain: '' }) });
+    closeModal('domain-modal');
+    toast('Domaine retiré');
+    loadRestaurants();
+  } catch (e) { document.getElementById('domain-error').textContent = e.message; }
+}
+async function verifyDomainInModal() {
+  const el = document.getElementById('d-verify-status');
+  el.innerHTML = '<span class="domain-badge muted">⏳ Vérification…</span>';
+  try {
+    const res = await api(`/restaurants/${domainRestaurantId}/verify-domain`);
+    const s = DOMAIN_STATUS[res.status] || DOMAIN_STATUS.unreachable;
+    el.innerHTML = `<span class="domain-badge ${s.cls}" title="${esc(s.msg)}">${s.icon} ${s.label}</span>`;
+  } catch (e) {
+    el.innerHTML = '';
+    document.getElementById('domain-error').textContent = e.message;
+  }
 }
 
 // Présentation des statuts renvoyés par /verify-domain.
@@ -321,7 +453,7 @@ const DOMAIN_STATUS = {
   no_domain: { cls: 'muted', icon: '–', label: 'Aucun domaine', msg: 'Aucun domaine personnalisé configuré.' }
 };
 
-// Teste en réel la chaîne DNS → hébergeur → app → bon restaurant.
+// Vérif depuis le menu d'une carte : badge inline sur la carte.
 async function verifyDomain(restaurantId) {
   const el = document.getElementById(`dstatus-${restaurantId}`);
   if (el) el.innerHTML = '<span class="domain-badge muted">⏳ Vérification…</span>';
@@ -336,10 +468,58 @@ async function verifyDomain(restaurantId) {
   }
 }
 
-/* ---------- Modal utils ---------- */
-function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+/* ---------- Confirmation générique ---------- */
+function confirmDialog({ title, message, confirmLabel = 'Confirmer', danger = true, onConfirm }) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent = message;
+  const ok = document.getElementById('confirm-ok');
+  ok.textContent = confirmLabel;
+  ok.className = `btn ${danger ? 'btn-danger' : 'btn-primary'}`;
+  const handler = async () => {
+    ok.removeEventListener('click', handler);
+    closeModal('confirm-modal');
+    await onConfirm();
+  };
+  ok.addEventListener('click', handler);
+  openModal('confirm-modal');
+}
+
+/* ---------- Modal infra (focus-trap, Échap, restauration du focus) ---------- */
+let modalOpener = null;
+function openModal(id) {
+  closeAllMenus();
+  modalOpener = document.activeElement;
+  const m = document.getElementById(id);
+  m.classList.remove('hidden');
+  const focusable = m.querySelector('input:not([type=hidden]), select, textarea, button');
+  if (focusable) setTimeout(() => focusable.focus(), 40);
+}
+function closeModal(id) {
+  document.getElementById(id).classList.add('hidden');
+  if (modalOpener && typeof modalOpener.focus === 'function') modalOpener.focus();
+  modalOpener = null;
+}
+
+// Échap ferme la modale du dessus ; Tab reste piégé à l'intérieur.
+document.addEventListener('keydown', (e) => {
+  const open = [...document.querySelectorAll('.modal:not(.hidden)')].pop();
+  if (!open) return;
+  if (e.key === 'Escape') { closeModal(open.id); return; }
+  if (e.key !== 'Tab') return;
+  const f = [...open.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select, textarea')]
+    .filter((el) => el.offsetParent !== null && el.style.display !== 'none');
+  if (!f.length) return;
+  const first = f[0];
+  const last = f[f.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
+
+// Clic sur le fond ferme la modale ; clic ailleurs ferme les menus overflow.
 window.addEventListener('click', (e) => {
-  if (e.target.classList.contains('modal')) e.target.classList.add('hidden');
+  if (e.target.classList.contains('modal')) { closeModal(e.target.id); return; }
+  // Ferme les menus overflow sauf si on (re)clique le bouton bascule lui-même.
+  if (!e.target.closest('.menu-btn')) closeAllMenus();
 });
 
 /* ---------- Init ---------- */
