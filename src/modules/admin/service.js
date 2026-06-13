@@ -30,6 +30,24 @@ function normalizeDomain(input) {
   return d || null;
 }
 
+// Sonde HTTP vers le /whoami d'un domaine personnalisé (fetch natif, Node ≥ 18).
+// Borne le temps d'attente pour ne pas bloquer si le DNS n'est pas propagé.
+async function probeWhoami(url, timeoutMs = 5000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      redirect: 'follow',
+      headers: { accept: 'application/json' }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 class AdminService {
   generateToken(adminId) {
     return jwt.sign(
@@ -266,6 +284,41 @@ class AdminService {
 
     await restaurant.update(patch);
     return restaurant.toJSON();
+  }
+
+  /**
+   * Vérifie en conditions réelles qu'un domaine personnalisé est « live » :
+   * interroge https://<domaine>/api/public/whoami et confirme que la chaîne
+   * complète (DNS → hébergeur → app → résolution par Host) aboutit au BON
+   * restaurant. Statuts possibles :
+   *   - no_domain        : aucun domaine personnalisé configuré
+   *   - unreachable      : injoignable (DNS non propagé, TLS absent, hébergeur non configuré, timeout)
+   *   - unresolved       : joignable mais l'app ne résout aucun restaurant pour ce Host
+   *   - wrong_restaurant : joignable mais résout vers un AUTRE restaurant
+   *   - active           : tout est bon, le domaine sert bien ce restaurant
+   */
+  async verifyDomain(restaurantId) {
+    const restaurant = await Restaurant.findByPk(restaurantId);
+    if (!restaurant) throw new Error('Restaurant non trouvé');
+
+    const domain = restaurant.custom_domain;
+    if (!domain) return { status: 'no_domain', domain: null };
+
+    const url = `https://${domain}/api/public/whoami`;
+    let probe;
+    try {
+      probe = await probeWhoami(url);
+    } catch (err) {
+      return { status: 'unreachable', domain, url, error: err.message };
+    }
+
+    if (!probe || !probe.resolved || !probe.restaurant) {
+      return { status: 'unresolved', domain, url };
+    }
+    if (probe.restaurant.id !== restaurant.id) {
+      return { status: 'wrong_restaurant', domain, url, resolved: probe.restaurant };
+    }
+    return { status: 'active', domain, url, resolved: probe.restaurant };
   }
 }
 

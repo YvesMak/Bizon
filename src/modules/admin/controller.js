@@ -72,6 +72,14 @@ class AdminController {
       res.status(400).json({ error: error.message });
     }
   }
+
+  async verifyDomain(req, res) {
+    try {
+      res.json(await AdminService.verifyDomain(req.params.restaurantId));
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
 }
 
 module.exports = new AdminController();
