@@ -1,6 +1,6 @@
 // Page d'inscription publique Bizon (propriétaires de restaurant).
 const API = '/api';
-const state = { plans: [], cadence: 'monthly', selectedPlan: 'premium' };
+const state = { plans: [], cadence: 'monthly', selectedPlan: 'premium', token: null, phone: '' };
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
@@ -67,13 +67,18 @@ function openSignup(planId) {
       : `Plan ${p.name} — essai gratuit de 14 jours, sans carte bancaire.`)
     : 'Essai gratuit de 14 jours — sans carte bancaire.';
   document.getElementById('signup-plan-line').textContent = line;
-  // (ré)afficher le formulaire, masquer le succès
-  document.getElementById('signup-form').classList.remove('hidden');
-  document.getElementById('signup-success').classList.add('hidden');
   document.getElementById('signup-error').textContent = '';
+  showPanel('signup-form');
   openModal('signup-modal');
 }
 function closeSignup() { closeModal('signup-modal'); }
+
+// Affiche un seul panneau de la modale (formulaire → succès → paiement → activé).
+function showPanel(id) {
+  ['signup-form', 'signup-success', 'signup-pay', 'signup-activated'].forEach((p) => {
+    document.getElementById(p).classList.toggle('hidden', p !== id);
+  });
+}
 
 document.getElementById('signup-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -106,6 +111,8 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Inscription impossible');
+    state.token = data.token;
+    state.phone = payload.phone;
     showSuccess();
   } catch (e2) {
     err.textContent = e2.message;
@@ -117,12 +124,87 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
 
 function showSuccess() {
   const p = planById(state.selectedPlan);
-  document.getElementById('success-plan-line').innerHTML = p && !p.custom
+  const payable = p && !p.custom;
+  document.getElementById('success-plan-line').innerHTML = payable
     ? `Plan choisi : <strong>${esc(p.name)}</strong> — ${fmt(p.monthly)} FCFA/mois après l'essai`
     : 'Notre équipe vous contactera pour votre devis.';
-  document.getElementById('signup-form').classList.add('hidden');
-  document.getElementById('signup-success').classList.remove('hidden');
+  // Enterprise / pas de token : pas d'activation self-serve.
+  document.getElementById('activate-btn').classList.toggle('hidden', !payable || !state.token);
+  showPanel('signup-success');
   toast('Compte créé 🎉');
+}
+
+/* ---------- Paiement (activation) ---------- */
+function showPay() {
+  const p = planById(state.selectedPlan);
+  if (!p || p.custom) return;
+  const yearly = state.cadence === 'yearly';
+  document.getElementById('pay-plan-name').textContent = p.name;
+  document.getElementById('pay-amount-line').textContent =
+    `${fmt(yearly ? p.yearly : p.monthly)} FCFA / ${yearly ? 'an' : 'mois'}`;
+  document.getElementById('pay-phone').value = state.phone || '';
+  document.getElementById('pay-error').textContent = '';
+  document.getElementById('pay-pending').classList.add('hidden');
+  document.getElementById('pay-submit').disabled = false;
+  showPanel('signup-pay');
+}
+
+async function startPay() {
+  const err = document.getElementById('pay-error');
+  err.textContent = '';
+  const phone = document.getElementById('pay-phone').value.trim();
+  if (!phone) { err.textContent = 'Entrez votre numéro Mobile Money.'; return; }
+  const btn = document.getElementById('pay-submit');
+  btn.disabled = true;
+  btn.textContent = 'Initialisation…';
+  try {
+    const res = await fetch(`${API}/subscriptions/checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${state.token}` },
+      body: JSON.stringify({ plan: state.selectedPlan, cadence: state.cadence, phone })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Paiement impossible');
+    document.getElementById('pay-ussd').textContent = data.ussd_code || '*126#';
+    document.getElementById('pay-pending').classList.remove('hidden');
+    btn.textContent = 'En attente…';
+    await pollConfirm(data.reference);
+  } catch (e) {
+    err.textContent = e.message;
+    btn.disabled = false;
+    btn.textContent = 'Payer maintenant';
+    document.getElementById('pay-pending').classList.add('hidden');
+  }
+}
+
+async function pollConfirm(reference, attempt = 0) {
+  if (attempt > 20) { // ~60 s
+    document.getElementById('pay-error').textContent = "Paiement non confirmé. Réessayez ou validez depuis votre téléphone.";
+    document.getElementById('pay-pending').classList.add('hidden');
+    const btn = document.getElementById('pay-submit');
+    btn.disabled = false; btn.textContent = 'Réessayer';
+    return;
+  }
+  const res = await fetch(`${API}/subscriptions/checkout/${encodeURIComponent(reference)}`, {
+    headers: { Authorization: `Bearer ${state.token}` }
+  });
+  const data = await res.json();
+  if (data.status === 'successful') { showActivated(); return; }
+  if (data.status === 'failed') {
+    document.getElementById('pay-error').textContent = 'Paiement échoué. Réessayez.';
+    document.getElementById('pay-pending').classList.add('hidden');
+    const btn = document.getElementById('pay-submit');
+    btn.disabled = false; btn.textContent = 'Réessayer';
+    return;
+  }
+  setTimeout(() => pollConfirm(reference, attempt + 1), 3000);
+}
+
+function showActivated() {
+  const p = planById(state.selectedPlan);
+  document.getElementById('activated-line').innerHTML = `Votre plan <strong>${esc(p ? p.name : '')}</strong> est actif. Merci !`;
+  showPanel('signup-activated');
+  toast('Abonnement activé ✅');
 }
 
 /* ---------- Infra modale (Échap, fond, focus) ---------- */

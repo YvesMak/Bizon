@@ -109,15 +109,39 @@
         <p class="form-foot">En continuant, vous acceptez nos conditions. Déjà un compte ? <a href="/staff/">Se connecter</a></p>
       </form>
 
-      <!-- SUCCÈS -->
+      <!-- SUCCÈS : compte créé -->
       <div id="signup-success" class="success hidden">
         <div class="success-ico" aria-hidden="true">🎉</div>
         <h3>Votre restaurant est créé !</h3>
-        <p>Votre essai gratuit de <strong>14 jours</strong> a démarré. Vous pouvez dès maintenant configurer votre menu et prendre des commandes.</p>
+        <p>Votre essai gratuit de <strong>14 jours</strong> a démarré. Configurez votre menu et prenez des commandes dès maintenant.</p>
         <div class="next-box">
           <p class="next-title" id="success-plan-line">Plan choisi : <strong>Premium</strong></p>
-          <p class="next-sub">Activez-le quand vous voulez par Mobile Money — à tout moment pendant l'essai.</p>
+          <p class="next-sub">Activez-le par Mobile Money — sinon vous passez en essai 14 jours.</p>
         </div>
+        <button class="btn btn-primary btn-block" id="activate-btn" onclick="showPay()">Activer par Mobile Money</button>
+        <a class="btn btn-ghost btn-block" href="/staff/" style="margin-top:10px">Plus tard — accéder à mon espace</a>
+      </div>
+
+      <!-- ÉTAPE PAIEMENT -->
+      <div id="signup-pay" class="success hidden">
+        <h3>Activer <span id="pay-plan-name">Premium</span></h3>
+        <p class="modal-desc" id="pay-amount-line">15 000 FCFA / mois</p>
+        <label for="pay-phone">Numéro Mobile Money (MTN / Orange)</label>
+        <input id="pay-phone" type="tel" placeholder="+237 6XX XX XX XX" autocomplete="tel">
+        <p class="error-msg" id="pay-error" role="alert"></p>
+        <div id="pay-pending" class="pay-pending hidden">
+          <div class="spinner" aria-hidden="true"></div>
+          <p>Composez <strong id="pay-ussd">*126#</strong> sur votre téléphone et validez le paiement…</p>
+        </div>
+        <button class="btn btn-primary btn-block" id="pay-submit" onclick="startPay()">Payer maintenant</button>
+        <a class="btn btn-ghost btn-block" href="/staff/" style="margin-top:10px">Payer plus tard</a>
+      </div>
+
+      <!-- ABONNEMENT ACTIVÉ -->
+      <div id="signup-activated" class="success hidden">
+        <div class="success-ico" aria-hidden="true">✅</div>
+        <h3>Abonnement activé !</h3>
+        <p id="activated-line">Votre plan <strong>Premium</strong> est actif. Merci !</p>
         <a class="btn btn-primary btn-block" href="/staff/">Accéder à mon espace</a>
       </div>
     </div>
