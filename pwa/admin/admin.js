@@ -6,7 +6,8 @@ const state = {
   token: localStorage.getItem('bizon_admin_token') || null,
   owners: [],
   restaurants: [],
-  subscriptions: []
+  subscriptions: [],
+  dashboard: null
 };
 
 const PLAN_LABELS = { trial: 'Essai', basic: 'Basic', premium: 'Premium', enterprise: 'Enterprise' };
@@ -92,35 +93,136 @@ async function boot() {
   try {
     const me = await api('/me');
     document.getElementById('admin-name').textContent = me.admin.name;
-    await Promise.all([loadStats(), loadOwners(), loadRestaurants(), loadSubscriptions()]);
+    await Promise.all([loadDashboard(), loadOwners(), loadRestaurants(), loadSubscriptions()]);
   } catch (err) {
     toast(err.message, true);
   }
 }
 
-/* ---------- Stats ---------- */
-async function loadStats() {
-  const s = await api('/stats');
-  const byStatus = s.restaurantsByStatus || {};
-  document.getElementById('stats-grid').innerHTML = `
-    <div class="stat-card"><div class="v">${s.restaurants}</div><div class="k">Restaurants</div></div>
-    <div class="stat-card accent"><div class="v">${s.owners}</div><div class="k">Propriétaires</div></div>
-    <div class="stat-card"><div class="v">${s.orders}</div><div class="k">Commandes totales</div></div>
-    <div class="stat-card"><div class="v">${byStatus.active || 0}</div><div class="k">Restaurants actifs</div></div>
-    <div class="stat-card"><div class="v">${byStatus.suspended || 0}</div><div class="k">Suspendus</div></div>
-  `;
+/* ---------- Navigation (barre latérale) ---------- */
+const SECTIONS = ['dashboard', 'owners', 'restaurants', 'subscriptions'];
+const SECTION_TITLES = {
+  dashboard: "Vue d'ensemble", owners: 'Propriétaires', restaurants: 'Restaurants', subscriptions: 'Abonnements'
+};
+function switchTab(section) {
+  document.querySelectorAll('.nav-item').forEach((n) => {
+    const on = n.dataset.section === section;
+    n.classList.toggle('active', on);
+    if (on) n.setAttribute('aria-current', 'page'); else n.removeAttribute('aria-current');
+  });
+  SECTIONS.forEach((s) => {
+    document.getElementById(`tab-${s}`).classList.toggle('hidden', s !== section);
+  });
+  document.getElementById('section-title').textContent = SECTION_TITLES[section] || '';
+  applySearch();
+  toggleSidebar(false);
 }
 
-/* ---------- Tabs ---------- */
-function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach((t) => {
-    const on = t.dataset.tab === tab;
-    t.classList.toggle('active', on);
-    t.setAttribute('aria-selected', on ? 'true' : 'false');
+function toggleSidebar(force) {
+  const open = force === undefined ? !document.body.classList.contains('sidebar-open') : force;
+  document.body.classList.toggle('sidebar-open', open);
+}
+
+/* ---------- Recherche globale ---------- */
+let searchQuery = '';
+function onSearch(q) { searchQuery = (q || '').trim().toLowerCase(); applySearch(); }
+function applySearch() {
+  const active = document.querySelector('.tab-panel:not(.hidden)');
+  if (!active) return;
+  const cards = active.querySelectorAll('.card[data-search]');
+  let visible = 0;
+  cards.forEach((c) => {
+    const match = !searchQuery || c.dataset.search.includes(searchQuery);
+    c.classList.toggle('hidden', !match);
+    if (match) visible += 1;
   });
-  document.getElementById('tab-owners').classList.toggle('hidden', tab !== 'owners');
-  document.getElementById('tab-restaurants').classList.toggle('hidden', tab !== 'restaurants');
-  document.getElementById('tab-subscriptions').classList.toggle('hidden', tab !== 'subscriptions');
+  const list = active.querySelector('.cards');
+  if (!list || !cards.length) return;
+  let empty = list.querySelector('.search-empty');
+  if (searchQuery && !visible) {
+    if (!empty) {
+      empty = document.createElement('p');
+      empty.className = 'muted search-empty';
+      list.appendChild(empty);
+    }
+    empty.textContent = `Aucun résultat pour « ${searchQuery} ».`;
+    empty.classList.remove('hidden');
+  } else if (empty) {
+    empty.classList.add('hidden');
+  }
+}
+
+/* ---------- Vue d'ensemble (KPIs + graphiques) ---------- */
+function fmtNum(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+
+async function loadDashboard() {
+  const d = await api('/dashboard');
+  state.dashboard = d;
+  document.getElementById('kpi-grid').innerHTML = `
+    <div class="kpi"><div class="kpi-v">${fmtNum(d.mrr)}</div><div class="kpi-k">MRR estimé (FCFA)</div></div>
+    <div class="kpi accent"><div class="kpi-v">${d.subscriptions.paying}</div><div class="kpi-k">Abonnés payants</div></div>
+    <div class="kpi"><div class="kpi-v">${d.totals.restaurants}</div><div class="kpi-k">Restaurants</div></div>
+    <div class="kpi"><div class="kpi-v">${d.totals.owners}</div><div class="kpi-k">Propriétaires</div></div>
+    <div class="kpi"><div class="kpi-v">${d.subscriptions.trials}</div><div class="kpi-k">Essais en cours</div></div>
+    <div class="kpi"><div class="kpi-v ${d.subscriptions.expiringSoon ? 'warn' : ''}">${d.subscriptions.expiringSoon}</div><div class="kpi-k">Expirent sous 3 j</div></div>
+  `;
+  renderPlansChart(d.planDistribution);
+  renderStatusChart(d.statusDistribution);
+  renderSignupsChart(d.signupsByWeek);
+}
+
+const PLAN_COLORS = { trial: '#B9B2A8', basic: '#1A73C7', premium: '#C62828', enterprise: '#1F1B16' };
+function renderPlansChart(dist) {
+  const el = document.getElementById('chart-plans');
+  const entries = Object.entries(dist).filter(([, v]) => v > 0);
+  const total = entries.reduce((a, [, v]) => a + v, 0);
+  if (!total) { el.innerHTML = '<p class="muted">Aucune donnée.</p>'; return; }
+  const r = 52; const cx = 60; const cy = 60; const circ = 2 * Math.PI * r;
+  let acc = 0;
+  const segs = entries.map(([k, v]) => {
+    const frac = v / total;
+    const s = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${PLAN_COLORS[k] || '#999'}" stroke-width="16" stroke-dasharray="${frac * circ} ${circ}" stroke-dashoffset="${-acc * circ}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    acc += frac;
+    return s;
+  }).join('');
+  const legend = entries.map(([k, v]) => `<li><span class="dot" style="background:${PLAN_COLORS[k] || '#999'}"></span>${PLAN_LABELS[k] || k} <strong>${v}</strong></li>`).join('');
+  el.innerHTML = `<div class="donut-wrap">
+    <svg viewBox="0 0 120 120" class="donut" role="img" aria-label="Répartition des plans">${segs}
+      <text x="60" y="58" text-anchor="middle" class="donut-c">${total}</text>
+      <text x="60" y="75" text-anchor="middle" class="donut-l">total</text></svg>
+    <ul class="legend">${legend}</ul></div>`;
+}
+
+const STATUS_COLORS = { active: '#2E7D32', suspended: '#C62828', closed: '#B9B2A8' };
+const STATUS_NAMES = { active: 'Actifs', suspended: 'Suspendus', closed: 'Fermés' };
+function renderStatusChart(dist) {
+  const el = document.getElementById('chart-status');
+  const entries = Object.entries(dist);
+  const max = Math.max(1, ...entries.map(([, v]) => v));
+  el.innerHTML = `<div class="bars">${entries.map(([k, v]) => `
+    <div class="bar-row">
+      <span class="bar-label">${STATUS_NAMES[k] || k}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${(v / max) * 100}%;background:${STATUS_COLORS[k]}"></div></div>
+      <span class="bar-val">${v}</span>
+    </div>`).join('')}</div>`;
+}
+
+function renderSignupsChart(weeks) {
+  const el = document.getElementById('chart-signups');
+  const max = Math.max(1, ...weeks.map((w) => w.count));
+  const W = 560; const H = 170; const pad = 26; const n = weeks.length;
+  const gap = (W - pad * 2) / n;
+  const bw = gap * 0.55;
+  const bars = weeks.map((w, i) => {
+    const h = (w.count / max) * (H - pad * 2);
+    const x = pad + i * gap + (gap - bw) / 2;
+    const y = H - pad - h;
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="4" fill="var(--red)"/>
+      <text x="${(x + bw / 2).toFixed(1)}" y="${H - pad + 15}" text-anchor="middle" class="axis-l">${esc(w.label)}</text>
+      ${w.count ? `<text x="${(x + bw / 2).toFixed(1)}" y="${(y - 6).toFixed(1)}" text-anchor="middle" class="bar-c">${w.count}</text>` : ''}`;
+  }).join('');
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" class="signups" role="img" aria-label="Inscriptions par semaine">
+    <line x1="${pad}" y1="${H - pad}" x2="${W - pad}" y2="${H - pad}" stroke="var(--line)"/>${bars}</svg>`;
 }
 
 /* ---------- Menu overflow (⋯) ---------- */
@@ -163,8 +265,9 @@ async function loadOwners() {
   }
   list.innerHTML = state.owners.map((o) => {
     const restos = (o.ownedRestaurants || []).map((r) => `<span class="resto-mini">• ${esc(r.name)}</span>`).join(' ');
+    const search = esc(`${o.first_name} ${o.last_name} ${o.email} ${o.phone || ''} ${(o.ownedRestaurants || []).map((r) => r.name).join(' ')}`.toLowerCase());
     return `
-      <div class="card">
+      <div class="card" data-search="${search}">
         <div class="card-row">
           <div>
             <h3>${esc(o.first_name)} ${esc(o.last_name)}</h3>
@@ -213,7 +316,7 @@ document.getElementById('owner-form').addEventListener('submit', async (e) => {
     });
     closeModal('owner-modal');
     toast('Propriétaire créé');
-    await Promise.all([loadOwners(), loadRestaurants(), loadStats()]);
+    await Promise.all([loadOwners(), loadRestaurants(), loadDashboard()]);
   } catch (e2) {
     err.textContent = e2.message;
   }
@@ -287,8 +390,9 @@ async function loadRestaurants() {
       fn: `confirmToggleRestaurant('${r.id}','${r.status}')`,
       danger: r.status === 'active'
     });
+    const search = esc(`${r.name} ${r.slug} ${r.custom_domain || ''} ${r.owner ? r.owner.first_name + ' ' + r.owner.last_name + ' ' + r.owner.email : ''}`.toLowerCase());
     return `
-      <div class="card">
+      <div class="card" data-search="${search}">
         <div class="card-row">
           <div>
             <h3>${esc(r.name)}</h3>
@@ -341,7 +445,7 @@ document.getElementById('restaurant-form').addEventListener('submit', async (e) 
     });
     closeModal('restaurant-modal');
     toast('Restaurant créé');
-    await Promise.all([loadRestaurants(), loadOwners(), loadStats()]);
+    await Promise.all([loadRestaurants(), loadOwners(), loadDashboard()]);
   } catch (e2) {
     err.textContent = e2.message;
   }
@@ -385,7 +489,7 @@ function confirmToggleRestaurant(restaurantId, status) {
       try {
         await api(`/restaurants/${restaurantId}`, { method: 'PATCH', body: JSON.stringify({ status: next }) });
         toast('Statut mis à jour');
-        await Promise.all([loadRestaurants(), loadStats()]);
+        await Promise.all([loadRestaurants(), loadDashboard()]);
       } catch (e) { toast(e.message, true); }
     }
   });
@@ -535,8 +639,9 @@ async function loadSubscriptions() {
     const restoName = s.restaurant ? esc(s.restaurant.name) : '<span class="muted">Restaurant supprimé</span>';
     const owner = s.owner ? `${esc(s.owner.name)} · ${esc(s.owner.email)}` : '<span class="muted">Sans propriétaire</span>';
     const end = new Date(s.end_date).toLocaleDateString('fr-FR');
+    const search = esc(`${s.restaurant ? s.restaurant.name : ''} ${s.owner ? s.owner.name + ' ' + s.owner.email : ''} ${s.plan}`.toLowerCase());
     return `
-      <div class="card">
+      <div class="card" data-search="${search}">
         <div class="card-row">
           <div>
             <h3>${restoName}</h3>
