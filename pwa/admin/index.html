@@ -29,52 +29,71 @@
 
   <!-- APPLICATION -->
   <div id="app" class="app hidden">
-    <header class="topbar" role="banner">
-      <div class="topbar-brand"><span class="topbar-logo" aria-hidden="true">B</span> Bizon · <span class="muted">Admin</span></div>
-      <div class="topbar-right">
-        <span id="admin-name" class="admin-name"></span>
-        <button class="btn btn-ghost" onclick="logout()">Déconnexion</button>
-      </div>
-    </header>
+    <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar(false)"></div>
 
-    <main class="container" role="main">
-      <!-- STATISTIQUES -->
-      <section class="stats-grid" id="stats-grid" aria-label="Statistiques"></section>
-
-      <!-- ONGLETS -->
-      <nav class="tabs" role="tablist" aria-label="Sections d'administration">
-        <button class="tab active" id="tab-btn-owners" role="tab" aria-selected="true" aria-controls="tab-owners" data-tab="owners" onclick="switchTab('owners')">Propriétaires</button>
-        <button class="tab" id="tab-btn-restaurants" role="tab" aria-selected="false" aria-controls="tab-restaurants" data-tab="restaurants" onclick="switchTab('restaurants')">Restaurants</button>
-        <button class="tab" id="tab-btn-subscriptions" role="tab" aria-selected="false" aria-controls="tab-subscriptions" data-tab="subscriptions" onclick="switchTab('subscriptions')">Abonnements</button>
+    <!-- BARRE LATÉRALE -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand"><span class="brand-logo" aria-hidden="true">B</span> Bizon <span class="muted">Admin</span></div>
+      <nav class="sidebar-nav" role="navigation" aria-label="Sections d'administration">
+        <button class="nav-item active" data-section="dashboard" onclick="switchTab('dashboard')"><span class="nav-ico" aria-hidden="true">▦</span> Vue d'ensemble</button>
+        <button class="nav-item" data-section="owners" onclick="switchTab('owners')"><span class="nav-ico" aria-hidden="true">👤</span> Propriétaires</button>
+        <button class="nav-item" data-section="restaurants" onclick="switchTab('restaurants')"><span class="nav-ico" aria-hidden="true">🍽️</span> Restaurants</button>
+        <button class="nav-item" data-section="subscriptions" onclick="switchTab('subscriptions')"><span class="nav-ico" aria-hidden="true">💳</span> Abonnements</button>
       </nav>
+      <div class="sidebar-foot">
+        <div class="admin-id" id="admin-name"></div>
+        <button class="btn btn-ghost btn-sm btn-block" onclick="logout()">Déconnexion</button>
+      </div>
+    </aside>
 
-      <!-- PROPRIÉTAIRES -->
-      <section id="tab-owners" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-owners">
-        <div class="panel-head">
-          <h2>Propriétaires</h2>
-          <button class="btn btn-primary" onclick="openOwnerModal()">+ Nouveau propriétaire</button>
+    <!-- ZONE PRINCIPALE -->
+    <div class="main">
+      <header class="topbar" role="banner">
+        <button class="menu-toggle" aria-label="Ouvrir le menu" onclick="toggleSidebar()">☰</button>
+        <h1 class="section-title" id="section-title">Vue d'ensemble</h1>
+        <div class="search-wrap">
+          <span class="search-ico" aria-hidden="true">⌕</span>
+          <input id="global-search" type="search" placeholder="Rechercher…" aria-label="Rechercher" oninput="onSearch(this.value)">
         </div>
-        <div id="owners-list" class="cards"></div>
-      </section>
+      </header>
 
-      <!-- RESTAURANTS -->
-      <section id="tab-restaurants" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-btn-restaurants">
-        <div class="panel-head">
-          <h2>Restaurants</h2>
-          <button class="btn btn-primary" onclick="openRestaurantModal()">+ Nouveau restaurant</button>
-        </div>
-        <div id="restaurants-list" class="cards"></div>
-      </section>
+      <main class="content" role="main">
+        <!-- VUE D'ENSEMBLE -->
+        <section id="tab-dashboard" class="tab-panel">
+          <div class="kpi-grid" id="kpi-grid" aria-label="Indicateurs clés"></div>
+          <div class="charts-grid">
+            <div class="panel"><h3 class="panel-title">Répartition des plans</h3><div id="chart-plans" class="chart"></div></div>
+            <div class="panel"><h3 class="panel-title">Restaurants par statut</h3><div id="chart-status" class="chart"></div></div>
+            <div class="panel span2"><h3 class="panel-title">Inscriptions — 8 dernières semaines</h3><div id="chart-signups" class="chart"></div></div>
+          </div>
+        </section>
 
-      <!-- ABONNEMENTS -->
-      <section id="tab-subscriptions" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-btn-subscriptions">
-        <div class="panel-head">
-          <h2>Abonnements</h2>
-        </div>
-        <div id="sub-summary" class="sub-summary"></div>
-        <div id="subscriptions-list" class="cards"></div>
-      </section>
-    </main>
+        <!-- PROPRIÉTAIRES -->
+        <section id="tab-owners" class="tab-panel hidden">
+          <div class="panel-head">
+            <h2>Propriétaires</h2>
+            <button class="btn btn-primary" onclick="openOwnerModal()">+ Nouveau propriétaire</button>
+          </div>
+          <div id="owners-list" class="cards"></div>
+        </section>
+
+        <!-- RESTAURANTS -->
+        <section id="tab-restaurants" class="tab-panel hidden">
+          <div class="panel-head">
+            <h2>Restaurants</h2>
+            <button class="btn btn-primary" onclick="openRestaurantModal()">+ Nouveau restaurant</button>
+          </div>
+          <div id="restaurants-list" class="cards"></div>
+        </section>
+
+        <!-- ABONNEMENTS -->
+        <section id="tab-subscriptions" class="tab-panel hidden">
+          <div class="panel-head"><h2>Abonnements</h2></div>
+          <div id="sub-summary" class="sub-summary"></div>
+          <div id="subscriptions-list" class="cards"></div>
+        </section>
+      </main>
+    </div>
   </div>
 
   <!-- MODALE PROPRIÉTAIRE -->

@@ -23,6 +23,14 @@ class AdminController {
     }
   }
 
+  async dashboard(req, res) {
+    try {
+      res.json(await AdminService.getDashboard());
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
   async listOwners(req, res) {
     try {
       res.json(await AdminService.listOwners());

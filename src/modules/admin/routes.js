@@ -11,6 +11,7 @@ router.use(platformAuth);
 
 router.get('/me', AdminController.me);
 router.get('/stats', AdminController.stats);
+router.get('/dashboard', AdminController.dashboard);
 
 router.get('/owners', AdminController.listOwners);
 router.post('/owners', AdminController.createOwner);

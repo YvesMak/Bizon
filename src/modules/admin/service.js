@@ -4,6 +4,7 @@ const { sequelize } = require('../../config/database');
 const {
   PlatformAdmin, User, Restaurant, Subscription, Order
 } = require('../../models');
+const { PLANS } = require('../../config/plans');
 
 const SERVICE_TYPES = ['dine_in', 'takeaway', 'delivery'];
 
@@ -89,6 +90,67 @@ class AdminService {
     }, {});
 
     return { restaurants, owners, orders, restaurantsByStatus };
+  }
+
+  /**
+   * Métriques agrégées pour la vue d'ensemble (KPIs + graphiques) :
+   * MRR estimé, répartition des plans, statut des restaurants, inscriptions
+   * par semaine (8 dernières).
+   */
+  async getDashboard() {
+    const [restaurants, owners, orders, subs, restaurantRows] = await Promise.all([
+      Restaurant.count(),
+      User.count({ where: { role: 'owner' } }),
+      Order.count(),
+      Subscription.findAll({ attributes: ['plan', 'status', 'end_date'], raw: true }),
+      Restaurant.findAll({ attributes: ['status', 'created_at'], raw: true })
+    ]);
+
+    const planMonthly = {};
+    PLANS.forEach((p) => { if (!p.custom) planMonthly[p.id] = p.monthly; });
+
+    const now = Date.now();
+    const planDistribution = { trial: 0, basic: 0, premium: 0, enterprise: 0 };
+    let paying = 0; let expired = 0; let expiringSoon = 0; let mrr = 0; let trials = 0;
+
+    subs.forEach((s) => {
+      const isExpired = s.status === 'expired'
+        || (s.status !== 'cancelled' && new Date(s.end_date).getTime() < now);
+      if (planDistribution[s.plan] !== undefined) planDistribution[s.plan] += 1;
+      if (isExpired) expired += 1;
+      if (s.plan === 'trial' && !isExpired && s.status === 'active') trials += 1;
+      if (s.plan !== 'trial' && s.status === 'active' && !isExpired) {
+        paying += 1;
+        mrr += planMonthly[s.plan] || 0;
+      }
+      if (!isExpired && s.status === 'active') {
+        const days = Math.ceil((new Date(s.end_date).getTime() - now) / 86400000);
+        if (days >= 0 && days <= 3) expiringSoon += 1;
+      }
+    });
+
+    const statusDistribution = { active: 0, suspended: 0, closed: 0 };
+    const WEEKS = 8;
+    const weekCounts = new Array(WEEKS).fill(0);
+    restaurantRows.forEach((r) => {
+      if (statusDistribution[r.status] !== undefined) statusDistribution[r.status] += 1;
+      const idx = Math.floor((now - new Date(r.created_at).getTime()) / (7 * 86400000));
+      if (idx >= 0 && idx < WEEKS) weekCounts[WEEKS - 1 - idx] += 1;
+    });
+    const signupsByWeek = weekCounts.map((count, i) => ({
+      label: i === WEEKS - 1 ? 'Cette sem.' : `S-${WEEKS - 1 - i}`,
+      count
+    }));
+
+    return {
+      totals: { restaurants, owners, orders },
+      mrr,
+      currency: 'FCFA',
+      subscriptions: { trials, paying, expired, expiringSoon },
+      planDistribution,
+      statusDistribution,
+      signupsByWeek
+    };
   }
 
   async listOwners() {
