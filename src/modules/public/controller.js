@@ -1,6 +1,12 @@
 const { Menu, Category, Product, Restaurant, OptionGroup, ProductOption } = require('../../models');
+const { PLANS, TRIAL_DAYS, CURRENCY } = require('../../config/plans');
 
 class PublicController {
+  // GET /api/public/plans — grille tarifaire publique (page d'inscription).
+  async getPlans(req, res) {
+    res.json({ currency: CURRENCY, trial_days: TRIAL_DAYS, plans: PLANS });
+  }
+
   // GET /api/public/menu?restaurantId=xxx  ou premier restaurant si absent
   async getMenu(req, res) {
     try {
