@@ -122,13 +122,18 @@ function switchTab(tab) {
 function closeAllMenus() {
   document.querySelectorAll('.menu-pop').forEach((p) => p.classList.add('hidden'));
   document.querySelectorAll('.menu-btn').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+  document.querySelectorAll('.card.menu-open').forEach((c) => c.classList.remove('menu-open'));
 }
 function toggleMenu(e, btn) {
   e.stopPropagation();
   const pop = btn.nextElementSibling;
   const isOpen = !pop.classList.contains('hidden');
   closeAllMenus();
-  if (!isOpen) { pop.classList.remove('hidden'); btn.setAttribute('aria-expanded', 'true'); }
+  if (!isOpen) {
+    pop.classList.remove('hidden');
+    btn.setAttribute('aria-expanded', 'true');
+    btn.closest('.card')?.classList.add('menu-open'); // surélève la carte porteuse
+  }
 }
 
 function menu(items) {
