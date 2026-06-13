@@ -5,12 +5,16 @@
   --cream-2: #F5EAD8;
   --bg: #FBFAF9;
   --ink: #1F1B16;
-  --muted: #8A8178;
+  --muted: #6B6357;          /* assombri : ≥ 5.9:1 sur blanc (WCAG AA) */
   --line: #ECE6DE;
   --green: #2E7D32;
   --amber: #B7791F;
+  --danger: #C62828;
+  --danger-bg: #FDECEC;
+  --focus: #1A73C7;          /* anneau de focus contrasté */
   --radius: 14px;
   --shadow: 0 6px 20px rgba(31,27,22,.08);
+  --shadow-pop: 0 12px 30px rgba(31,27,22,.16);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -46,16 +50,24 @@ input, select {
 input:focus, select:focus { outline: none; border-color: var(--red); }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  border: none; border-radius: 10px; padding: 11px 16px; font-size: 14px; font-weight: 600;
-  cursor: pointer; transition: .15s;
+  min-height: 40px; border: 1px solid transparent; border-radius: 10px;
+  padding: 9px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: background .15s, border-color .15s, transform .12s, box-shadow .15s;
 }
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0) scale(.98); }
+.btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.btn:disabled { opacity: .55; cursor: not-allowed; pointer-events: none; transform: none; }
 .btn-primary { background: var(--red); color: #fff; }
 .btn-primary:hover { background: var(--red-dark); }
-.btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
-.btn-ghost:hover { background: var(--cream); }
+.btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn-ghost:hover { background: var(--cream); border-color: var(--cream-2); }
+.btn-danger { background: transparent; color: var(--danger); border-color: #F1C7C7; }
+.btn-danger:hover { background: var(--danger-bg); border-color: var(--danger); }
 .btn-block { width: 100%; margin-top: 20px; }
-.btn-sm { padding: 7px 11px; font-size: 13px; }
+.btn-sm { min-height: 36px; padding: 7px 12px; font-size: 13px; }
 .error-msg { color: var(--red); font-size: 13px; margin-top: 10px; min-height: 18px; }
+.error-msg[role="alert"]:empty { min-height: 0; margin-top: 0; }
 
 /* ---------- TOPBAR ---------- */
 .topbar {
@@ -109,8 +121,8 @@ input:focus, select:focus { outline: none; border-color: var(--red); }
 .badge.closed { background: #EEE; color: var(--muted); }
 .resto-mini { font-size: 13px; color: var(--muted); }
 .link-box {
-  display: flex; align-items: center; gap: 8px; margin-top: 10px;
-  background: var(--cream); border: 1px solid var(--cream-2); border-radius: 10px;
+  display: flex; align-items: center; gap: 8px; margin-top: 12px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
   padding: 8px 10px; flex-wrap: wrap;
 }
 .link-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
@@ -123,12 +135,17 @@ input:focus, select:focus { outline: none; border-color: var(--red); }
 .modal {
   position: fixed; inset: 0; background: rgba(31,27,22,.45); display: flex;
   align-items: center; justify-content: center; padding: 20px; z-index: 50;
+  animation: modalFade .18s var(--ease, ease) both;
 }
 .modal-card {
   background: #fff; border-radius: 18px; padding: 24px; width: 100%; max-width: 440px;
-  max-height: 90vh; overflow-y: auto;
+  max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-pop);
+  animation: modalPop .22s cubic-bezier(.2,0,0,1) both;
 }
+@keyframes modalFade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes modalPop { from { opacity: 0; transform: translateY(14px) scale(.98) } to { opacity: 1; transform: none } }
 .modal-card h3 { font-size: 20px; margin-bottom: 6px; }
+.modal-card .modal-desc { color: var(--muted); font-size: 14px; margin-bottom: 14px; }
 .modal-card hr { border: none; border-top: 1px solid var(--line); margin: 16px 0 4px; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .checks { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
@@ -154,10 +171,88 @@ input:focus, select:focus { outline: none; border-color: var(--red); }
 }
 .domain-badge.ok { background: #E7F4E8; color: var(--green); }
 .domain-badge.warn { background: #FBF1DD; color: var(--amber); }
-.domain-badge.err { background: #FDECEC; color: var(--red); }
+.domain-badge.err { background: #FDECEC; color: var(--danger); }
 .domain-badge.muted { background: #EEE; color: var(--muted); }
+
+/* ---------- MENU OVERFLOW (⋯) ---------- */
+.menu-wrap { position: relative; display: inline-block; }
+.menu-btn {
+  min-height: 36px; min-width: 36px; padding: 0 10px; font-size: 18px; line-height: 1;
+  background: transparent; border: 1px solid var(--line); border-radius: 10px;
+  color: var(--ink); cursor: pointer;
+}
+.menu-btn:hover { background: var(--cream); }
+.menu-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.menu-pop {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 30;
+  min-width: 200px; background: #fff; border: 1px solid var(--line);
+  border-radius: 12px; box-shadow: var(--shadow-pop); padding: 6px;
+  animation: modalPop .14s ease both;
+}
+.menu-pop button {
+  display: flex; width: 100%; align-items: center; gap: 8px; min-height: 40px;
+  padding: 8px 10px; background: none; border: none; border-radius: 8px;
+  font-size: 14px; color: var(--ink); cursor: pointer; text-align: left;
+}
+.menu-pop button:hover { background: var(--cream); }
+.menu-pop button.danger { color: var(--danger); }
+.menu-pop button.danger:hover { background: var(--danger-bg); }
+.menu-pop hr { border: none; border-top: 1px solid var(--line); margin: 4px 2px; }
+
+/* ---------- CHAMP COPIABLE (CNAME) ---------- */
+.copy-field {
+  display: flex; align-items: stretch; gap: 0; margin-top: 6px;
+  border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+}
+.copy-field code {
+  flex: 1; padding: 10px 12px; font-size: 13px; background: var(--bg);
+  color: var(--ink); word-break: break-all; display: flex; align-items: center;
+}
+.copy-field button {
+  border: none; border-left: 1px solid var(--line); background: #fff;
+  padding: 0 14px; font-size: 13px; font-weight: 600; color: var(--red); cursor: pointer;
+}
+.copy-field button:hover { background: var(--cream); }
+.hint { font-size: 13px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+
+/* ---------- SKELETON ---------- */
+.skeleton-card {
+  background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 18px; box-shadow: var(--shadow);
+}
+.sk {
+  background: linear-gradient(90deg, #F0EBE4 25%, #F7F3EE 50%, #F0EBE4 75%);
+  background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 8px;
+}
+.sk.line { height: 12px; margin: 8px 0; }
+.sk.title { height: 18px; width: 45%; margin-bottom: 12px; }
+.sk.w60 { width: 60%; } .sk.w30 { width: 30%; }
+@keyframes shimmer { from { background-position: 200% 0 } to { background-position: -200% 0 } }
+
+/* ---------- EMPTY STATE ---------- */
+.empty {
+  text-align: center; padding: 40px 20px; border: 1px dashed var(--line);
+  border-radius: var(--radius); background: #fff;
+}
+.empty .emoji { font-size: 34px; }
+.empty h3 { font-size: 16px; margin: 10px 0 4px; }
+.empty p { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+
+/* ---------- CARDS : entrée animée + interaction ---------- */
+.card { transition: box-shadow .2s, transform .2s; }
+.card:hover { box-shadow: var(--shadow-pop); }
+.cards .card { animation: fadeSlideUp .3s var(--ease, ease) both; }
+.cards .card:nth-child(2) { animation-delay: .04s }
+.cards .card:nth-child(3) { animation-delay: .08s }
+.cards .card:nth-child(4) { animation-delay: .12s }
+@keyframes fadeSlideUp { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
 
 @media (max-width: 560px) {
   .grid2 { grid-template-columns: 1fr; }
   .container { padding: 16px; }
+  input, select { font-size: 16px; } /* évite le zoom auto iOS */
 }

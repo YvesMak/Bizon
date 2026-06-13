@@ -29,26 +29,26 @@
 
   <!-- APPLICATION -->
   <div id="app" class="app hidden">
-    <header class="topbar">
-      <div class="topbar-brand"><span class="topbar-logo">B</span> Bizon · <span class="muted">Admin</span></div>
+    <header class="topbar" role="banner">
+      <div class="topbar-brand"><span class="topbar-logo" aria-hidden="true">B</span> Bizon · <span class="muted">Admin</span></div>
       <div class="topbar-right">
         <span id="admin-name" class="admin-name"></span>
         <button class="btn btn-ghost" onclick="logout()">Déconnexion</button>
       </div>
     </header>
 
-    <main class="container">
+    <main class="container" role="main">
       <!-- STATISTIQUES -->
-      <section class="stats-grid" id="stats-grid"></section>
+      <section class="stats-grid" id="stats-grid" aria-label="Statistiques"></section>
 
       <!-- ONGLETS -->
-      <nav class="tabs">
-        <button class="tab active" data-tab="owners" onclick="switchTab('owners')">Propriétaires</button>
-        <button class="tab" data-tab="restaurants" onclick="switchTab('restaurants')">Restaurants</button>
+      <nav class="tabs" role="tablist" aria-label="Sections d'administration">
+        <button class="tab active" id="tab-btn-owners" role="tab" aria-selected="true" aria-controls="tab-owners" data-tab="owners" onclick="switchTab('owners')">Propriétaires</button>
+        <button class="tab" id="tab-btn-restaurants" role="tab" aria-selected="false" aria-controls="tab-restaurants" data-tab="restaurants" onclick="switchTab('restaurants')">Restaurants</button>
       </nav>
 
       <!-- PROPRIÉTAIRES -->
-      <section id="tab-owners" class="tab-panel">
+      <section id="tab-owners" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-owners">
         <div class="panel-head">
           <h2>Propriétaires</h2>
           <button class="btn btn-primary" onclick="openOwnerModal()">+ Nouveau propriétaire</button>
@@ -57,7 +57,7 @@
       </section>
 
       <!-- RESTAURANTS -->
-      <section id="tab-restaurants" class="tab-panel hidden">
+      <section id="tab-restaurants" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-btn-restaurants">
         <div class="panel-head">
           <h2>Restaurants</h2>
           <button class="btn btn-primary" onclick="openRestaurantModal()">+ Nouveau restaurant</button>
@@ -68,9 +68,9 @@
   </div>
 
   <!-- MODALE PROPRIÉTAIRE -->
-  <div id="owner-modal" class="modal hidden">
+  <div id="owner-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="owner-modal-title">
     <div class="modal-card">
-      <h3>Nouveau propriétaire</h3>
+      <h3 id="owner-modal-title">Nouveau propriétaire</h3>
       <form id="owner-form">
         <div class="grid2">
           <div><label>Prénom</label><input id="o-first" type="text" placeholder="Paul"></div>
@@ -99,9 +99,9 @@
   </div>
 
   <!-- MODALE RESTAURANT -->
-  <div id="restaurant-modal" class="modal hidden">
+  <div id="restaurant-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="restaurant-modal-title">
     <div class="modal-card">
-      <h3>Nouveau restaurant</h3>
+      <h3 id="restaurant-modal-title">Nouveau restaurant</h3>
       <form id="restaurant-form">
         <label>Propriétaire *</label>
         <select id="r-owner" required></select>
@@ -123,7 +123,84 @@
     </div>
   </div>
 
-  <div id="toast" class="toast hidden"></div>
+  <!-- MODALE MODES DE SERVICE -->
+  <div id="service-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="service-modal-title">
+    <div class="modal-card">
+      <h3 id="service-modal-title">Modes de service</h3>
+      <p class="modal-desc" id="service-modal-sub"></p>
+      <form id="service-form">
+        <div class="checks" id="s-service-types">
+          <label class="chk"><input type="checkbox" value="dine_in"> Sur place</label>
+          <label class="chk"><input type="checkbox" value="takeaway"> À emporter</label>
+          <label class="chk"><input type="checkbox" value="delivery"> Livraison</label>
+        </div>
+        <p class="error-msg" id="service-error" role="alert"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" onclick="closeModal('service-modal')">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODALE DOMAINE PERSONNALISÉ -->
+  <div id="domain-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="domain-modal-title">
+    <div class="modal-card">
+      <h3 id="domain-modal-title">Domaine personnalisé</h3>
+      <p class="modal-desc" id="domain-modal-sub"></p>
+      <form id="domain-form">
+        <label for="d-domain">Domaine</label>
+        <input id="d-domain" type="text" placeholder="commande.mon-resto.cm" autocomplete="off" spellcheck="false">
+        <p class="hint">Le restaurateur crée un enregistrement DNS de type <strong>CNAME</strong> vers&nbsp;:</p>
+        <div class="copy-field">
+          <code id="d-cname"></code>
+          <button type="button" onclick="copyCname()">Copier</button>
+        </div>
+        <p class="hint">Puis ajoute ce domaine dans <strong>Render → Settings → Custom Domains</strong>. Le certificat HTTPS est émis automatiquement.</p>
+        <div style="margin-top:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+          <button type="button" class="btn btn-ghost btn-sm" id="d-verify-btn" onclick="verifyDomainInModal()">Vérifier maintenant</button>
+          <span id="d-verify-status"></span>
+        </div>
+        <p class="error-msg" id="domain-error" role="alert"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-danger" id="d-remove-btn" onclick="removeDomain()">Retirer</button>
+          <button type="button" class="btn btn-ghost" onclick="closeModal('domain-modal')">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODALE QUOTA -->
+  <div id="quota-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="quota-modal-title">
+    <div class="modal-card">
+      <h3 id="quota-modal-title">Quota de restaurants</h3>
+      <p class="modal-desc" id="quota-modal-sub"></p>
+      <form id="quota-form">
+        <label for="q-value">Nombre maximum de restaurants</label>
+        <input id="q-value" type="number" min="1" value="1">
+        <p class="error-msg" id="quota-error" role="alert"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" onclick="closeModal('quota-modal')">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODALE CONFIRMATION (actions sensibles) -->
+  <div id="confirm-modal" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-msg">
+    <div class="modal-card" style="max-width:400px">
+      <h3 id="confirm-title">Confirmer</h3>
+      <p class="modal-desc" id="confirm-msg"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('confirm-modal')">Annuler</button>
+        <button type="button" class="btn btn-danger" id="confirm-ok">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
   <script src="admin.js"></script>
 </body>
 </html>
