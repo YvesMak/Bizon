@@ -24,7 +24,7 @@
 
   /* — Texte — */
   --text: #1C1917;
-  --text-muted: #78716C;
+  --text-muted: #6B6357; /* assombri : ≥ 5.9:1 sur blanc (WCAG AA, était #78716C ≈ 4.0:1) */
   --text-inverse: #FAFAF9;
 
   /* — Bordures — */
