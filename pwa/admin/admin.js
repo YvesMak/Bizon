@@ -7,7 +7,9 @@ const state = {
   owners: [],
   restaurants: [],
   subscriptions: [],
-  dashboard: null
+  dashboard: null,
+  subSort: { key: 'days', dir: 'asc' },
+  subQuick: 'all'
 };
 
 const PLAN_LABELS = { trial: 'Essai', basic: 'Basic', premium: 'Premium', enterprise: 'Enterprise' };
@@ -129,6 +131,8 @@ function onSearch(q) { searchQuery = (q || '').trim().toLowerCase(); applySearch
 function applySearch() {
   const active = document.querySelector('.tab-panel:not(.hidden)');
   if (!active) return;
+  // Les abonnements sont un tableau filtré/trié côté rendu (pas un masquage DOM).
+  if (active.id === 'tab-subscriptions') { if (state.subscriptions.length) renderSubscriptions(); return; }
   const cards = active.querySelectorAll('.card[data-search]');
   let visible = 0;
   cards.forEach((c) => {
@@ -155,22 +159,37 @@ function applySearch() {
 /* ---------- Vue d'ensemble (KPIs + graphiques) ---------- */
 function fmtNum(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
 
+// Badge de tendance « cette semaine vs précédente ».
+function deltaBadge(curr, prev) {
+  if (prev == null || prev === 0) return curr > 0 ? '<span class="kpi-delta up">▲ nouv.</span>' : '';
+  const pct = Math.round(((curr - prev) / prev) * 100);
+  if (pct === 0) return '<span class="kpi-delta flat">– 0 %</span>';
+  const up = pct > 0;
+  return `<span class="kpi-delta ${up ? 'up' : 'down'}" title="vs semaine précédente">${up ? '▲' : '▼'} ${up ? '+' : ''}${pct} %</span>`;
+}
+
 async function loadDashboard() {
   const d = await api('/dashboard');
   state.dashboard = d;
   const rev = d.revenue || { total: 0, last8Weeks: 0 };
+  const rw = d.revenueByWeek || [];
+  const sw = d.signupsByWeek || [];
+  const revThis = rw.length ? rw[rw.length - 1].amount : 0;
+  const revPrev = rw.length > 1 ? rw[rw.length - 2].amount : 0;
+  const sThis = sw.length ? sw[sw.length - 1].count : 0;
+  const sPrev = sw.length > 1 ? sw[sw.length - 2].count : 0;
   document.getElementById('kpi-grid').innerHTML = `
     <div class="kpi"><div class="kpi-v">${fmtNum(d.mrr)}</div><div class="kpi-k">MRR estimé (FCFA)</div></div>
-    <div class="kpi accent"><div class="kpi-v">${fmtNum(rev.last8Weeks)}</div><div class="kpi-k">CA encaissé · 8 sem. (FCFA)</div></div>
+    <div class="kpi accent"><div class="kpi-v">${fmtNum(rev.last8Weeks)}</div><div class="kpi-k">CA encaissé · 8 sem. (FCFA)</div>${deltaBadge(revThis, revPrev)}</div>
+    <div class="kpi"><div class="kpi-v">${sThis}</div><div class="kpi-k">Inscriptions · cette sem.</div>${deltaBadge(sThis, sPrev)}</div>
     <div class="kpi"><div class="kpi-v">${d.subscriptions.paying}</div><div class="kpi-k">Abonnés payants</div></div>
     <div class="kpi"><div class="kpi-v">${d.totals.restaurants}</div><div class="kpi-k">Restaurants</div></div>
-    <div class="kpi"><div class="kpi-v">${d.totals.owners}</div><div class="kpi-k">Propriétaires</div></div>
     <div class="kpi"><div class="kpi-v ${d.subscriptions.expiringSoon ? 'warn' : ''}">${d.subscriptions.expiringSoon}</div><div class="kpi-k">Expirent sous 3 j</div></div>
   `;
-  renderRevenueChart(d.revenueByWeek || []);
+  renderRevenueChart(rw);
   renderPlansChart(d.planDistribution);
   renderStatusChart(d.statusDistribution);
-  renderSignupsChart(d.signupsByWeek);
+  renderSignupsChart(sw);
 }
 
 // Courbe (aire) du revenu encaissé par semaine.
@@ -657,35 +676,89 @@ async function loadSubscriptions() {
   list.innerHTML = skeletons(3);
   state.subscriptions = await api('/subscriptions');
   renderSubSummary();
-  if (!state.subscriptions.length) {
-    document.getElementById('sub-summary').innerHTML = '';
-    list.innerHTML = '<p class="muted">Aucun abonnement.</p>';
-    return;
+  renderSubscriptions();
+}
+
+// Filtre rapide (churn) + tri.
+function setSubQuick(qf) {
+  state.subQuick = qf;
+  document.querySelectorAll('#sub-quickfilters .fchip').forEach((b) => {
+    const on = b.dataset.qf === qf;
+    b.classList.toggle('active', on);
+    if (on) b.setAttribute('aria-pressed', 'true'); else b.removeAttribute('aria-pressed');
+  });
+  renderSubscriptions();
+}
+function sortSubs(key) {
+  const cur = state.subSort;
+  state.subSort = { key, dir: cur.key === key && cur.dir === 'asc' ? 'desc' : 'asc' };
+  renderSubscriptions();
+}
+function subMatchesQuick(s) {
+  switch (state.subQuick) {
+    case 'paying': return s.plan !== 'trial' && s.status === 'active' && !s.isExpired;
+    case 'trial': return s.plan === 'trial' && !s.isExpired && s.status !== 'cancelled';
+    case 'risk': return (!s.isExpired && s.status === 'active' && s.daysRemaining <= 3) || s.isExpired;
+    case 'expired': return s.isExpired;
+    default: return true;
   }
-  list.innerHTML = state.subscriptions.map((s) => {
-    const restoName = s.restaurant ? esc(s.restaurant.name) : '<span class="muted">Restaurant supprimé</span>';
-    const owner = s.owner ? `${esc(s.owner.name)} · ${esc(s.owner.email)}` : '<span class="muted">Sans propriétaire</span>';
+}
+
+function renderSubscriptions() {
+  const list = document.getElementById('subscriptions-list');
+  const planFilter = (document.getElementById('sub-plan-filter') || {}).value || 'all';
+  let rows = state.subscriptions.filter((s) => {
+    if (!subMatchesQuick(s)) return false;
+    if (planFilter !== 'all' && s.plan !== planFilter) return false;
+    if (searchQuery) {
+      const hay = `${s.restaurant ? s.restaurant.name : ''} ${s.owner ? s.owner.name + ' ' + s.owner.email : ''} ${s.plan}`.toLowerCase();
+      if (!hay.includes(searchQuery)) return false;
+    }
+    return true;
+  });
+
+  const { key, dir } = state.subSort;
+  const planOrder = { trial: 0, basic: 1, premium: 2, enterprise: 3 };
+  const val = (s) => {
+    switch (key) {
+      case 'restaurant': return (s.restaurant ? s.restaurant.name : '').toLowerCase();
+      case 'owner': return (s.owner ? s.owner.name : '').toLowerCase();
+      case 'plan': return planOrder[s.plan] ?? 0;
+      case 'status': return subStatusLabel(s);
+      default: return s.daysRemaining; // 'days'
+    }
+  };
+  rows.sort((a, b) => {
+    const va = val(a); const vb = val(b);
+    const c = va < vb ? -1 : va > vb ? 1 : 0;
+    return dir === 'asc' ? c : -c;
+  });
+
+  if (!state.subscriptions.length) { list.innerHTML = '<p class="muted">Aucun abonnement.</p>'; return; }
+  if (!rows.length) { list.innerHTML = '<p class="muted search-empty">Aucun abonnement ne correspond aux filtres.</p>'; return; }
+
+  const arrow = (k) => (key === k ? (dir === 'asc' ? ' ▲' : ' ▼') : '');
+  const head = `<thead><tr>
+    <th class="sortable" onclick="sortSubs('restaurant')">Restaurant${arrow('restaurant')}</th>
+    <th class="sortable" onclick="sortSubs('owner')">Propriétaire${arrow('owner')}</th>
+    <th class="sortable" onclick="sortSubs('plan')">Plan${arrow('plan')}</th>
+    <th class="sortable" onclick="sortSubs('status')">Statut${arrow('status')}</th>
+    <th class="sortable" onclick="sortSubs('days')">Échéance${arrow('days')}</th>
+    <th></th></tr></thead>`;
+  const body = rows.map((s) => {
+    const restoName = s.restaurant ? esc(s.restaurant.name) : '<span class="muted">supprimé</span>';
+    const owner = s.owner ? `<span class="muted">${esc(s.owner.name)}</span>` : '<span class="muted">—</span>';
     const end = new Date(s.end_date).toLocaleDateString('fr-FR');
-    const search = esc(`${s.restaurant ? s.restaurant.name : ''} ${s.owner ? s.owner.name + ' ' + s.owner.email : ''} ${s.plan}`.toLowerCase());
-    return `
-      <div class="card" data-search="${search}">
-        <div class="card-row">
-          <div>
-            <h3>${restoName}</h3>
-            <div class="sub">${owner}</div>
-          </div>
-          <span class="plan-badge plan-${s.plan}">${PLAN_LABELS[s.plan] || s.plan}</span>
-        </div>
-        <div class="sub-meta">
-          <span class="badge ${subBadgeClass(s)}">${subStatusLabel(s)}</span>
-          <span class="days ${daysClass(s)}">${daysLabel(s)}</span>
-          <span class="muted" style="font-size:13px">Échéance : ${end} · ${esc(PLAN_PRICE[s.plan] || '')}</span>
-        </div>
-        <div class="card-actions">
-          <button class="btn btn-ghost btn-sm" onclick="openSubModal('${s.restaurant_id}')">Gérer l'abonnement</button>
-        </div>
-      </div>`;
+    return `<tr>
+      <td><strong>${restoName}</strong></td>
+      <td>${owner}</td>
+      <td><span class="plan-badge plan-${s.plan}">${PLAN_LABELS[s.plan] || s.plan}</span></td>
+      <td><span class="badge ${subBadgeClass(s)}">${subStatusLabel(s)}</span></td>
+      <td><span class="days ${daysClass(s)}">${daysLabel(s)}</span><div class="muted tiny">${end}</div></td>
+      <td class="ta-right"><button class="btn btn-ghost btn-sm" onclick="openSubModal('${s.restaurant_id}')">Gérer</button></td>
+    </tr>`;
   }).join('');
+  list.innerHTML = `<div class="table-wrap"><table class="data-table">${head}<tbody>${body}</tbody></table></div>`;
 }
 
 function renderSubSummary() {

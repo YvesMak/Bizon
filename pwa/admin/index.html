@@ -97,7 +97,23 @@
             <button class="btn btn-ghost btn-sm" onclick="exportSubscriptionsCSV()">⤓ Exporter CSV</button>
           </div>
           <div id="sub-summary" class="sub-summary"></div>
-          <div id="subscriptions-list" class="cards"></div>
+          <div class="table-toolbar">
+            <div class="filter-chips" id="sub-quickfilters" role="group" aria-label="Filtres rapides">
+              <button class="fchip active" data-qf="all" onclick="setSubQuick('all')">Tous</button>
+              <button class="fchip" data-qf="paying" onclick="setSubQuick('paying')">Payants</button>
+              <button class="fchip" data-qf="trial" onclick="setSubQuick('trial')">Essais</button>
+              <button class="fchip" data-qf="risk" onclick="setSubQuick('risk')">⚠ À risque</button>
+              <button class="fchip" data-qf="expired" onclick="setSubQuick('expired')">Expirés</button>
+            </div>
+            <select id="sub-plan-filter" class="mini-select" onchange="renderSubscriptions()" aria-label="Filtrer par plan">
+              <option value="all">Tous les plans</option>
+              <option value="trial">Essai</option>
+              <option value="basic">Basic</option>
+              <option value="premium">Premium</option>
+              <option value="enterprise">Enterprise</option>
+            </select>
+          </div>
+          <div id="subscriptions-list"></div>
         </section>
       </main>
     </div>
