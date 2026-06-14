@@ -31,6 +31,14 @@ class AdminController {
     }
   }
 
+  async restaurantDetail(req, res) {
+    try {
+      res.json(await AdminService.getRestaurantDetail(req.params.restaurantId));
+    } catch (error) {
+      res.status(404).json({ error: error.message });
+    }
+  }
+
   async listOwners(req, res) {
     try {
       res.json(await AdminService.listOwners());

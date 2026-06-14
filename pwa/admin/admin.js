@@ -158,17 +158,43 @@ function fmtNum(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
 async function loadDashboard() {
   const d = await api('/dashboard');
   state.dashboard = d;
+  const rev = d.revenue || { total: 0, last8Weeks: 0 };
   document.getElementById('kpi-grid').innerHTML = `
     <div class="kpi"><div class="kpi-v">${fmtNum(d.mrr)}</div><div class="kpi-k">MRR estimé (FCFA)</div></div>
-    <div class="kpi accent"><div class="kpi-v">${d.subscriptions.paying}</div><div class="kpi-k">Abonnés payants</div></div>
+    <div class="kpi accent"><div class="kpi-v">${fmtNum(rev.last8Weeks)}</div><div class="kpi-k">CA encaissé · 8 sem. (FCFA)</div></div>
+    <div class="kpi"><div class="kpi-v">${d.subscriptions.paying}</div><div class="kpi-k">Abonnés payants</div></div>
     <div class="kpi"><div class="kpi-v">${d.totals.restaurants}</div><div class="kpi-k">Restaurants</div></div>
     <div class="kpi"><div class="kpi-v">${d.totals.owners}</div><div class="kpi-k">Propriétaires</div></div>
-    <div class="kpi"><div class="kpi-v">${d.subscriptions.trials}</div><div class="kpi-k">Essais en cours</div></div>
     <div class="kpi"><div class="kpi-v ${d.subscriptions.expiringSoon ? 'warn' : ''}">${d.subscriptions.expiringSoon}</div><div class="kpi-k">Expirent sous 3 j</div></div>
   `;
+  renderRevenueChart(d.revenueByWeek || []);
   renderPlansChart(d.planDistribution);
   renderStatusChart(d.statusDistribution);
   renderSignupsChart(d.signupsByWeek);
+}
+
+// Courbe (aire) du revenu encaissé par semaine.
+function renderRevenueChart(weeks) {
+  const el = document.getElementById('chart-revenue');
+  if (!weeks.length) { el.innerHTML = '<p class="muted">Aucune donnée.</p>'; return; }
+  const max = Math.max(1, ...weeks.map((w) => w.amount));
+  const W = 560; const H = 180; const pad = 30; const n = weeks.length;
+  const stepX = (W - pad * 2) / (n - 1 || 1);
+  const x = (i) => pad + i * stepX;
+  const y = (v) => H - pad - (v / max) * (H - pad * 2);
+  const pts = weeks.map((w, i) => `${x(i).toFixed(1)},${y(w.amount).toFixed(1)}`);
+  const line = `M ${pts.join(' L ')}`;
+  const area = `M ${x(0).toFixed(1)},${(H - pad).toFixed(1)} L ${pts.join(' L ')} L ${x(n - 1).toFixed(1)},${(H - pad).toFixed(1)} Z`;
+  const dots = weeks.map((w, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(w.amount).toFixed(1)}" r="3.5" fill="#fff" stroke="var(--red)" stroke-width="2"/>`).join('');
+  const labels = weeks.map((w, i) => `<text x="${x(i).toFixed(1)}" y="${H - pad + 16}" text-anchor="middle" class="axis-l">${esc(w.label)}</text>`).join('');
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" class="revenue" role="img" aria-label="Revenu par semaine">
+    <defs><linearGradient id="revgrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="var(--red)" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="var(--red)" stop-opacity="0"/></linearGradient></defs>
+    <line x1="${pad}" y1="${H - pad}" x2="${W - pad}" y2="${H - pad}" stroke="var(--line)"/>
+    <path d="${area}" fill="url(#revgrad)"/>
+    <path d="${line}" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    ${dots}${labels}</svg>`;
 }
 
 const PLAN_COLORS = { trial: '#B9B2A8', basic: '#1A73C7', premium: '#C62828', enterprise: '#1F1B16' };
@@ -410,6 +436,7 @@ async function loadRestaurants() {
 
         <div class="chips">${chips}</div>
         <div class="card-actions">
+          <button class="btn btn-ghost btn-sm" onclick="openRestaurantDetail('${r.id}')">Détails</button>
           <button class="btn btn-ghost btn-sm" onclick="openDomainModal('${r.id}')">Domaine personnalisé</button>
           <button class="btn btn-ghost btn-sm" onclick="openServiceModal('${r.id}')">Modes de service</button>
           ${menu(overflow)}
@@ -703,6 +730,76 @@ document.getElementById('sub-form').addEventListener('submit', async (e) => {
     loadSubscriptions();
   } catch (e2) { err.textContent = e2.message; }
 });
+
+/* ---------- Détail restaurant ---------- */
+const ROLE_LABELS = { owner: 'Propriétaire', manager: 'Manager', waiter: 'Serveur', cashier: 'Caissier', kitchen: 'Cuisine' };
+async function openRestaurantDetail(restaurantId) {
+  const body = document.getElementById('detail-body');
+  document.getElementById('detail-title').textContent = 'Chargement…';
+  document.getElementById('detail-sub').textContent = '';
+  body.innerHTML = skeletons(1);
+  openModal('detail-modal');
+  try {
+    const d = await api(`/restaurants/${restaurantId}/detail`);
+    document.getElementById('detail-title').textContent = d.restaurant.name;
+    document.getElementById('detail-sub').innerHTML = d.owner
+      ? `${esc(d.owner.name)} · ${esc(d.owner.email)}`
+      : '<span class="muted">Sans propriétaire</span>';
+    const statusLabel = d.restaurant.status === 'active' ? 'Actif' : (d.restaurant.status === 'suspended' ? 'Suspendu' : 'Fermé');
+    const sub = d.subscription;
+    const subLine = sub ? `${PLAN_LABELS[sub.plan] || sub.plan} · ${sub.status}` : '—';
+    body.innerHTML = `
+      <div class="kpi-grid detail-kpis">
+        <div class="kpi"><div class="kpi-v">${fmtNum(d.stats.revenue)}</div><div class="kpi-k">CA encaissé (FCFA)</div></div>
+        <div class="kpi"><div class="kpi-v">${d.stats.orders}</div><div class="kpi-k">Commandes</div></div>
+        <div class="kpi"><div class="kpi-v">${d.stats.paidOrders}</div><div class="kpi-k">Payées</div></div>
+      </div>
+      <div class="detail-meta">
+        <span class="badge ${d.restaurant.status}">${statusLabel}</span>
+        <span class="chip">Abonnement : ${esc(subLine)}</span>
+        ${d.restaurant.custom_domain ? `<span class="chip">🌐 ${esc(d.restaurant.custom_domain)}</span>` : ''}
+      </div>
+      <h4 class="detail-h">Équipe (${d.team.length})</h4>
+      <ul class="team-list">
+        ${d.team.map((u) => `<li><div><strong>${esc(u.name) || '—'}</strong><div class="muted" style="font-size:13px">${esc(u.email)}</div></div><span class="role-badge">${ROLE_LABELS[u.role] || u.role}</span></li>`).join('')}
+      </ul>`;
+  } catch (e) {
+    body.innerHTML = `<p class="error-msg">${esc(e.message)}</p>`;
+  }
+}
+
+/* ---------- Export CSV ---------- */
+function csvCell(v) {
+  const s = String(v == null ? '' : v);
+  return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+function downloadCSV(filename, headers, rows) {
+  const lines = [headers.join(';'), ...rows.map((r) => r.map(csvCell).join(';'))];
+  const blob = new Blob([`﻿${lines.join('\n')}`], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Export CSV téléchargé');
+}
+function exportRestaurantsCSV() {
+  if (!state.restaurants.length) return toast('Rien à exporter', true);
+  const rows = state.restaurants.map((r) => [
+    r.name, r.slug, r.custom_domain || '', r.status,
+    r.owner ? `${r.owner.first_name} ${r.owner.last_name}` : '', r.owner ? r.owner.email : ''
+  ]);
+  downloadCSV('bizon-restaurants.csv', ['Nom', 'Slug', 'Domaine', 'Statut', 'Propriétaire', 'Email'], rows);
+}
+function exportSubscriptionsCSV() {
+  if (!state.subscriptions.length) return toast('Rien à exporter', true);
+  const rows = state.subscriptions.map((s) => [
+    s.restaurant ? s.restaurant.name : '', s.owner ? s.owner.name : '', s.owner ? s.owner.email : '',
+    PLAN_LABELS[s.plan] || s.plan, s.status, s.isExpired ? 'oui' : 'non',
+    s.daysRemaining, new Date(s.end_date).toLocaleDateString('fr-FR')
+  ]);
+  downloadCSV('bizon-abonnements.csv', ['Restaurant', 'Propriétaire', 'Email', 'Plan', 'Statut', 'Expiré', 'Jours restants', 'Échéance'], rows);
+}
 
 /* ---------- Modal infra (focus-trap, Échap, restauration du focus) ---------- */
 let modalOpener = null;

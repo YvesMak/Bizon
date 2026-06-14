@@ -62,6 +62,7 @@
         <section id="tab-dashboard" class="tab-panel">
           <div class="kpi-grid" id="kpi-grid" aria-label="Indicateurs clés"></div>
           <div class="charts-grid">
+            <div class="panel span2"><h3 class="panel-title">Revenu encaissé — 8 dernières semaines</h3><div id="chart-revenue" class="chart"></div></div>
             <div class="panel"><h3 class="panel-title">Répartition des plans</h3><div id="chart-plans" class="chart"></div></div>
             <div class="panel"><h3 class="panel-title">Restaurants par statut</h3><div id="chart-status" class="chart"></div></div>
             <div class="panel span2"><h3 class="panel-title">Inscriptions — 8 dernières semaines</h3><div id="chart-signups" class="chart"></div></div>
@@ -81,14 +82,20 @@
         <section id="tab-restaurants" class="tab-panel hidden">
           <div class="panel-head">
             <h2>Restaurants</h2>
-            <button class="btn btn-primary" onclick="openRestaurantModal()">+ Nouveau restaurant</button>
+            <div class="head-actions">
+              <button class="btn btn-ghost btn-sm" onclick="exportRestaurantsCSV()">⤓ Exporter CSV</button>
+              <button class="btn btn-primary" onclick="openRestaurantModal()">+ Nouveau restaurant</button>
+            </div>
           </div>
           <div id="restaurants-list" class="cards"></div>
         </section>
 
         <!-- ABONNEMENTS -->
         <section id="tab-subscriptions" class="tab-panel hidden">
-          <div class="panel-head"><h2>Abonnements</h2></div>
+          <div class="panel-head">
+            <h2>Abonnements</h2>
+            <button class="btn btn-ghost btn-sm" onclick="exportSubscriptionsCSV()">⤓ Exporter CSV</button>
+          </div>
           <div id="sub-summary" class="sub-summary"></div>
           <div id="subscriptions-list" class="cards"></div>
         </section>
@@ -258,6 +265,16 @@
         <button type="button" class="btn btn-ghost" onclick="closeModal('confirm-modal')">Annuler</button>
         <button type="button" class="btn btn-danger" id="confirm-ok">Confirmer</button>
       </div>
+    </div>
+  </div>
+
+  <!-- MODALE DÉTAIL RESTAURANT -->
+  <div id="detail-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+    <div class="modal-card modal-lg">
+      <button class="modal-close" aria-label="Fermer" onclick="closeModal('detail-modal')">✕</button>
+      <h3 id="detail-title">Restaurant</h3>
+      <p class="modal-desc" id="detail-sub"></p>
+      <div id="detail-body"></div>
     </div>
   </div>
 

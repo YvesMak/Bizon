@@ -35,4 +35,18 @@ describe('Back-office — vue d\'ensemble (dashboard)', () => {
     expect(res.body.signupsByWeek[7].count).toBeGreaterThanOrEqual(1);
     expect(res.body.subscriptions).toHaveProperty('trials');
   });
+
+  it('inclut le revenu par semaine et le total', async () => {
+    const token = await adminToken();
+    const res = await request(app)
+      .get('/api/admin/dashboard')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.revenue).toHaveProperty('total');
+    expect(typeof res.body.revenue.total).toBe('number');
+    expect(Array.isArray(res.body.revenueByWeek)).toBe(true);
+    expect(res.body.revenueByWeek).toHaveLength(8);
+    expect(res.body.revenueByWeek[7]).toHaveProperty('amount');
+  });
 });
