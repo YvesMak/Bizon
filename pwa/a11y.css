@@ -1,0 +1,34 @@
+/* ============================================================
+   Socle d'accessibilité partagé — espaces staff (manager,
+   caissier, cuisine, serveur). Chargé EN DERNIER pour primer
+   sur les `outline: none` existants.
+   WCAG 2.1 AA : 2.4.7 (indicateur de focus visible) + mouvement réduit.
+   ============================================================ */
+
+/* Focus clavier visible sur tous les éléments interactifs.
+   `:focus-visible` n'apparaît qu'à la navigation clavier (aucun impact souris). */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible,
+[role="button"]:focus-visible,
+[role="tab"]:focus-visible,
+[role="link"]:focus-visible,
+[role="menuitem"]:focus-visible {
+  outline: 2px solid var(--a11y-focus, #1A73C7) !important;
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Respect du choix « mouvement réduit ». */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

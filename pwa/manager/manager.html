@@ -6,6 +6,7 @@
     <title>Bizon - Espace Manager</title>
     <link rel="stylesheet" href="../styles.css">
     <link rel="stylesheet" href="manager.css">
+    <link rel="stylesheet" href="../a11y.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="manifest" href="../manifest.json">
@@ -404,7 +405,7 @@
     <div id="toast-container"></div>
 
     <!-- Modal Confirmation -->
-    <div class="modal" id="modal-confirm">
+    <div class="modal" id="modal-confirm" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal-content">
             <h3 id="modal-title">Confirmer l'action</h3>
             <p id="modal-message"></p>
@@ -416,7 +417,7 @@
     </div>
 
     <!-- Modal Formulaire -->
-    <div class="modal" id="modal-form">
+    <div class="modal" id="modal-form" role="dialog" aria-modal="true" aria-labelledby="form-title">
         <div class="modal-content modal-form-content">
             <div class="modal-form-header">
                 <h3 id="form-title">Formulaire</h3>

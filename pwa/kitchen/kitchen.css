@@ -1,4 +1,5 @@
 :root {
+  --a11y-focus: #5AA9FF; /* anneau de focus clair pour le thème sombre */
   --bg: #14110f;
   --col-bg: #1c1815;
   --card: #262019;
