@@ -850,17 +850,42 @@
 
   .filters { overflow-x: auto; flex-wrap: nowrap; }
 
-  /* Products table → cards on mobile */
+  /* Products table → cartes lisibles sur mobile (label + valeur) */
   .table-header { display: none; }
 
   .table-row {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.4rem;
     padding: 1rem 1.25rem;
+    text-align: left;
+  }
+  /* Le nom du produit fait office de titre de carte */
+  .table-row .product-name-col {
+    font-size: 16px;
+    font-weight: 700;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 0.15rem;
+  }
+  /* Cellules avec libellé : « Libellé …… valeur » */
+  .table-row > span[data-label] {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  .table-row > span[data-label]::before {
+    content: attr(data-label);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    flex: none;
   }
 
-  .actions-col { justify-content: flex-start; }
+  .actions-col { justify-content: flex-start; flex-wrap: wrap; padding-top: 0.35rem; }
   .form-row-2 { grid-template-columns: 1fr; }
 
   .menu-card-header {
