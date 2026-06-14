@@ -1077,3 +1077,17 @@
 .refund-row:first-of-type { border-top: none; }
 .refund-meta { color: var(--text-muted, #777); margin-left: 0.5rem; }
 .refund-actions { display: flex; gap: 0.5rem; }
+
+/* ============================================================
+   Baseline UI — typographie des données (transverse, 8 onglets)
+   • chiffres alignés (tabular-nums) pour KPIs, prix, tableaux, dates
+   • équilibrage du texte : titres balance, paragraphes pretty
+   ============================================================ */
+.manager-container { font-variant-numeric: tabular-nums; }
+.manager-container h1,
+.manager-container h2,
+.manager-container h3 { text-wrap: balance; }
+.manager-container p,
+.manager-container .stat-label,
+.manager-container .empty-state,
+.manager-container .cell-empty { text-wrap: pretty; }
