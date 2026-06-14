@@ -192,7 +192,15 @@ function showModal(title, message, callback) {
     document.getElementById('modal-title').textContent = title;
     document.getElementById('modal-message').textContent = message;
     document.getElementById('modal-confirm').classList.add('active');
+    setTimeout(() => document.querySelector('#modal-confirm .btn-primary')?.focus(), 30);
 }
+
+// Fermeture des modales par la touche Échap (accessibilité clavier).
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (document.getElementById('modal-confirm')?.classList.contains('active')) closeModal();
+    else if (document.getElementById('modal-form')?.classList.contains('active')) closeFormModal();
+});
 
 function closeModal() {
     document.getElementById('modal-confirm').classList.remove('active');
@@ -212,6 +220,7 @@ function showFormModal(title, bodyHtml) {
     document.getElementById('form-title').textContent = title;
     document.getElementById('form-body').innerHTML = bodyHtml;
     document.getElementById('modal-form').classList.add('active');
+    setTimeout(() => document.querySelector('#modal-form input, #modal-form select, #modal-form textarea')?.focus(), 30);
 }
 
 function closeFormModal() {
@@ -1782,24 +1791,25 @@ async function sendPushCampaign() {
     const url = document.getElementById('campaign-url').value.trim();
     if (!title || !body) { showToast('Titre et message requis', 'error'); return; }
     const cibleLabel = segment === 'inactive' ? 'aux clients inactifs' : (segment === 'top' ? 'aux top clients' : 'à tous les abonnés');
-    if (!confirm(`Envoyer cette notification ${cibleLabel} ?\n\n${title}\n${body}`)) return;
-    const status = document.getElementById('campaign-status');
-    if (status) { status.textContent = 'Envoi…'; status.className = 'pay-status'; }
-    try {
-        const r = await apiCall('/restaurants/campaigns', {
-            method: 'POST',
-            body: JSON.stringify({ title, body, segment, url: url || undefined })
-        });
-        if (!r) return;
-        if (status) { status.textContent = `✓ ${r.reached} client(s) atteint(s) sur ${r.targeted} ciblé(s)`; status.className = 'pay-status ok'; }
-        showToast(`Campagne envoyée : ${r.reached} client(s)`, 'success');
-        document.getElementById('campaign-title').value = '';
-        document.getElementById('campaign-body').value = '';
-        document.getElementById('campaign-url').value = '';
-    } catch (e) {
-        if (status) { status.textContent = '⚠ ' + e.message; status.className = 'pay-status warn'; }
-        showToast(e.message, 'error');
-    }
+    showModal('Envoyer la campagne', `Envoyer la notification « ${title} » ${cibleLabel} ?`, async () => {
+        const status = document.getElementById('campaign-status');
+        if (status) { status.textContent = 'Envoi…'; status.className = 'pay-status'; }
+        try {
+            const r = await apiCall('/restaurants/campaigns', {
+                method: 'POST',
+                body: JSON.stringify({ title, body, segment, url: url || undefined })
+            });
+            if (!r) return;
+            if (status) { status.textContent = `✓ ${r.reached} client(s) atteint(s) sur ${r.targeted} ciblé(s)`; status.className = 'pay-status ok'; }
+            showToast(`Campagne envoyée : ${r.reached} client(s)`, 'success');
+            document.getElementById('campaign-title').value = '';
+            document.getElementById('campaign-body').value = '';
+            document.getElementById('campaign-url').value = '';
+        } catch (e) {
+            if (status) { status.textContent = '⚠ ' + e.message; status.className = 'pay-status warn'; }
+            showToast(e.message, 'error');
+        }
+    });
 }
 
 // ============================================
@@ -1832,11 +1842,12 @@ async function doRefund(orderId, mode, amountLabel) {
     const msg = mode === 'campay'
         ? `Envoyer ${amountLabel} au client par Mobile Money (Campay) ?`
         : `Marquer cette commande comme remboursée (${amountLabel}) ? À faire si tu as déjà remboursé par un autre moyen.`;
-    if (!confirm(msg)) return;
-    try {
-        const r = await apiCall(`/payments/refunds/${orderId}`, { method: 'POST', body: JSON.stringify({ mode }) });
-        if (!r) return;
-        showToast(mode === 'campay' ? 'Remboursement Mobile Money envoyé' : 'Remboursement enregistré', 'success');
-        loadAccounting();
-    } catch (e) { showToast(e.message, 'error'); }
+    showModal('Confirmer le remboursement', msg, async () => {
+        try {
+            const r = await apiCall(`/payments/refunds/${orderId}`, { method: 'POST', body: JSON.stringify({ mode }) });
+            if (!r) return;
+            showToast(mode === 'campay' ? 'Remboursement Mobile Money envoyé' : 'Remboursement enregistré', 'success');
+            loadAccounting();
+        } catch (e) { showToast(e.message, 'error'); }
+    });
 }
