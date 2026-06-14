@@ -367,3 +367,23 @@ input:focus, select:focus { outline: none; border-color: var(--red); }
   .content { padding: 16px; }
   .section-title { font-size: 17px; }
 }
+
+/* ---------- Détail restaurant + export + revenu ---------- */
+.head-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.modal-lg { position: relative; max-width: 560px; }
+.modal-close {
+  position: absolute; top: 14px; right: 14px; width: 34px; height: 34px;
+  border-radius: 9px; border: 1px solid var(--line); background: #fff; cursor: pointer; color: var(--muted);
+}
+.modal-close:hover { background: var(--cream); }
+.detail-kpis { grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
+.detail-kpis .kpi-v { font-size: 22px; }
+.detail-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+.detail-h { font-size: 14px; color: var(--muted); margin: 4px 0 8px; }
+.team-list { list-style: none; display: grid; gap: 8px; }
+.team-list li {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+}
+.role-badge { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--cream); color: var(--ink); border: 1px solid var(--cream-2); }
+.revenue { display: block; }

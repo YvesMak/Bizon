@@ -98,12 +98,13 @@ class AdminService {
    * par semaine (8 dernières).
    */
   async getDashboard() {
-    const [restaurants, owners, orders, subs, restaurantRows] = await Promise.all([
+    const [restaurants, owners, orders, subs, restaurantRows, paidOrders] = await Promise.all([
       Restaurant.count(),
       User.count({ where: { role: 'owner' } }),
       Order.count(),
       Subscription.findAll({ attributes: ['plan', 'status', 'end_date'], raw: true }),
-      Restaurant.findAll({ attributes: ['status', 'created_at'], raw: true })
+      Restaurant.findAll({ attributes: ['status', 'created_at'], raw: true }),
+      Order.findAll({ where: { status: 'paid' }, attributes: ['total_amount', 'created_at'], raw: true })
     ]);
 
     const planMonthly = {};
@@ -137,19 +138,69 @@ class AdminService {
       const idx = Math.floor((now - new Date(r.created_at).getTime()) / (7 * 86400000));
       if (idx >= 0 && idx < WEEKS) weekCounts[WEEKS - 1 - idx] += 1;
     });
-    const signupsByWeek = weekCounts.map((count, i) => ({
-      label: i === WEEKS - 1 ? 'Cette sem.' : `S-${WEEKS - 1 - i}`,
-      count
-    }));
+    const weekLabel = (i) => (i === WEEKS - 1 ? 'Cette sem.' : `S-${WEEKS - 1 - i}`);
+    const signupsByWeek = weekCounts.map((count, i) => ({ label: weekLabel(i), count }));
+
+    // Revenu (CA) des commandes payées, par semaine (8 dernières).
+    const revenueWeeks = new Array(WEEKS).fill(0);
+    let revenueTotal = 0;
+    paidOrders.forEach((o) => {
+      const amount = Number(o.total_amount) || 0;
+      revenueTotal += amount;
+      const idx = Math.floor((now - new Date(o.created_at).getTime()) / (7 * 86400000));
+      if (idx >= 0 && idx < WEEKS) revenueWeeks[WEEKS - 1 - idx] += amount;
+    });
+    const revenueByWeek = revenueWeeks.map((amount, i) => ({ label: weekLabel(i), amount: Math.round(amount) }));
+    const revenue8w = revenueByWeek.reduce((a, r) => a + r.amount, 0);
 
     return {
       totals: { restaurants, owners, orders },
       mrr,
       currency: 'FCFA',
+      revenue: { total: Math.round(revenueTotal), last8Weeks: revenue8w },
       subscriptions: { trials, paying, expired, expiringSoon },
       planDistribution,
       statusDistribution,
-      signupsByWeek
+      signupsByWeek,
+      revenueByWeek
+    };
+  }
+
+  /**
+   * Détail d'un restaurant pour la page de détail (KPIs + équipe).
+   */
+  async getRestaurantDetail(restaurantId) {
+    const restaurant = await Restaurant.findByPk(restaurantId, {
+      include: [
+        { model: User, as: 'owner', attributes: ['id', 'first_name', 'last_name', 'email'] },
+        { model: Subscription, as: 'subscription', attributes: ['plan', 'status', 'end_date'] }
+      ]
+    });
+    if (!restaurant) throw new Error('Restaurant non trouvé');
+
+    const [orderCount, paidCount, revenue, team] = await Promise.all([
+      Order.count({ where: { restaurant_id: restaurantId } }),
+      Order.count({ where: { restaurant_id: restaurantId, status: 'paid' } }),
+      Order.sum('total_amount', { where: { restaurant_id: restaurantId, status: 'paid' } }),
+      User.findAll({
+        where: { restaurant_id: restaurantId },
+        attributes: ['id', 'first_name', 'last_name', 'email', 'role', 'status'],
+        order: [['role', 'ASC'], ['created_at', 'ASC']]
+      })
+    ]);
+
+    const r = restaurant.toJSON();
+    return {
+      restaurant: {
+        id: r.id, name: r.name, slug: r.slug, status: r.status,
+        custom_domain: r.custom_domain, address: r.address, phone: r.phone
+      },
+      owner: r.owner ? { name: `${r.owner.first_name} ${r.owner.last_name}`.trim(), email: r.owner.email } : null,
+      subscription: r.subscription || null,
+      stats: { orders: orderCount, paidOrders: paidCount, revenue: Math.round(revenue || 0) },
+      team: team.map((u) => ({
+        id: u.id, name: `${u.first_name} ${u.last_name}`.trim(), email: u.email, role: u.role, status: u.status
+      }))
     };
   }
 
